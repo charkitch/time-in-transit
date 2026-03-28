@@ -66,9 +66,14 @@ button:active {
 }
 
 @keyframes flashEntryAnim {
-  0%   { opacity: 0;   background: #ffffff; }
-  30%  { opacity: 1;   background: #8866ff; }
+  0%   { opacity: 0;   background: #4422cc; }
+  30%  { opacity: 0.8; background: #8866ff; }
   100% { opacity: 0;   background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flashEntry, .flashExit { animation: none; opacity: 0; }
+  .hyperChargeGlow { animation: none; }
 }
 
 .flashExit {

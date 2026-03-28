@@ -177,6 +177,7 @@ export function App() {
 
 function DeathScreen({ onRespawn, onNewGame }: { onRespawn: () => void; onNewGame: () => void }) {
   const credits = useGameState(s => s.player.credits);
+  const deathMessage = useGameState(s => s.ui.deathMessage);
   const penalty = Math.max(100, Math.floor(credits * 0.1));
 
   return (
@@ -196,8 +197,21 @@ function DeathScreen({ onRespawn, onNewGame }: { onRespawn: () => void; onNewGam
           SHIP DESTROYED
         </div>
         <div style={{ fontSize: 13, color: 'rgba(220,180,180,0.8)', lineHeight: 1.7, marginBottom: 24 }}>
-          Hull integrity failed. Emergency beacon triggered.<br />
-          Rescue vessel recovered pilot and cargo.<br />
+          {deathMessage?.length ? (
+            <>
+              {deathMessage.map((line, i) => (
+                <span key={i}>
+                  {line}
+                  <br />
+                </span>
+              ))}
+            </>
+          ) : (
+            <>
+              Hull integrity failed. Emergency beacon triggered.<br />
+              Rescue vessel recovered pilot and cargo.<br />
+            </>
+          )}
           <span style={{ color: '#FFAA00' }}>
             Insurance deducted: CR {penalty.toLocaleString()}
           </span>

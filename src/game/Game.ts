@@ -366,6 +366,16 @@ export class Game {
     const targetId = state.ui.hyperspaceTarget;
     if (targetId === null) return;
 
+    const enslavedPeopleInHold = state.player.cargo['Enslaved People'] ?? 0;
+    if (enslavedPeopleInHold > 0) {
+      this.triggerDeath([
+        'The enslaved people in your hold rebelled during the jump and killed you.',
+        'They seized your ship and used it to free enslaved people across the galaxy.',
+        'Your body floated in space for billions of years, unmourned.',
+      ]);
+      return;
+    }
+
     const currentSys = state.galaxy[state.currentSystemId];
     const targetSys = state.galaxy[targetId];
     const cost = this.hyperspace.jumpCost(currentSys, targetSys);
@@ -477,11 +487,12 @@ export class Game {
     });
   }
 
-  private triggerDeath(): void {
+  private triggerDeath(deathMessage: string[] | null = null): void {
     this.isDead = true;
     const state = useGameState.getState();
     state.setHyperspaceCountdown(0);
     state.setAlert(null);
+    state.setDeathMessage(deathMessage);
     this.flightModel.reset(this.sceneRenderer.shipGroup.position);
     state.setUIMode('dead');
   }
@@ -489,6 +500,7 @@ export class Game {
   newGame(): void {
     const state = useGameState.getState();
     state.resetGame();
+    state.setDeathMessage(null);
     this.isDead = false;
     this.hyperspaceActive = false;
     this.hyperspaceTimer = 0;
@@ -503,6 +515,7 @@ export class Game {
     state.addCredits(-penalty);
     state.setShields(100);
     state.setHeat(0);
+    state.setDeathMessage(null);
     this.isDead = false;
     state.setUIMode('docked');
   }
@@ -510,12 +523,23 @@ export class Game {
   private tryHail(): void {
     const state = useGameState.getState();
     if (state.ui.mode !== 'flight') return;
-    const targetId = state.player.targetId;
-    if (!targetId) return;
-    const entity = this.sceneRenderer.getAllEntities().get(targetId);
-    if (!entity || entity.type !== 'npc_ship') return;
+
+    // If current target is already an NPC ship, hail it directly
+    let targetId = state.player.targetId;
+    const currentEntity = targetId ? this.sceneRenderer.getAllEntities().get(targetId) : null;
+    if (!targetId || !currentEntity || currentEntity.type !== 'npc_ship') {
+      // Auto-find nearest NPC ship
+      targetId = this.findNearestNPCShip();
+      if (!targetId) return;
+      state.setTarget(targetId);
+    }
+
     const npcState = this.sceneRenderer.getNPCShip(targetId);
     if (!npcState) return;
+
+    const entity = this.sceneRenderer.getAllEntities().get(targetId)!;
+    const dist = this.sceneRenderer.shipGroup.position.distanceTo(entity.worldPos);
+    const TRADE_RANGE = 500;
 
     state.setPendingCommContext({
       npcId: npcState.id,
@@ -524,14 +548,33 @@ export class Game {
       commLines: npcState.commLines,
       cargo: npcState.cargo,
       factionTag: npcState.factionTag,
+      inTradeRange: dist <= TRADE_RANGE,
     });
     state.setUIMode('comms');
+  }
+
+  private findNearestNPCShip(): string | null {
+    const shipPos = this.sceneRenderer.shipGroup.position;
+    const entities = this.sceneRenderer.getAllEntities();
+    let bestId: string | null = null;
+    let bestDist = Infinity;
+
+    for (const [id, entity] of entities) {
+      if (entity.type !== 'npc_ship') continue;
+      const dist = shipPos.distanceTo(entity.worldPos);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestId = id;
+      }
+    }
+
+    return bestId;
   }
 
   tradeWithNPC(action: 'buy' | 'sell', good: GoodName): void {
     const state = useGameState.getState();
     const ctx = state.pendingCommContext;
-    if (!ctx) return;
+    if (!ctx || !ctx.inTradeRange) return;
     const entry = ctx.cargo.find(c => c.good === good);
     if (!entry) return;
 

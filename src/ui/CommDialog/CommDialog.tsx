@@ -13,6 +13,8 @@ export function CommDialog({ onTrade, onDismiss }: CommDialogProps) {
 
   if (!ctx) return null;
 
+  const canTrade = ctx.inTradeRange;
+
   return (
     <div className={styles.overlay}>
       <div className={styles.panel}>
@@ -38,43 +40,42 @@ export function CommDialog({ onTrade, onDismiss }: CommDialogProps) {
         {/* Manifest */}
         <div className={styles.manifestSection}>
           <div className={styles.manifestTitle}>MANIFEST</div>
+          {!canTrade && (
+            <div className={styles.rangeWarning}>SIGNAL ONLY — TOO FAR TO TRADE</div>
+          )}
           <div className={styles.manifestHeader}>
             <span>Good</span>
             <span>Buy</span>
             <span>Sell</span>
             <span>Qty</span>
-            <span></span>
+            {canTrade && <span></span>}
           </div>
-          {ctx.cargo.map(entry => {
-            const canBuy = player.credits >= entry.buyPrice;
-            const canSell = (player.cargo[entry.good] ?? 0) > 0;
-            return (
-              <div key={entry.good} className={styles.manifestRow}>
-                <span className={styles.goodName}>{entry.good}</span>
-                <span className={styles.price}>{entry.buyPrice} CR</span>
-                <span className={styles.price}>{entry.sellPrice} CR</span>
-                <span className={styles.qty}>{entry.qty}</span>
+          {ctx.cargo.map(entry => (
+            <div key={entry.good} className={styles.manifestRow}>
+              <span className={styles.goodName}>{entry.good}</span>
+              <span className={styles.price}>{entry.buyPrice} CR</span>
+              <span className={styles.price}>{entry.sellPrice} CR</span>
+              <span className={styles.qty}>{entry.qty}</span>
+              {canTrade && (
                 <span className={styles.tradeButtons}>
                   <button
                     className={styles.tradeBtn}
-                    disabled={!canBuy}
+                    disabled={player.credits < entry.buyPrice}
                     onClick={() => onTrade('buy', entry.good)}
-                    title={!canBuy ? 'Insufficient credits' : undefined}
                   >
                     BUY
                   </button>
                   <button
                     className={styles.tradeBtn}
-                    disabled={!canSell}
+                    disabled={(player.cargo[entry.good] ?? 0) <= 0}
                     onClick={() => onTrade('sell', entry.good)}
-                    title={!canSell ? 'None in cargo' : undefined}
                   >
                     SELL
                   </button>
                 </span>
-              </div>
-            );
-          })}
+              )}
+            </div>
+          ))}
         </div>
 
         {/* Dismiss */}

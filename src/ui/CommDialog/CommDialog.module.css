@@ -87,6 +87,14 @@
   margin-bottom: 8px;
 }
 
+.rangeWarning {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--color-warning, #FFAA00);
+  opacity: 0.7;
+  margin-bottom: 10px;
+}
+
 .manifestHeader {
   display: grid;
   grid-template-columns: 2fr 1.2fr 1.2fr 0.8fr 1.8fr;

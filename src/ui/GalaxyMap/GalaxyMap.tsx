@@ -68,9 +68,19 @@ export function GalaxyMap({ onClose, onJump }: GalaxyMapProps) {
     // Range ring
     const [cx, cy] = toCanvas(currentSys.x, currentSys.y);
     const rangePixels = (HYPERSPACE.maxRange / 100) * MAP_W;
-    ctx.strokeStyle = 'rgba(51,255,136,0.2)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
+
+    // Soft outer glow pass so the range ring stays readable against dense stars/lines.
+    ctx.strokeStyle = 'rgba(68, 220, 255, 0.22)';
+    ctx.lineWidth = 7;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, rangePixels, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Crisp primary ring pass with a higher-contrast dash pattern.
+    ctx.strokeStyle = 'rgba(102, 255, 204, 0.82)';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([10, 4]);
     ctx.beginPath();
     ctx.arc(cx, cy, rangePixels, 0, Math.PI * 2);
     ctx.stroke();

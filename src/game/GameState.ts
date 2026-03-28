@@ -16,6 +16,7 @@ export interface PendingCommContext {
   commLines: [string, string];
   cargo: NPCCargoEntry[];
   factionTag: string | null;
+  inTradeRange: boolean;
 }
 
 export interface PlayerState {
@@ -70,6 +71,7 @@ export interface GameStateData {
     alertMessage: string | null;
     hyperspaceTarget: number | null;
     hyperspaceCountdown: number;
+    deathMessage: string[] | null;
   };
   time: number; // game time in seconds
 
@@ -100,6 +102,7 @@ export interface GameActions {
   setAlert: (msg: string | null) => void;
   setHyperspaceTarget: (id: number | null) => void;
   setHyperspaceCountdown: (n: number) => void;
+  setDeathMessage: (lines: string[] | null) => void;
   addCredits: (delta: number) => void;
   addCargo: (good: GoodName, qty: number, purchasePrice?: number) => void;
   removeCargo: (good: GoodName, qty: number) => void;
@@ -154,6 +157,17 @@ interface SaveData {
   factionMemory: Record<number, FactionMemoryEntry>;
 }
 
+function migrateLegacyGoodKeys<T>(record: Partial<Record<GoodName, T>> | undefined): Partial<Record<GoodName, T>> | undefined {
+  if (!record) return record;
+  const migrated = { ...record } as Partial<Record<GoodName, T>> & { Slaves?: T };
+  const legacyValue = migrated.Slaves;
+  if (legacyValue !== undefined) {
+    migrated['Enslaved People'] = legacyValue;
+    delete migrated.Slaves;
+  }
+  return migrated;
+}
+
 function loadFromStorage(): Partial<SaveData> {
   try {
     const raw = localStorage.getItem('space-game-save');
@@ -173,6 +187,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
     alertMessage: null,
     hyperspaceTarget: null,
     hyperspaceCountdown: 0,
+    deathMessage: null,
   },
   time: 0,
 
@@ -201,6 +216,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   setAlert: (msg) => set(s => ({ ui: { ...s.ui, alertMessage: msg } })),
   setHyperspaceTarget: (id) => set(s => ({ ui: { ...s.ui, hyperspaceTarget: id } })),
   setHyperspaceCountdown: (n) => set(s => ({ ui: { ...s.ui, hyperspaceCountdown: n } })),
+  setDeathMessage: (lines) => set(s => ({ ui: { ...s.ui, deathMessage: lines } })),
   addCredits: (delta) => set(s => ({ player: { ...s.player, credits: s.player.credits + delta } })),
   addCargo: (good, qty, purchasePrice) => set(s => {
     const cargo = { ...s.player.cargo };
@@ -286,7 +302,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       knownFactions: new Set(),
       factionMemory: {},
       systemEntryLines: null,
-      ui: { mode: 'flight', alertMessage: null, hyperspaceTarget: null, hyperspaceCountdown: 0 },
+      ui: { mode: 'flight', alertMessage: null, hyperspaceTarget: null, hyperspaceCountdown: 0, deathMessage: null },
     });
   },
 
@@ -297,8 +313,8 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       player: {
         ...s.player,
         credits: saved.credits ?? s.player.credits,
-        cargo: saved.cargo ?? s.player.cargo,
-        cargoCostBasis: saved.cargoCostBasis ?? s.player.cargoCostBasis,
+        cargo: migrateLegacyGoodKeys(saved.cargo) ?? s.player.cargo,
+        cargoCostBasis: migrateLegacyGoodKeys(saved.cargoCostBasis) ?? s.player.cargoCostBasis,
         fuel: saved.fuel ?? s.player.fuel,
         shields: saved.shields ?? s.player.shields,
       },

@@ -57,7 +57,7 @@ export const GOODS = [
   'Food',
   'Textiles',
   'Radioactives',
-  'Slaves',
+  'Enslaved People',
   'Liquor',
   'Luxuries',
   'Narcotics',
