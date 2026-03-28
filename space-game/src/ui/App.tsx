@@ -3,6 +3,7 @@ import { useGameState } from '../game/GameState';
 import type { UIMode } from '../game/GameState';
 import { Game } from '../game/Game';
 import { HUD } from './HUD/HUD';
+import { SystemEntryText } from './HUD/SystemEntryText';
 import { GalaxyMap } from './GalaxyMap/GalaxyMap';
 import { SystemMap } from './SystemMap/SystemMap';
 import { StationUI } from './StationUI/StationUI';
@@ -54,6 +55,10 @@ export function App() {
     return gameRef.current?.['sceneRenderer']?.shipGroup?.position ?? new THREE.Vector3();
   }, []);
 
+  const getCamera = useCallback((): THREE.PerspectiveCamera | null => {
+    return gameRef.current?.['sceneRenderer']?.camera ?? null;
+  }, []);
+
   const handleUndock = () => {
     gameRef.current?.undock();
   };
@@ -80,6 +85,10 @@ export function App() {
     gameRef.current?.respawn();
   };
 
+  const handleNewGame = () => {
+    gameRef.current?.newGame();
+  };
+
   return (
     <>
       <canvas
@@ -88,8 +97,10 @@ export function App() {
       />
 
       {(uiMode === 'flight' || uiMode === 'hyperspace' || uiMode === 'comms') && (
-        <HUD getEntities={getEntities} getShipPos={getShipPos} />
+        <HUD getEntities={getEntities} getShipPos={getShipPos} getCamera={getCamera} />
       )}
+
+      {uiMode === 'flight' && <SystemEntryText />}
 
       {uiMode === 'hyperspace' && (
         <div style={{
@@ -131,12 +142,29 @@ export function App() {
       {uiMode === 'landing' && <LandingDialog onChoice={handleLandingChoice} />}
       {uiMode === 'docked' && <StationUI onUndock={handleUndock} />}
 
-      {uiMode === 'dead' && <DeathScreen onRespawn={handleRespawn} />}
+      {uiMode === 'dead' && <DeathScreen onRespawn={handleRespawn} onNewGame={handleNewGame} />}
+
+      {(uiMode === 'flight' || uiMode === 'docked') && (
+        <button
+          onClick={handleNewGame}
+          style={{
+            position: 'absolute', bottom: 16, right: 16,
+            padding: '6px 14px', fontSize: 11, letterSpacing: 2,
+            border: '1px solid rgba(255,255,255,0.15)',
+            background: 'rgba(0,0,0,0.5)', color: 'rgba(255,255,255,0.35)',
+            fontFamily: 'Courier New, monospace', cursor: 'pointer',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
+        >
+          NEW GAME
+        </button>
+      )}
     </>
   );
 }
 
-function DeathScreen({ onRespawn }: { onRespawn: () => void }) {
+function DeathScreen({ onRespawn, onNewGame }: { onRespawn: () => void; onNewGame: () => void }) {
   const credits = useGameState(s => s.player.credits);
   const penalty = Math.max(100, Math.floor(credits * 0.1));
 
@@ -163,17 +191,30 @@ function DeathScreen({ onRespawn }: { onRespawn: () => void }) {
             Insurance deducted: CR {penalty.toLocaleString()}
           </span>
         </div>
-        <button
-          onClick={onRespawn}
-          style={{
-            padding: '10px 28px', fontSize: 13, letterSpacing: 3,
-            border: '1px solid rgba(255,34,0,0.5)',
-            background: 'rgba(255,34,0,0.1)', color: '#FF6644',
-            fontFamily: 'inherit', cursor: 'pointer',
-          }}
-        >
-          CLAIM INSURANCE
-        </button>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+          <button
+            onClick={onRespawn}
+            style={{
+              padding: '10px 28px', fontSize: 13, letterSpacing: 3,
+              border: '1px solid rgba(255,34,0,0.5)',
+              background: 'rgba(255,34,0,0.1)', color: '#FF6644',
+              fontFamily: 'inherit', cursor: 'pointer',
+            }}
+          >
+            CLAIM INSURANCE
+          </button>
+          <button
+            onClick={onNewGame}
+            style={{
+              padding: '10px 28px', fontSize: 13, letterSpacing: 3,
+              border: '1px solid rgba(255,255,255,0.2)',
+              background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)',
+              fontFamily: 'inherit', cursor: 'pointer',
+            }}
+          >
+            NEW GAME
+          </button>
+        </div>
       </div>
     </div>
   );

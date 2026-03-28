@@ -6,6 +6,7 @@ import { DockingSystem } from './mechanics/DockingSystem';
 import { HyperspaceSystem } from './mechanics/HyperspaceSystem';
 import { jumpYearsElapsed } from './mechanics/RelativisticTime';
 import { getCivState } from './mechanics/CivilizationSystem';
+import { getSystemFactionState, getFaction } from './mechanics/FactionSystem';
 import { selectEvent } from './data/events';
 import { generateSolarSystem } from './generation/SystemGenerator';
 import { useGameState } from './GameState';
@@ -56,7 +57,7 @@ export class Game {
     state.setCurrentSystem(state.currentSystemId, systemData);
     state.markVisited(state.currentSystemId);
 
-    this.sceneRenderer.loadSystem(systemData, state.currentSystemId, state.galaxyYear, starData.name);
+    this.sceneRenderer.loadSystem(systemData, state.currentSystemId, state.galaxyYear, starData.name, starData);
 
     // Place ship near the main station
     const mainPlanetId = systemData.mainStationPlanetId;
@@ -165,6 +166,9 @@ export class Game {
     // Proximity alerts
     this.checkProximityAlerts(pos, state);
 
+    // Battle zone danger
+    this.checkBattleZone(pos, dt, state);
+
     // Hyperspace countdown
     if (state.ui.hyperspaceCountdown > 0) {
       const remaining = state.ui.hyperspaceCountdown - dt;
@@ -194,6 +198,31 @@ export class Game {
 
     if (!this.scoopingFuel && state.ui.hyperspaceCountdown === 0) {
       state.setAlert(null);
+    }
+  }
+
+  private checkBattleZone(
+    pos: THREE.Vector3,
+    dt: number,
+    state: ReturnType<typeof useGameState.getState>,
+  ): void {
+    const battle = this.sceneRenderer.getFleetBattle();
+    if (!battle) return;
+
+    const dist = pos.distanceTo(battle.position);
+    if (dist < battle.noGoRadius) {
+      if (dist < 350) {
+        // Danger zone — take damage
+        state.setShields(state.player.shields - 20 * dt);
+        state.setHeat(state.player.heat + 25 * dt);
+        state.setAlert('TAKING FIRE — COMBAT ZONE');
+        if (state.player.shields <= 0 && !this.isDead) {
+          this.triggerDeath();
+        }
+      } else {
+        // Warning zone
+        state.setAlert('WARNING: ACTIVE COMBAT ZONE');
+      }
     }
   }
 
@@ -378,7 +407,7 @@ export class Game {
     state.setCurrentSystem(targetId, systemData);
     state.markVisited(targetId);
 
-    this.sceneRenderer.loadSystem(systemData, targetId, state.galaxyYear, starData.name);
+    this.sceneRenderer.loadSystem(systemData, targetId, state.galaxyYear, starData.name, starData);
 
     // Appear at system edge, facing inward toward star
     this.sceneRenderer.shipGroup.position.set(0, 0, 8000);
@@ -386,8 +415,65 @@ export class Game {
     this.flightModel.reset(this.sceneRenderer.shipGroup.position);
     this.flightModel.velocity.set(0, 0, -150);
 
-    // Go to landing dialog
-    this.prepareLanding(targetId);
+    // ── Faction discovery & system entry text ──────────────────────────────
+    this.buildSystemEntryText(targetId, starData, systemData, state);
+
+    // Arrive in free flight
+    state.setUIMode('flight');
+  }
+
+  private buildSystemEntryText(
+    systemId: number,
+    starData: { name: string; economy: import('./constants').EconomyType },
+    systemData: import('./generation/SystemGenerator').SolarSystemData,
+    state: ReturnType<typeof useGameState.getState>,
+  ): void {
+    const civState = getCivState(systemId, state.galaxyYear, starData.economy);
+    const factionState = getSystemFactionState(systemId, state.galaxyYear, civState.politics);
+
+    const controlFaction = getFaction(factionState.controllingFactionId);
+    const contestFaction = factionState.contestingFactionId
+      ? getFaction(factionState.contestingFactionId)
+      : null;
+
+    // Discover factions
+    if (controlFaction) state.addKnownFaction(controlFaction.id);
+    if (contestFaction) state.addKnownFaction(contestFaction.id);
+
+    const lines: string[] = [];
+    lines.push(`ENTERING ${starData.name.toUpperCase()}`);
+
+    if (factionState.isContested && contestFaction && controlFaction) {
+      lines.push(`CONTESTED — ${controlFaction.name.toUpperCase()} vs ${contestFaction.name.toUpperCase()}`);
+    } else if (controlFaction) {
+      lines.push(`CONTROLLED BY ${controlFaction.name.toUpperCase()}`);
+    }
+
+    // Battle detection
+    const battle = this.sceneRenderer.getFleetBattle();
+    if (battle) {
+      const battlePlanet = systemData.planets.find(p => p.id === battle.planetId);
+      const planetName = battlePlanet ? battlePlanet.id.replace(`${systemId}-`, '') : 'UNKNOWN';
+      lines.push(`FLEET ENGAGEMENT DETECTED NEAR ${planetName.toUpperCase()}`);
+    }
+
+    // Check faction memory for changes
+    const memory = state.factionMemory[systemId];
+    if (memory) {
+      const oldFaction = getFaction(memory.factionId);
+      if (oldFaction && memory.factionId !== factionState.controllingFactionId) {
+        lines.push(`LAST VISIT: YEAR ${memory.galaxyYear.toLocaleString()}. ${oldFaction.name.toUpperCase()} NO LONGER HOLDS THIS SYSTEM.`);
+      }
+    }
+
+    state.setSystemEntryLines(lines);
+
+    // Update faction memory
+    state.setFactionMemory(systemId, {
+      factionId: factionState.controllingFactionId,
+      contestingFactionId: factionState.contestingFactionId,
+      galaxyYear: state.galaxyYear,
+    });
   }
 
   private triggerDeath(): void {
@@ -397,6 +483,16 @@ export class Game {
     state.setAlert(null);
     this.flightModel.reset(this.sceneRenderer.shipGroup.position);
     state.setUIMode('dead');
+  }
+
+  newGame(): void {
+    const state = useGameState.getState();
+    state.resetGame();
+    this.isDead = false;
+    this.hyperspaceActive = false;
+    this.hyperspaceTimer = 0;
+    this.sceneRenderer.stopHyperspace();
+    this.loadCurrentSystem();
   }
 
   respawn(): void {

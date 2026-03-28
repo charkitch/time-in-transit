@@ -53,6 +53,12 @@ export interface PendingLandingContext {
   yearsSinceLastVisit: number | null;
 }
 
+export interface FactionMemoryEntry {
+  factionId: string;
+  contestingFactionId: string | null;
+  galaxyYear: number;
+}
+
 export interface GameStateData {
   player: PlayerState;
   currentSystemId: number;
@@ -74,6 +80,11 @@ export interface GameStateData {
   lastVisitYear: Record<number, number>;              // systemId → galaxyYear
   pendingLandingEvent: PendingLandingContext | null;
   pendingCommContext: PendingCommContext | null;
+
+  // ── Faction tracking ──────────────────────────────────────────────────────
+  knownFactions: Set<string>;
+  factionMemory: Record<number, FactionMemoryEntry>;
+  systemEntryLines: string[] | null;
 }
 
 export interface GameActions {
@@ -96,6 +107,7 @@ export interface GameActions {
   tickTime: (dt: number) => void;
   loadSave: () => void;
   saveGame: () => void;
+  resetGame: () => void;
 
   // ── New relativistic time actions ────────────────────────────────────────
   advanceGalaxyYear: (years: number) => void;
@@ -104,6 +116,11 @@ export interface GameActions {
   setPendingLandingEvent: (ctx: PendingLandingContext | null) => void;
   setPendingCommContext: (ctx: PendingCommContext | null) => void;
   recordVisitYear: (systemId: number, year: number) => void;
+
+  // ── Faction tracking actions ────────────────────────────────────────────
+  addKnownFaction: (id: string) => void;
+  setFactionMemory: (systemId: number, data: FactionMemoryEntry) => void;
+  setSystemEntryLines: (lines: string[] | null) => void;
 }
 
 const GALAXY = generateGalaxy();
@@ -133,6 +150,8 @@ interface SaveData {
   jumpLog: JumpLogEntry[];
   playerChoices: Record<number, SystemChoices>;
   lastVisitYear: Record<number, number>;
+  knownFactions: string[];
+  factionMemory: Record<number, FactionMemoryEntry>;
 }
 
 function loadFromStorage(): Partial<SaveData> {
@@ -164,6 +183,11 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   lastVisitYear: {},
   pendingLandingEvent: null,
   pendingCommContext: null,
+
+  // Faction tracking state
+  knownFactions: new Set(),
+  factionMemory: {},
+  systemEntryLines: null,
 
   setPlayerPosition: (pos) => set(s => ({ player: { ...s.player, position: pos } })),
   setPlayerVelocity: (vel) => set(s => ({ player: { ...s.player, velocity: vel } })),
@@ -235,6 +259,37 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
     lastVisitYear: { ...s.lastVisitYear, [systemId]: year },
   })),
 
+  addKnownFaction: (id) => set(s => {
+    const known = new Set(s.knownFactions);
+    known.add(id);
+    return { knownFactions: known };
+  }),
+  setFactionMemory: (systemId, data) => set(s => ({
+    factionMemory: { ...s.factionMemory, [systemId]: data },
+  })),
+  setSystemEntryLines: (lines) => set({ systemEntryLines: lines }),
+
+  resetGame: () => {
+    localStorage.removeItem('space-game-save');
+    set({
+      player: { ...DEFAULT_PLAYER },
+      currentSystemId: 0,
+      currentSystem: null,
+      visitedSystems: new Set(),
+      time: 0,
+      galaxyYear: GALAXY_YEAR_START,
+      jumpLog: [],
+      playerChoices: {},
+      lastVisitYear: {},
+      pendingLandingEvent: null,
+      pendingCommContext: null,
+      knownFactions: new Set(),
+      factionMemory: {},
+      systemEntryLines: null,
+      ui: { mode: 'flight', alertMessage: null, hyperspaceTarget: null, hyperspaceCountdown: 0 },
+    });
+  },
+
   loadSave: () => {
     const saved = loadFromStorage();
     if (Object.keys(saved).length === 0) return;
@@ -253,6 +308,8 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       jumpLog: saved.jumpLog ?? [],
       playerChoices: saved.playerChoices ?? {},
       lastVisitYear: saved.lastVisitYear ?? {},
+      knownFactions: new Set(saved.knownFactions ?? []),
+      factionMemory: saved.factionMemory ?? {},
     }));
   },
 
@@ -270,6 +327,8 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       jumpLog: s.jumpLog,
       playerChoices: s.playerChoices,
       lastVisitYear: s.lastVisitYear,
+      knownFactions: Array.from(s.knownFactions),
+      factionMemory: s.factionMemory,
     };
     localStorage.setItem('space-game-save', JSON.stringify(data));
   },

@@ -4,6 +4,9 @@ import { HyperspaceSystem } from '../../game/mechanics/HyperspaceSystem';
 import { jumpYearsElapsed } from '../../game/mechanics/RelativisticTime';
 import type { StarSystemData } from '../../game/generation/GalaxyGenerator';
 import { HYPERSPACE } from '../../game/constants';
+import { getCivState } from '../../game/mechanics/CivilizationSystem';
+import { getSystemFactionState, getFaction } from '../../game/mechanics/FactionSystem';
+import type { FactionMemoryEntry } from '../../game/GameState';
 import styles from './GalaxyMap.module.css';
 
 const hyperspace = new HyperspaceSystem();
@@ -33,6 +36,8 @@ export function GalaxyMap({ onClose, onJump }: GalaxyMapProps) {
   const setHyperspaceTarget = useGameState(s => s.setHyperspaceTarget);
   const galaxyYear = useGameState(s => s.galaxyYear);
   const jumpLog = useGameState(s => s.jumpLog);
+  const factionMemory = useGameState(s => s.factionMemory);
+  const knownFactions = useGameState(s => s.knownFactions);
 
   const currentSys = galaxy[currentSystemId];
   const reachable = hyperspace.getReachableSystems(currentSys, galaxy);
@@ -123,6 +128,33 @@ export function GalaxyMap({ onClose, onJump }: GalaxyMapProps) {
         ctx.stroke();
       }
 
+      // Faction color pips for visited systems
+      if (isVisited) {
+        const mem: FactionMemoryEntry | undefined = factionMemory[sys.id];
+        if (mem) {
+          const faction = getFaction(mem.factionId);
+          if (faction && knownFactions.has(faction.id)) {
+            const fc = `#${faction.color.toString(16).padStart(6, '0')}`;
+            ctx.beginPath();
+            ctx.arc(sx + r + 4, sy - r + 2, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = fc;
+            ctx.fill();
+
+            // Second pip for contested
+            if (mem.contestingFactionId) {
+              const cf = getFaction(mem.contestingFactionId);
+              if (cf && knownFactions.has(cf.id)) {
+                const cc = `#${cf.color.toString(16).padStart(6, '0')}`;
+                ctx.beginPath();
+                ctx.arc(sx + r + 4, sy - r + 8, 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = cc;
+                ctx.fill();
+              }
+            }
+          }
+        }
+      }
+
       // Name label
       if (isCurrent || isTarget || hovered?.id === sys.id) {
         ctx.fillStyle = isCurrent ? '#33FF88' : isTarget ? '#44CCFF' : '#FFFFFF';
@@ -130,7 +162,7 @@ export function GalaxyMap({ onClose, onJump }: GalaxyMapProps) {
         ctx.fillText(sys.name.toUpperCase(), sx + 8, sy + 4);
       }
     }
-  }, [galaxy, currentSystemId, visitedSystems, hyperspaceTarget, reachableIds, hovered, currentSys]);
+  }, [galaxy, currentSystemId, visitedSystems, hyperspaceTarget, reachableIds, hovered, currentSys, factionMemory, knownFactions]);
 
   useEffect(() => { draw(); }, [draw]);
 
@@ -213,11 +245,36 @@ export function GalaxyMap({ onClose, onJump }: GalaxyMapProps) {
                 })()}
                 <br />
                 TECH LV: {selectedSys.techLevel} · {selectedSys.economy}
+                {(() => {
+                  const mem = factionMemory[selectedSys.id];
+                  if (!mem) return null;
+                  const f = getFaction(mem.factionId);
+                  if (!f || !knownFactions.has(f.id)) return null;
+                  const fc = `#${f.color.toString(16).padStart(6, '0')}`;
+                  return <>
+                    <br />
+                    <span style={{ color: fc }}>{f.name.toUpperCase()}</span>
+                    {mem.contestingFactionId && (() => {
+                      const cf = getFaction(mem.contestingFactionId!);
+                      if (!cf || !knownFactions.has(cf.id)) return null;
+                      const cc = `#${cf.color.toString(16).padStart(6, '0')}`;
+                      return <span style={{ color: cc }}> vs {cf.name.toUpperCase()}</span>;
+                    })()}
+                  </>;
+                })()}
               </div>
             )}
             {previewYears !== null && !selectedSys && hovered && reachableIds.has(hovered.id) && (
               <div style={{ marginTop: '4px', color: 'var(--color-warning)', fontSize: '11px' }}>
                 HOVER: {hovered.name.toUpperCase()} +{previewYears.toLocaleString()} YRS
+                {(() => {
+                  const mem = factionMemory[hovered.id];
+                  if (!mem) return null;
+                  const f = getFaction(mem.factionId);
+                  if (!f || !knownFactions.has(f.id)) return null;
+                  const fc = `#${f.color.toString(16).padStart(6, '0')}`;
+                  return <span style={{ color: fc, marginLeft: 6 }}>{f.name.toUpperCase()}</span>;
+                })()}
               </div>
             )}
           </div>

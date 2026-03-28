@@ -148,6 +148,20 @@ export function makeNPCShipMesh(color: number = 0x44CCFF): THREE.Group {
   return makeWireframeObject(geo, color, color, 0.8);
 }
 
+/** Fleet battle ship — variable-scale wireframe. Capital ships use elongated box. */
+export function makeFleetShipMesh(color: number, scale: number): THREE.Group {
+  let geo: THREE.BufferGeometry;
+  if (scale > 1.5) {
+    // Capital ship: elongated box
+    geo = new THREE.BoxGeometry(6 * scale, 4 * scale, 20 * scale);
+  } else {
+    // Fighter: cone like NPC ships
+    geo = new THREE.ConeGeometry(8 * scale, 24 * scale, 4);
+    geo.rotateX(Math.PI / 2);
+  }
+  return makeWireframeObject(geo, color, color, 0.8);
+}
+
 /** Planetary ring */
 export function makeRingMesh(innerR: number, outerR: number): THREE.Mesh {
   const geo = new THREE.RingGeometry(innerR, outerR, 64);

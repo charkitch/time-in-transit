@@ -1,22 +1,27 @@
 import { useGameState } from '../../game/GameState';
 import { StatusBars } from './StatusBars';
 import { Scanner } from './Scanner';
+import { TargetIndicator } from './TargetIndicator';
 import type { SceneEntity } from '../../game/rendering/SceneRenderer';
+import { getCivState } from '../../game/mechanics/CivilizationSystem';
+import { getSystemFactionState, getFaction } from '../../game/mechanics/FactionSystem';
 import styles from './HUD.module.css';
 import * as THREE from 'three';
 
 interface HUDProps {
   getEntities: () => Map<string, SceneEntity>;
   getShipPos: () => THREE.Vector3;
+  getCamera: () => THREE.PerspectiveCamera | null;
 }
 
-export function HUD({ getEntities, getShipPos }: HUDProps) {
+export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
   const player = useGameState(s => s.player);
   const galaxy = useGameState(s => s.galaxy);
   const currentSystemId = useGameState(s => s.currentSystemId);
   const alert = useGameState(s => s.ui.alertMessage);
   const hyperspaceTarget = useGameState(s => s.ui.hyperspaceTarget);
   const galaxyYear = useGameState(s => s.galaxyYear);
+  const knownFactions = useGameState(s => s.knownFactions);
 
   const currentStar = galaxy[currentSystemId];
   const targetStar = hyperspaceTarget !== null ? galaxy[hyperspaceTarget] : null;
@@ -31,6 +36,7 @@ export function HUD({ getEntities, getShipPos }: HUDProps) {
 
   return (
     <div className={styles.hud}>
+      <TargetIndicator getEntities={getEntities} getCamera={getCamera} />
       {/* Crosshair */}
       <div className={styles.center}>
         <div className={styles.crosshair} />
@@ -47,6 +53,15 @@ export function HUD({ getEntities, getShipPos }: HUDProps) {
         </div>
         <div className={styles.systemInfo}>
           {currentStar?.name} · {currentStar?.starType}-TYPE · {currentStar?.economy}
+          {currentStar && (() => {
+            const civState = getCivState(currentSystemId, galaxyYear, currentStar.economy);
+            const fs = getSystemFactionState(currentSystemId, galaxyYear, civState.politics);
+            const faction = getFaction(fs.controllingFactionId);
+            const known = faction && knownFactions.has(faction.id);
+            const name = known ? faction.name.toUpperCase() : 'UNKNOWN';
+            const color = known && faction ? `#${faction.color.toString(16).padStart(6, '0')}` : 'var(--color-hud-dim)';
+            return <span style={{ color, marginLeft: '6px' }}>· {name}</span>;
+          })()}
         </div>
         {targetStar && (
           <div style={{ color: 'var(--color-hyperspace-bright)', fontSize: '11px', marginTop: '4px' }}>

@@ -88,3 +88,12 @@ export const POLITICAL_TYPES = [
   'Feudal',
 ] as const;
 export type PoliticalType = typeof POLITICAL_TYPES[number];
+
+export const FACTION_COLORS: number[] = [
+  0xFF4444, // red
+  0xFF8833, // orange
+  0x4488FF, // blue
+  0xAA44FF, // purple
+  0x44DDAA, // teal
+  0xFFCC22, // gold
+];

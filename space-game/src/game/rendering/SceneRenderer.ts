@@ -1,13 +1,23 @@
 import * as THREE from 'three';
 import { PALETTE, STAR_COLORS } from '../constants';
-import { createStarfield, createHyperspaceTunnel, updateHyperspaceTunnel, createHyperspaceGrid, updateHyperspaceGrid } from './effects';
+import {
+  createStarfield, createHyperspaceTunnel, updateHyperspaceTunnel,
+  createHyperspaceGrid, updateHyperspaceGrid,
+  createBattleProjectiles, updateBattleProjectiles,
+  createBattleExplosions, updateBattleExplosions,
+  type BattleExplosions,
+} from './effects';
 import {
   makePlanet, makeGasGiant, makeStation, makeGlowSprite,
-  makeAsteroidBelt, makeRingMesh, makeNPCShipMesh,
+  makeAsteroidBelt, makeRingMesh, makeNPCShipMesh, makeFleetShipMesh,
 } from './meshFactory';
 import type { SolarSystemData } from '../generation/SystemGenerator';
+import type { StarSystemData } from '../generation/GalaxyGenerator';
 import { generateNPCShips } from '../mechanics/NPCSystem';
 import type { NPCShipState } from '../mechanics/NPCSystem';
+import { generateFleetBattle } from '../mechanics/FleetBattleSystem';
+import type { FleetBattle } from '../mechanics/FleetBattleSystem';
+import { getFaction } from '../mechanics/FactionSystem';
 import { PRNG } from '../generation/prng';
 import { GALAXY_SEED } from '../constants';
 
@@ -18,7 +28,7 @@ export interface SceneEntity {
   orbitSpeed: number;
   orbitPhase: number;
   parentId?: string;
-  type: 'planet' | 'station' | 'star' | 'moon' | 'npc_ship';
+  type: 'planet' | 'station' | 'star' | 'moon' | 'npc_ship' | 'fleet_ship';
   worldPos: THREE.Vector3; // updated each frame
 }
 
@@ -35,14 +45,19 @@ export class SceneRenderer {
   private hyperspacePoints: THREE.Points | null = null;
   private hyperspaceGrid: THREE.LineSegments | null = null;
   private systemObjects: THREE.Object3D[] = [];
+  private battleProjectiles: THREE.Points | null = null;
+  private battleExplosions: BattleExplosions | null = null;
+  private fleetBattleData: FleetBattle | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
-    // Force a WebGL1 context to avoid WebGL2-only texImage3D upload paths.
-    // On some drivers/browser versions these paths can trigger context resets.
-    const gl = canvas.getContext('webgl', { antialias: true }) ?? canvas.getContext('experimental-webgl');
-    this.renderer = gl
-      ? new THREE.WebGLRenderer({ canvas, context: gl as WebGLRenderingContext, antialias: true })
-      : new THREE.WebGLRenderer({ canvas, antialias: true });
+    // Prefer WebGL2, with WebGL1 fallback for older environments.
+    const gl2 = canvas.getContext('webgl2', { antialias: true });
+    const gl1 = gl2 ? null : (canvas.getContext('webgl', { antialias: true }) ?? canvas.getContext('experimental-webgl'));
+    this.renderer = gl2
+      ? new THREE.WebGLRenderer({ canvas, context: gl2, antialias: true })
+      : gl1
+        ? new THREE.WebGLRenderer({ canvas, context: gl1 as WebGLRenderingContext, antialias: true })
+        : new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setClearColor(PALETTE.bg);
 
@@ -74,12 +89,15 @@ export class SceneRenderer {
     this.camera.updateProjectionMatrix();
   };
 
-  loadSystem(data: SolarSystemData, systemId: number, galaxyYear = 0, systemName = ''): void {
+  loadSystem(data: SolarSystemData, systemId: number, galaxyYear = 0, systemName = '', starData?: StarSystemData): void {
     // Remove old system objects
     this.systemObjects.forEach(o => this.scene.remove(o));
     this.systemObjects = [];
     this.entities.clear();
     this.npcShips.clear();
+    this.battleProjectiles = null;
+    this.battleExplosions = null;
+    this.fleetBattleData = null;
 
     // Star
     const starColor = STAR_COLORS[data.starType] ?? PALETTE.starG;
@@ -223,6 +241,78 @@ export class SceneRenderer {
         factionTag: shipData.factionTag,
       });
     }
+
+    // Fleet battle
+    if (starData) {
+      const battle = generateFleetBattle(data, systemId, galaxyYear, starData);
+      this.fleetBattleData = battle;
+
+      if (battle) {
+        const battleGroup = new THREE.Group();
+        battleGroup.position.copy(battle.position);
+        this.scene.add(battleGroup);
+        this.systemObjects.push(battleGroup);
+
+        const factionA = getFaction(battle.factionA);
+        const factionB = getFaction(battle.factionB);
+        const colorA = factionA?.color ?? 0xFF4444;
+        const colorB = factionB?.color ?? 0x4488FF;
+
+        const shipWorldPosA: THREE.Vector3[] = [];
+        const shipWorldPosB: THREE.Vector3[] = [];
+
+        for (const ship of battle.shipsA) {
+          const mesh = makeFleetShipMesh(colorA, ship.scale);
+          mesh.position.copy(ship.localOffset);
+          battleGroup.add(mesh);
+
+          const worldPos = ship.localOffset.clone().add(battle.position);
+          shipWorldPosA.push(worldPos);
+
+          this.entities.set(ship.id, {
+            id: ship.id,
+            group: mesh,
+            orbitRadius: 0,
+            orbitSpeed: 0,
+            orbitPhase: 0,
+            type: 'fleet_ship',
+            worldPos: worldPos,
+          });
+        }
+
+        for (const ship of battle.shipsB) {
+          const mesh = makeFleetShipMesh(colorB, ship.scale);
+          mesh.position.copy(ship.localOffset);
+          battleGroup.add(mesh);
+
+          const worldPos = ship.localOffset.clone().add(battle.position);
+          shipWorldPosB.push(worldPos);
+
+          this.entities.set(ship.id, {
+            id: ship.id,
+            group: mesh,
+            orbitRadius: 0,
+            orbitSpeed: 0,
+            orbitPhase: 0,
+            type: 'fleet_ship',
+            worldPos: worldPos,
+          });
+        }
+
+        // Create projectile + explosion effects
+        this.battleProjectiles = createBattleProjectiles(
+          this.scene, battle.position,
+          shipWorldPosA, shipWorldPosB,
+          colorA, colorB,
+        );
+        this.systemObjects.push(this.battleProjectiles);
+
+        this.battleExplosions = createBattleExplosions(this.scene);
+        for (const s of this.battleExplosions.sprites) {
+          this.systemObjects.push(s);
+        }
+      }
+    }
   }
 
   updateOrbits(time: number, dt = 0): void {
@@ -276,6 +366,14 @@ export class SceneRenderer {
         entity.worldPos.copy(entity.group.position);
       }
     }
+
+    // Battle projectile + explosion animation
+    if (this.battleProjectiles && dt > 0) {
+      updateBattleProjectiles(this.battleProjectiles, dt, this.battleExplosions);
+    }
+    if (this.battleExplosions && dt > 0) {
+      updateBattleExplosions(this.battleExplosions, dt);
+    }
   }
 
   getEntityWorldPos(id: string): THREE.Vector3 | null {
@@ -288,6 +386,10 @@ export class SceneRenderer {
 
   getNPCShip(id: string): NPCShipState | undefined {
     return this.npcShips.get(id);
+  }
+
+  getFleetBattle(): FleetBattle | null {
+    return this.fleetBattleData;
   }
 
   startHyperspace(): void {
