@@ -25,6 +25,7 @@ export class InputSystem {
   private onCycleTarget?: () => void;
   private onJumpRequest?: () => void;
   private onHail?: () => void;
+  private onEscape?: () => void;
 
   constructor() {
     window.addEventListener('keydown', this.handleKeyDown);
@@ -40,6 +41,7 @@ export class InputSystem {
     if (e.code === 'Tab') { e.preventDefault(); if (!e.repeat) this.onCycleTarget?.(); }
     if (e.code === 'KeyJ' && !e.repeat) this.onJumpRequest?.();
     if (e.code === 'KeyH' && !e.repeat) this.onHail?.();
+    if (e.code === 'Escape' && !e.repeat) this.onEscape?.();
   };
 
   private handleKeyUp = (e: KeyboardEvent) => {
@@ -68,6 +70,7 @@ export class InputSystem {
   onCycleTargetEvent(fn: () => void) { this.onCycleTarget = fn; }
   onJumpRequestEvent(fn: () => void) { this.onJumpRequest = fn; }
   onHailRequest(fn: () => void) { this.onHail = fn; }
+  onEscapeEvent(fn: () => void) { this.onEscape = fn; }
 
   dispose() {
     window.removeEventListener('keydown', this.handleKeyDown);

@@ -96,11 +96,21 @@ export function App() {
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       />
 
-      {(uiMode === 'flight' || uiMode === 'hyperspace' || uiMode === 'comms') && (
+      {(uiMode === 'flight' || uiMode === 'comms') && (
         <HUD getEntities={getEntities} getShipPos={getShipPos} getCamera={getCamera} />
       )}
 
       {uiMode === 'flight' && <SystemEntryText />}
+
+      {uiMode === 'hyperspace' && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: '#000',
+          pointerEvents: 'none',
+          zIndex: 20,
+        }} />
+      )}
 
       {uiMode === 'hyperspace' && (
         <div style={{
@@ -113,6 +123,7 @@ export function App() {
           letterSpacing: '8px',
           textShadow: '0 0 20px #8866FF',
           pointerEvents: 'none',
+          zIndex: 21,
         }}>
           HYPERSPACE
         </div>

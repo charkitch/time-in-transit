@@ -43,6 +43,7 @@ export class Game {
     this.input.onCycleTargetEvent(() => this.cycleTarget());
     this.input.onJumpRequestEvent(() => this.tryJump());
     this.input.onHailRequest(() => this.tryHail());
+    this.input.onEscapeEvent(() => this.handleEscape());
 
     // Load save & initialize first system
     const state = useGameState.getState();
@@ -552,6 +553,17 @@ export class Game {
     const state = useGameState.getState();
     state.setPendingCommContext(null);
     state.setUIMode('flight');
+  }
+
+  private handleEscape(): void {
+    const state = useGameState.getState();
+    if (state.ui.mode === 'docked') {
+      this.undock();
+      return;
+    }
+    if (state.ui.mode === 'galaxy_map' || state.ui.mode === 'system_map') {
+      state.setUIMode('flight');
+    }
   }
 
   private updateHyperspace(dt: number, _state: ReturnType<typeof useGameState.getState>): void {
