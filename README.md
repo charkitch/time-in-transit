@@ -1,11 +1,17 @@
 # The Years Between The Stars
 
-This repository contains experiments and prototypes, including a browser-based space game built with React, TypeScript, Three.js, and Vite.
+A browser-based space exploration and trading game inspired by classics like Elite and the works of Vernor Vinge and Alastair Reynolds. Fly your ship across a procedurally generated galaxy, trade goods between stations, navigate faction politics, and watch civilizations rise and fall as relativistic time passes with each hyperspace jump.
 
-## Project Layout
+Built with React, TypeScript, Three.js, and Vite.
 
-- `space-game/`: main game project (Vite + React + TypeScript)
-- `baseball.html`: standalone HTML prototype
+## Features
+
+- **Free-flight spaceship controls** — thrust, pitch, yaw, roll, with shield, heat, and fuel management
+- **Trading economy** — buy and sell goods (food, textiles, luxuries, narcotics, and more) across 30 star systems
+- **Hyperspace travel** — jump between systems with relativistic time dilation; years pass with each jump
+- **Faction politics** — 6 factions vie for control of systems, with contested territories and fleet battles
+- **Procedural generation** — seeded galaxy with multiple star types, orbiting planets, and stations
+- **Docking and stations** — dock at stations to trade, refuel, and interact with NPCs
 
 ## Getting Started
 
@@ -14,7 +20,7 @@ This repository contains experiments and prototypes, including a browser-based s
 - Node.js 18+ (or newer LTS)
 - npm
 
-### Run the Space Game
+### Run the Game
 
 ```bash
 cd space-game
