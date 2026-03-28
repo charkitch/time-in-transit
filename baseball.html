@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Browser Baseball</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0d1f0d;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 16px;
+  user-select: none;
+}
+
+h1 {
+  color: #f4d03f;
+  letter-spacing: 4px;
+  font-size: 1.4em;
+  margin-bottom: 14px;
+  text-shadow: 0 0 12px #f4d03f66;
+}
+
+/* ── Scoreboard ── */
+#scoreboard {
+  background: #000;
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 12px 20px;
+  width: 100%;
+  max-width: 480px;
+  margin-bottom: 16px;
+}
+
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.team-block { text-align: center; min-width: 80px; }
+.team-label { color: #888; font-size: 0.75em; letter-spacing: 2px; }
+.team-score { color: #f4d03f; font-size: 2.2em; font-weight: bold; line-height: 1; }
+
+.inning-block { text-align: center; }
+.inning-num { color: #7efff5; font-size: 1.3em; font-weight: bold; }
+.half-label { color: #888; font-size: 0.7em; margin-top: 2px; }
+
+.count-row {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  font-size: 0.85em;
+  color: #888;
+  border-top: 1px solid #222;
+  padding-top: 8px;
+}
+.count-row span { color: #ff8; font-weight: bold; font-size: 1.1em; }
+
+/* Base runner indicators (diamond shape) */
+.runners-display {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+.runners-diamond {
+  position: relative;
+  width: 56px;
+  height: 40px;
+}
+.rd {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border: 2px solid #555;
+  transform: rotate(45deg);
+  background: transparent;
+  transition: background 0.2s, border-color 0.2s;
+}
+.rd.on { background: #f60; border-color: #f90; box-shadow: 0 0 6px #f60; }
+#rd-2nd { top: 0;  left: 50%; margin-left: -6px; }
+#rd-3rd { top: 14px; left: 4px; }
+#rd-1st { top: 14px; right: 4px; }
+
+/* ── Field ── */
+#field-wrap {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  margin-bottom: 16px;
+}
+
+#field {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at 50% 80%, #1e4a0e 0%, #163a0a 60%, #0f2a06 100%);
+  border-radius: 50% 50% 10% 10%;
+  border: 2px solid #1a3a10;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Warning track */
+.warning-track {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 30px;
+  background: #5a3a1a;
+  border-radius: 0 0 10px 10px;
+}
+
+/* Infield dirt */
+.infield {
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  background: #7a5018;
+  transform: rotate(45deg);
+  bottom: 55px;
+  left: 50%;
+  margin-left: -65px;
+}
+
+/* Pitcher's mound */
+.mound {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: #9a6520;
+  border-radius: 50%;
+  bottom: 135px;
+  left: 50%;
+  margin-left: -9px;
+  z-index: 2;
+}
+
+/* Bases on field */
+.fb {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: white;
+  transform: rotate(45deg);
+  z-index: 3;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.fb.on { background: #f60; box-shadow: 0 0 8px #f90; }
+
+#fb-home   { bottom: 52px; left: 50%; margin-left: -7px; border-radius: 0 0 3px 0; }
+#fb-first  { bottom: 118px; right: 72px; }
+#fb-second { bottom: 180px; left: 50%; margin-left: -7px; }
+#fb-third  { bottom: 118px; left: 72px; }
+
+/* Batter */
+#batter {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  margin-left: -12px;
+  font-size: 22px;
+  z-index: 4;
+  transition: transform 0.1s;
+}
+#batter.swing { transform: rotate(-30deg) scale(1.3); }
+
+/* Pitch ball */
+#ball {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  background: #f8f8f0;
+  border-radius: 50%;
+  border: 1.5px solid #cc9944;
+  left: 50%;
+  margin-left: -6px;
+  z-index: 10;
+  display: none;
+  box-shadow: 0 0 4px rgba(255,255,200,0.6);
+}
+
+/* Swing zone indicator */
+#zone-indicator {
+  position: absolute;
+  width: 50px;
+  height: 30px;
+  border: 2px dashed rgba(255,255,100,0.0);
+  border-radius: 4px;
+  bottom: 56px;
+  left: 50%;
+  margin-left: -25px;
+  z-index: 5;
+  transition: border-color 0.1s;
+}
+#zone-indicator.active { border-color: rgba(255,255,100,0.5); }
+
+/* ── Controls ── */
+#controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 480px;
+}
+
+#result-msg {
+  font-size: 1.8em;
+  font-weight: bold;
+  text-align: center;
+  min-height: 1.4em;
+  text-shadow: 0 0 10px currentColor;
+  letter-spacing: 2px;
+  transition: opacity 0.3s;
+}
+
+#status {
+  font-size: 0.95em;
+  color: #aaa;
+  text-align: center;
+  min-height: 1.4em;
+}
+
+.btn-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+
+.btn {
+  padding: 10px 28px;
+  font-size: 1em;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.08s, filter 0.1s;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.btn:hover:not(:disabled) { filter: brightness(1.2); }
+.btn:active:not(:disabled) { transform: scale(0.94); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+#pitch-btn { background: #1a4a9a; color: #fff; font-size: 1.05em; }
+#swing-btn { background: #aa1a00; color: #fff; font-size: 1.3em; padding: 14px 40px; }
+#restart-btn { background: #1a6a2a; color: #fff; }
+
+/* Timing bar */
+#timing-bar-wrap {
+  width: 100%;
+  max-width: 300px;
+  height: 12px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 6px;
+  overflow: hidden;
+  display: none;
+}
+#timing-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(to right, #f44, #ff8, #0f0, #ff8, #f44);
+  background-size: 300px 100%;
+  border-radius: 6px;
+  transition: none;
+}
+
+/* Hit flash overlay */
+#flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.05s;
+  z-index: 999;
+}
+</style>
+</head>
+<body>
+
+<h1>⚾ BROWSER BASEBALL</h1>
+
+<div id="scoreboard">
+  <div class="score-row">
+    <div class="team-block">
+      <div class="team-label">AWAY</div>
+      <div class="team-score" id="away-score">0</div>
+    </div>
+    <div class="inning-block">
+      <div class="inning-num" id="inning-num">1st ▲</div>
+      <div class="half-label" id="half-label">COMPUTER BATS</div>
+    </div>
+    <div class="team-block">
+      <div class="team-label">HOME (YOU)</div>
+      <div class="team-score" id="home-score">0</div>
+    </div>
+  </div>
+  <div class="count-row">
+    <div>BALLS: <span id="balls">0</span></div>
+    <div>STRIKES: <span id="strikes">0</span></div>
+    <div>OUTS: <span id="outs">0</span></div>
+  </div>
+  <div class="runners-display">
+    <div class="runners-diamond">
+      <div class="rd" id="rd-2nd"></div>
+      <div class="rd" id="rd-3rd"></div>
+      <div class="rd" id="rd-1st"></div>
+    </div>
+  </div>
+</div>
+
+<div id="field-wrap">
+  <div id="field">
+    <div class="warning-track"></div>
+    <div class="infield"></div>
+    <div class="mound"></div>
+    <div class="fb" id="fb-home"></div>
+    <div class="fb" id="fb-first"></div>
+    <div class="fb" id="fb-second"></div>
+    <div class="fb" id="fb-third"></div>
+    <div id="zone-indicator"></div>
+    <div id="batter">🏏</div>
+    <div id="ball"></div>
+  </div>
+</div>
+
+<div id="controls">
+  <div id="result-msg"></div>
+  <div id="status">Loading game...</div>
+  <div id="timing-bar-wrap"><div id="timing-bar"></div></div>
+  <div class="btn-row">
+    <button class="btn" id="pitch-btn" onclick="startPitch()" disabled>PITCH</button>
+    <button class="btn" id="swing-btn" onclick="swing()" disabled>SWING!</button>
+  </div>
+</div>
+
+<div id="flash"></div>
+
+<script>
+const INNINGS = 9;
+const PITCH_MS = 1500;
+// Swing zone: pitch progress 0.60 – 0.88 is the hit window
+const ZONE_START = 0.60;
+const ZONE_END   = 0.88;
+
+let G = {
+  inning: 1, half: 'top',
+  outs: 0, balls: 0, strikes: 0,
+  score: { home: 0, away: 0 },
+  bases: [false, false, false], // [1st, 2nd, 3rd]
+  phase: 'idle',
+  pitchStart: null,
+  pitchType: null,  // 'strike' | 'ball'
+  pitchOffset: 0,   // x drift for ball location
+  animId: null,
+  swingProgress: null,
+};
+
+// ── DOM refs ──
+const elBalls    = document.getElementById('balls');
+const elStrikes  = document.getElementById('strikes');
+const elOuts     = document.getElementById('outs');
+const elAwayScore = document.getElementById('away-score');
+const elHomeScore = document.getElementById('home-score');
+const elInning   = document.getElementById('inning-num');
+const elHalf     = document.getElementById('half-label');
+const elStatus   = document.getElementById('status');
+const elResult   = document.getElementById('result-msg');
+const elPitchBtn = document.getElementById('pitch-btn');
+const elSwingBtn = document.getElementById('swing-btn');
+const elBall     = document.getElementById('ball');
+const elBatter   = document.getElementById('batter');
+const elZone     = document.getElementById('zone-indicator');
+const elTimingWrap = document.getElementById('timing-bar-wrap');
+const elTimingBar  = document.getElementById('timing-bar');
+const elFlash    = document.getElementById('flash');
+
+const INNING_LABELS = ['1st','2nd','3rd','4th','5th','6th','7th','8th','9th'];
+
+function render() {
+  elBalls.textContent   = G.balls;
+  elStrikes.textContent = G.strikes;
+  elOuts.textContent    = G.outs;
+  elAwayScore.textContent = G.score.away;
+  elHomeScore.textContent = G.score.home;
+
+  const label = G.inning <= INNINGS ? INNING_LABELS[G.inning - 1] : 'F';
+  elInning.textContent = label + (G.half === 'top' ? ' ▲' : ' ▼');
+  elHalf.textContent = G.half === 'top' ? 'COMPUTER BATS' : 'YOU BAT';
+
+  // Scoreboard runner dots
+  ['1st','2nd','3rd'].forEach((id, i) => {
+    document.getElementById('rd-' + id).classList.toggle('on', G.bases[i]);
+  });
+  // Field bases
+  document.getElementById('fb-first').classList.toggle('on',  G.bases[0]);
+  document.getElementById('fb-second').classList.toggle('on', G.bases[1]);
+  document.getElementById('fb-third').classList.toggle('on',  G.bases[2]);
+}
+
+function setStatus(msg)         { elStatus.textContent  = msg; }
+function setResult(msg, color)  { elResult.textContent  = msg; elResult.style.color = color || '#0f0'; }
+
+function flashScreen(color) {
+  elFlash.style.background = color;
+  elFlash.style.opacity = '0.35';
+  setTimeout(() => elFlash.style.opacity = '0', 120);
+}
+
+// ── Player turn ──
+function startPitch() {
+  if (G.phase !== 'idle' || G.half !== 'bottom') return;
+
+  G.phase = 'pitching';
+  G.swingProgress = null;
+  G.pitchType = Math.random() < 0.58 ? 'strike' : 'ball';
+  // x offset: strike = small, ball = big drift
+  G.pitchOffset = G.pitchType === 'strike'
+    ? (Math.random() * 16 - 8)
+    : (Math.random() < 0.5 ? -(28 + Math.random()*14) : (28 + Math.random()*14));
+
+  elPitchBtn.disabled = true;
+  elSwingBtn.disabled = false;
+  elTimingWrap.style.display = 'block';
+  setResult('');
+  setStatus('⚾  Pitch incoming — SWING at the right moment!');
+
+  elBall.style.display = 'block';
+  elBall.style.opacity = '1';
+  elZone.classList.remove('active');
+
+  G.pitchStart = performance.now();
+
+  function animate(now) {
+    const t = Math.min((now - G.pitchStart) / PITCH_MS, 1);
+
+    // Ball travels from mound (bottom: 135px) to plate area (bottom: 52px) — in CSS top coords:
+    // Field height 300px. mound bottom=135 → top=152; plate bottom=52 → top=235
+    const startTop = 152, endTop = 232;
+    const top = startTop + (endTop - startTop) * t;
+    const x = G.pitchOffset * Math.sin(t * Math.PI * 0.6);
+    elBall.style.top  = top + 'px';
+    elBall.style.left = `calc(50% - 6px + ${x}px)`;
+
+    // Timing bar fills left-to-right; green zone is 60-88%
+    elTimingBar.style.width = (t * 100) + '%';
+
+    // Highlight zone
+    if (t >= ZONE_START && t <= ZONE_END) elZone.classList.add('active');
+    else elZone.classList.remove('active');
+
+    if (t < 1 && G.swingProgress === null) {
+      G.animId = requestAnimationFrame(animate);
+    } else if (G.swingProgress === null) {
+      // Pitch crossed plate without a swing
+      endPitchAnim();
+      resolveNoSwing();
+    }
+  }
+
+  G.animId = requestAnimationFrame(animate);
+}
+
+function swing() {
+  if (G.phase !== 'pitching') return;
+
+  const t = Math.min((performance.now() - G.pitchStart) / PITCH_MS, 1);
+  G.swingProgress = t;
+  G.phase = 'result';
+
+  cancelAnimationFrame(G.animId);
+  G.animId = null;
+  endPitchAnim();
+
+  // Batter swing animation
+  elBatter.classList.add('swing');
+  setTimeout(() => elBatter.classList.remove('swing'), 300);
+
+  resolveSwing(t);
+}
+
+function endPitchAnim() {
+  elBall.style.display = 'none';
+  elSwingBtn.disabled = true;
+  elTimingWrap.style.display = 'none';
+  elTimingBar.style.width = '0%';
+  elZone.classList.remove('active');
+}
+
+function resolveSwing(t) {
+  const inZone = t >= ZONE_START && t <= ZONE_END;
+
+  if (inZone) {
+    // Quality: how centered in the zone (0=edge, 1=dead center)
+    const mid = (ZONE_START + ZONE_END) / 2;
+    const quality = 1 - Math.abs(t - mid) / ((ZONE_END - ZONE_START) / 2);
+    const r = Math.random();
+
+    // Better timing → better chance of extra-base hit
+    if (r < 0.12 + quality * 0.12)      playerHit(4, quality);  // HR
+    else if (r < 0.22 + quality * 0.08) playerHit(3, quality);  // Triple
+    else if (r < 0.40 + quality * 0.08) playerHit(2, quality);  // Double
+    else                                 playerHit(1, quality);  // Single
+  } else {
+    // Missed — foul if close
+    const close = (t >= ZONE_START - 0.12 && t <= ZONE_END + 0.12);
+    if (close && G.strikes < 2) {
+      setResult('FOUL BALL', '#f4d03f');
+      flashScreen('#f4d03f');
+      addStrike(true);
+    } else {
+      setResult('SWING AND A MISS!', '#e74c3c');
+      flashScreen('#8b0000');
+      addStrike(false);
+    }
+  }
+}
+
+function resolveNoSwing() {
+  if (G.pitchType === 'strike') {
+    setResult('CALLED STRIKE!', '#e74c3c');
+    flashScreen('#8b0000');
+    addStrike(false);
+  } else {
+    setResult('BALL!', '#5dade2');
+    addBall();
+  }
+}
+
+function playerHit(bases, quality) {
+  const labels = ['','SINGLE!','DOUBLE!!','TRIPLE!!!','HOME RUN! 🎉'];
+  const colors = ['','#2ecc71','#1abc9c','#f4d03f','#e74c3c'];
+  setResult(labels[bases], colors[bases]);
+
+  if (bases === 4) flashScreen('#ffff00');
+  else flashScreen('#00aa44');
+
+  advanceBases(bases, 'home');
+  setTimeout(() => afterAtBat(), 1800);
+}
+
+function addStrike(isFoul) {
+  if (!isFoul || G.strikes < 2) G.strikes++;
+  if (G.strikes >= 3) {
+    setResult('STRIKEOUT! ✗', '#e74c3c');
+    render();
+    addOut();
+    return;
+  }
+  render();
+  setTimeout(() => nextPitch(), 1400);
+}
+
+function addBall() {
+  G.balls++;
+  if (G.balls >= 4) {
+    setResult('WALK!', '#5dade2');
+    applyWalk('home');
+    render();
+    setTimeout(() => afterAtBat(), 1400);
+    return;
+  }
+  render();
+  setTimeout(() => nextPitch(), 1400);
+}
+
+function addOut() {
+  G.outs++;
+  render();
+  if (G.outs >= 3) {
+    setTimeout(() => endHalf(), 2000);
+  } else {
+    setTimeout(() => afterAtBat(), 2000);
+  }
+}
+
+function nextPitch() {
+  if (G.phase === 'game_over') return;
+  G.phase = 'idle';
+  elPitchBtn.disabled = false;
+  elSwingBtn.disabled = true;
+  render();
+  setStatus('Press PITCH for the next pitch');
+  setResult('');
+}
+
+function afterAtBat() {
+  G.balls = 0; G.strikes = 0;
+  if (G.outs >= 3) { endHalf(); return; }
+  render();
+  if (G.half === 'bottom') {
+    setResult('');
+    nextPitch();
+  } else {
+    setTimeout(() => computerBats(), 800);
+  }
+}
+
+// ── Base runner logic ──
+function advanceBases(bases, team) {
+  let runs = 0;
+  let nb = [false, false, false];
+  // Advance existing runners
+  for (let i = 2; i >= 0; i--) {
+    if (G.bases[i]) {
+      const dest = i + bases;
+      if (dest >= 3) runs++;
+      else nb[dest] = true;
+    }
+  }
+  // Batter advances
+  if (bases >= 4) runs++;
+  else nb[bases - 1] = true;
+
+  G.bases = nb;
+  G.score[team] += runs;
+
+  if (runs > 0) {
+    const msg = runs === 1 ? '1 run scores!' : `${runs} runs score!`;
+    setTimeout(() => setStatus(msg), 400);
+  }
+  render();
+}
+
+function applyWalk(team) {
+  let nb = [...G.bases];
+  let runs = 0;
+  if (nb[0] && nb[1] && nb[2]) { runs++; }
+  else if (nb[0] && nb[1]) { nb[2] = true; }
+  else if (nb[0])           { nb[1] = true; }
+  nb[0] = true;
+  G.bases = nb;
+  G.score[team] += runs;
+}
+
+// ── Half-inning transitions ──
+function endHalf() {
+  G.outs = 0; G.balls = 0; G.strikes = 0;
+  G.bases = [false, false, false];
+
+  if (G.half === 'top') {
+    G.half = 'bottom';
+    G.phase = 'idle';
+    render();
+    setResult('');
+    setStatus('Your turn to bat! Press PITCH to begin.');
+    elPitchBtn.disabled = false;
+    elSwingBtn.disabled = true;
+  } else {
+    if (G.inning >= INNINGS) {
+      gameOver();
+      return;
+    }
+    G.inning++;
+    G.half = 'top';
+    G.phase = 'computer_turn';
+    render();
+    setResult('');
+    elPitchBtn.disabled = true;
+    elSwingBtn.disabled = true;
+    setStatus(`Inning ${INNING_LABELS[G.inning-1]} — Computer is batting...`);
+    setTimeout(() => computerBats(), 1200);
+  }
+}
+
+// ── Computer AI ──
+function computerBats() {
+  if (G.phase === 'game_over') return;
+  G.phase = 'computer_turn';
+  G.balls = 0; G.strikes = 0;
+  render();
+  setResult('');
+  setStatus('Computer batting...');
+
+  // Decide PA outcome upfront (~.240 avg, 9% BB, 22% K)
+  const r = Math.random();
+  let outcome;
+  if      (r < 0.06) outcome = 'hr';
+  else if (r < 0.10) outcome = 'triple';
+  else if (r < 0.19) outcome = 'double';
+  else if (r < 0.35) outcome = 'single';
+  else if (r < 0.44) outcome = 'walk';
+  else if (r < 0.64) outcome = 'strikeout';
+  else               outcome = 'out';
+
+  setTimeout(() => resolveComputerPA(outcome), 1000 + Math.random() * 600);
+}
+
+const OUT_TYPES = ['GROUNDS OUT','FLIES OUT','LINES OUT','POPS OUT'];
+
+function resolveComputerPA(outcome) {
+  if (G.phase === 'game_over') return;
+
+  switch (outcome) {
+    case 'hr':
+      setResult('COMPUTER: HOME RUN!', '#e74c3c');
+      flashScreen('#880000');
+      advanceBases(4, 'away');
+      break;
+    case 'triple':
+      setResult('COMPUTER: TRIPLE!', '#e67e22');
+      advanceBases(3, 'away');
+      break;
+    case 'double':
+      setResult('COMPUTER: DOUBLE', '#e67e22');
+      advanceBases(2, 'away');
+      break;
+    case 'single':
+      setResult('COMPUTER: SINGLE', '#e67e22');
+      advanceBases(1, 'away');
+      break;
+    case 'walk':
+      setResult('COMPUTER: WALK', '#5dade2');
+      applyWalk('away');
+      render();
+      break;
+    case 'strikeout':
+      setResult('COMPUTER: STRUCK OUT ✓', '#2ecc71');
+      flashScreen('#006600');
+      G.outs++;
+      render();
+      break;
+    default: {
+      const t = OUT_TYPES[Math.floor(Math.random() * OUT_TYPES.length)];
+      setResult(`COMPUTER: ${t} ✓`, '#2ecc71');
+      G.outs++;
+      render();
+    }
+  }
+
+  if (G.outs >= 3) {
+    setTimeout(() => endHalf(), 2000);
+  } else {
+    setTimeout(() => computerBats(), 2000);
+  }
+}
+
+// ── Game over ──
+function gameOver() {
+  G.phase = 'game_over';
+  elPitchBtn.disabled = true;
+  elSwingBtn.disabled = true;
+  render();
+
+  const h = G.score.home, a = G.score.away;
+  if (h > a)      { setResult(`YOU WIN!  ${h}–${a}  🏆`, '#f4d03f'); flashScreen('#336600'); }
+  else if (a > h) { setResult(`COMPUTER WINS  ${a}–${h}`, '#e74c3c'); flashScreen('#660000'); }
+  else            { setResult(`TIE GAME!  ${h}–${a}`, '#f4d03f'); }
+
+  setStatus('Game over! Press Play Again to start a new game.');
+
+  const btn = document.createElement('button');
+  btn.textContent = 'PLAY AGAIN';
+  btn.className = 'btn';
+  btn.id = 'restart-btn';
+  btn.onclick = () => location.reload();
+  document.getElementById('controls').appendChild(btn);
+}
+
+// ── Boot ──
+render();
+setStatus('Computer bats first...');
+setTimeout(() => computerBats(), 1000);
+</script>
+</body>
+</html>
