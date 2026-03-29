@@ -1,5 +1,5 @@
 import { PRNG } from './prng';
-import { GALAXY_SEED } from '../constants';
+import { CLUSTER_SEED } from '../constants';
 import type { StarSystemData } from './GalaxyGenerator';
 
 export interface PlanetData {
@@ -74,7 +74,7 @@ function planetName(systemName: string, index: number): string {
 }
 
 export function generateSolarSystem(star: StarSystemData): SolarSystemData {
-  const rng = PRNG.fromIndex(GALAXY_SEED, star.id * 97 + 13);
+  const rng = PRNG.fromIndex(CLUSTER_SEED, star.id * 97 + 13);
 
   const innerCount = rng.int(1, 3);
   const outerCount = rng.int(1, 3);

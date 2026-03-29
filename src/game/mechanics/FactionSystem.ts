@@ -1,5 +1,5 @@
 import { PRNG } from '../generation/prng';
-import { GALAXY_SEED, ERA_LENGTH, FACTION_COLORS, type PoliticalType } from '../constants';
+import { CLUSTER_SEED, ERA_LENGTH, FACTION_COLORS, type PoliticalType } from '../constants';
 
 // ─── Political clusters (mirrors CivilizationSystem) ─────────────────────────
 
@@ -34,7 +34,7 @@ const SUFFIXES = ['athi', 'eron', 'undi', 'imar', 'ossa', 'enth'];
 // ─── Generate 6 factions deterministically ────────────────────────────────────
 
 function generateFactions(): Faction[] {
-  const rng = PRNG.fromIndex(GALAXY_SEED, 0xFAC710);
+  const rng = PRNG.fromIndex(CLUSTER_SEED, 0xFAC710);
   const factions: Faction[] = [];
 
   for (let i = 0; i < 6; i++) {
@@ -72,7 +72,7 @@ export function getSystemFactionState(
 ): SystemFactionState {
   const era = Math.floor(galaxyYear / ERA_LENGTH);
   const rng = PRNG.fromIndex(
-    (GALAXY_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7 + 0xFAC)) >>> 0,
+    (CLUSTER_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7 + 0xFAC)) >>> 0,
     era,
   );
 
@@ -92,7 +92,7 @@ export function getSystemFactionState(
   // Check if controlling faction would change between eras
   if (era > 0) {
     const prevRng = PRNG.fromIndex(
-      (GALAXY_SEED ^ (systemId * 0x9E3779B9) ^ ((era - 1) * 0x517CC1B7 + 0xFAC)) >>> 0,
+      (CLUSTER_SEED ^ (systemId * 0x9E3779B9) ^ ((era - 1) * 0x517CC1B7 + 0xFAC)) >>> 0,
       era - 1,
     );
     const prevScores = ALL_FACTIONS.map(f => {
@@ -108,7 +108,7 @@ export function getSystemFactionState(
 
   // Roll for contestation
   const contestRng = PRNG.fromIndex(
-    (GALAXY_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7 + 0xC0E)) >>> 0,
+    (CLUSTER_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7 + 0xC0E)) >>> 0,
     era,
   );
   const isContested = contestRng.next() < contestChance;

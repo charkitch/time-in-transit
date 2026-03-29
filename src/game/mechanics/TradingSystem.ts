@@ -1,5 +1,5 @@
 import { PRNG } from '../generation/prng';
-import { GOODS, GALAXY_SEED, type GoodName, type EconomyType } from '../constants';
+import { GOODS, CLUSTER_SEED, type GoodName, type EconomyType } from '../constants';
 import type { CivilizationState } from './CivilizationSystem';
 import type { SystemChoices } from '../GameState';
 
@@ -49,7 +49,7 @@ export class TradingSystem {
   ): MarketEntry[] {
     // Era-seeded PRNG as per design spec
     const era = civState?.era ?? 0;
-    const rng = PRNG.fromIndex(GALAXY_SEED, systemId * 53 + 7 + era * 1000);
+    const rng = PRNG.fromIndex(CLUSTER_SEED, systemId * 53 + 7 + era * 1000);
 
     const mods = ECONOMY_MODIFIERS[economy] ?? {};
     const civBanned: GoodName[] = civState?.bannedGoods ?? [];

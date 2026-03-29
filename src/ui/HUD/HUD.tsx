@@ -17,15 +17,15 @@ interface HUDProps {
 
 export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
   const player = useGameState(s => s.player);
-  const galaxy = useGameState(s => s.galaxy);
+  const cluster = useGameState(s => s.cluster);
   const currentSystemId = useGameState(s => s.currentSystemId);
   const alert = useGameState(s => s.ui.alertMessage);
   const hyperspaceTarget = useGameState(s => s.ui.hyperspaceTarget);
   const galaxyYear = useGameState(s => s.galaxyYear);
   const knownFactions = useGameState(s => s.knownFactions);
 
-  const currentStar = galaxy[currentSystemId];
-  const targetStar = hyperspaceTarget !== null ? galaxy[hyperspaceTarget] : null;
+  const currentStar = cluster[currentSystemId];
+  const targetStar = hyperspaceTarget !== null ? cluster[hyperspaceTarget] : null;
 
   const currentSystem = useGameState(s => s.currentSystem);
 

@@ -123,15 +123,29 @@ export class Game {
       (amount) => state.setFuel(state.player.fuel - amount),
     );
 
+    // Collision avoidance — push ship out of celestial bodies
+    const collidables = this.sceneRenderer.getCollidables();
+    const hit = this.flightModel.resolveCollisions(this.sceneRenderer.shipGroup, collidables);
+    if (hit) {
+      state.setShields(state.player.shields - 5 * dt);
+      state.setAlert('COLLISION!');
+      if (state.player.shields <= 0 && !this.isDead) {
+        this.triggerDeath();
+        return;
+      }
+    }
+
     const pos = this.sceneRenderer.shipGroup.position;
     state.setPlayerPosition({ x: pos.x, y: pos.y, z: pos.z });
     state.setPlayerSpeed(speed);
 
     // Fuel scooping near star
-    const starPos = this.sceneRenderer.getEntityWorldPos('star');
-    if (starPos) {
+    const starEntity = this.sceneRenderer.getAllEntities().get('star');
+    const starPos = starEntity?.worldPos ?? null;
+    if (starPos && starEntity) {
       const distToStar = pos.distanceTo(starPos);
-      if (distToStar < 600) {
+      const scoopRange = starEntity.collisionRadius + 200;
+      if (distToStar < scoopRange) {
         const scoopRate = 0.3 * dt;
         state.setFuel(state.player.fuel + scoopRate);
         state.setHeat(state.player.heat + 15 * dt);
@@ -189,9 +203,11 @@ export class Game {
   ): void {
     const entities = this.sceneRenderer.getAllEntities();
     for (const [, entity] of entities) {
-      if (entity.type === 'star') continue;
+      const alertDist = entity.collisionRadius > 0
+        ? entity.collisionRadius * 1.5
+        : 150;
       const dist = pos.distanceTo(entity.worldPos);
-      if (dist < 150) {
+      if (dist < alertDist) {
         state.setAlert(`WARNING: ${entity.type.toUpperCase()} PROXIMITY`);
         return;
       }

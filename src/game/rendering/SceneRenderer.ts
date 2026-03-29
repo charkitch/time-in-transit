@@ -20,7 +20,9 @@ import { generateFleetBattle } from '../mechanics/FleetBattleSystem';
 import type { FleetBattle } from '../mechanics/FleetBattleSystem';
 import { getFaction } from '../mechanics/FactionSystem';
 import { PRNG } from '../generation/prng';
-import { GALAXY_SEED } from '../constants';
+import { CLUSTER_SEED } from '../constants';
+
+const _npcCollisionVec = new THREE.Vector3();
 
 export interface SceneEntity {
   id: string;
@@ -31,6 +33,7 @@ export interface SceneEntity {
   parentId?: string;
   type: 'planet' | 'station' | 'star' | 'moon' | 'npc_ship' | 'fleet_ship';
   worldPos: THREE.Vector3; // updated each frame
+  collisionRadius: number;
 }
 
 export class SceneRenderer {
@@ -49,6 +52,7 @@ export class SceneRenderer {
   private battleProjectiles: THREE.Points | null = null;
   private battleExplosions: BattleExplosions | null = null;
   private fleetBattleData: FleetBattle | null = null;
+  private collidables: SceneEntity[] = [];
 
   constructor(canvas: HTMLCanvasElement) {
     // Prefer WebGL2, with WebGL1 fallback for older environments.
@@ -125,9 +129,10 @@ export class SceneRenderer {
       orbitPhase: 0,
       type: 'star',
       worldPos: new THREE.Vector3(),
+      collisionRadius: data.starRadius * 1.2,
     });
 
-    const rng = PRNG.fromIndex(GALAXY_SEED, systemId * 97 + 13);
+    const rng = PRNG.fromIndex(CLUSTER_SEED, systemId * 97 + 13);
 
     // Planets
     for (const planet of data.planets) {
@@ -149,6 +154,7 @@ export class SceneRenderer {
         orbitPhase: planet.orbitPhase,
         type: 'planet',
         worldPos: new THREE.Vector3(),
+        collisionRadius: planet.radius * 1.3,
       });
 
       // Rings
@@ -172,6 +178,7 @@ export class SceneRenderer {
           parentId: planet.id,
           type: 'station',
           worldPos: new THREE.Vector3(),
+          collisionRadius: 0,
         });
       }
 
@@ -189,6 +196,7 @@ export class SceneRenderer {
           parentId: planet.id,
           type: 'moon',
           worldPos: new THREE.Vector3(),
+          collisionRadius: moon.radius * 1.3,
         });
       }
     }
@@ -231,6 +239,7 @@ export class SceneRenderer {
         orbitPhase: base.orbitPhase,
         type: 'station', // reuse station type so docking works
         worldPos: new THREE.Vector3(),
+        collisionRadius: 0,
       });
 
       // Ambient particles around secret bases
@@ -298,6 +307,7 @@ export class SceneRenderer {
         orbitPhase: 0,
         type: 'npc_ship',
         worldPos: startPos.clone(),
+        collisionRadius: 0,
       });
 
       this.npcShips.set(shipData.id, {
@@ -350,6 +360,7 @@ export class SceneRenderer {
             orbitPhase: 0,
             type: 'fleet_ship',
             worldPos: worldPos,
+            collisionRadius: 0,
           });
         }
 
@@ -369,6 +380,7 @@ export class SceneRenderer {
             orbitPhase: 0,
             type: 'fleet_ship',
             worldPos: worldPos,
+            collisionRadius: 0,
           });
         }
 
@@ -386,6 +398,21 @@ export class SceneRenderer {
         }
       }
     }
+
+    this.rebuildCollidables();
+  }
+
+  private rebuildCollidables(): void {
+    this.collidables = [];
+    for (const [, entity] of this.entities) {
+      if (entity.collisionRadius > 0) {
+        this.collidables.push(entity);
+      }
+    }
+  }
+
+  getCollidables(): SceneEntity[] {
+    return this.collidables;
   }
 
   updateOrbits(time: number, dt = 0): void {
@@ -436,6 +463,18 @@ export class SceneRenderer {
         if (npcState.t <= 0) { npcState.t = 0; npcState.direction = 1; }
 
         entity.group.position.lerpVectors(npcState.waypointA, npcState.waypointB, npcState.t);
+
+        // Push NPC out of any collidable body
+        for (const body of this.collidables) {
+          const diff = _npcCollisionVec.copy(entity.group.position).sub(body.worldPos);
+          const dist = diff.length();
+          const minDist = body.collisionRadius + 10;
+          if (dist < minDist && dist > 0.001) {
+            const normal = diff.normalize();
+            entity.group.position.copy(body.worldPos).addScaledVector(normal, minDist);
+          }
+        }
+
         entity.worldPos.copy(entity.group.position);
       }
     }

@@ -17,7 +17,7 @@ type TabId = 'trade' | 'refuel' | 'cargo';
 
 export function StationUI({ onUndock }: StationUIProps) {
   const [tab, setTab] = useState<TabId>('trade');
-  const galaxy = useGameState(s => s.galaxy);
+  const cluster = useGameState(s => s.cluster);
   const currentSystemId = useGameState(s => s.currentSystemId);
   const player = useGameState(s => s.player);
   const galaxyYear = useGameState(s => s.galaxyYear);
@@ -28,7 +28,8 @@ export function StationUI({ onUndock }: StationUIProps) {
   const setFuel = useGameState(s => s.setFuel);
   const setShields = useGameState(s => s.setShields);
 
-  const starData = galaxy[currentSystemId];
+  const starData = cluster[currentSystemId];
+  if (!starData) return null;
   const civState = getCivState(currentSystemId, galaxyYear, starData.economy);
   const systemChoices = playerChoices[currentSystemId];
   const market = trading.getMarket(currentSystemId, civState.economy, civState, systemChoices);

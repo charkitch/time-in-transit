@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PRNG } from '../generation/prng';
-import { GALAXY_SEED, ERA_LENGTH } from '../constants';
+import { CLUSTER_SEED, ERA_LENGTH } from '../constants';
 import { getSystemFactionState } from './FactionSystem';
 import { getCivState } from './CivilizationSystem';
 import type { SolarSystemData, PlanetData } from '../generation/SystemGenerator';
@@ -232,7 +232,7 @@ export function generateFleetBattle(
 
   const era = Math.floor(galaxyYear / ERA_LENGTH);
   const rng = PRNG.fromIndex(
-    (GALAXY_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7 + 0xBA77)) >>> 0,
+    (CLUSTER_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7 + 0xBA77)) >>> 0,
     era,
   );
 

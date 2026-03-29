@@ -15,8 +15,8 @@ export function SystemMap({ onClose }: SystemMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const currentSystem = useGameState(s => s.currentSystem);
   const currentSystemId = useGameState(s => s.currentSystemId);
-  const galaxy = useGameState(s => s.galaxy);
-  const starData = galaxy[currentSystemId];
+  const cluster = useGameState(s => s.cluster);
+  const starData = cluster[currentSystemId];
   const time = useGameState(s => s.time);
 
   useEffect(() => {

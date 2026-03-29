@@ -1,6 +1,6 @@
 import { PRNG } from '../generation/prng';
 import {
-  GALAXY_SEED, ERA_LENGTH,
+  CLUSTER_SEED, ERA_LENGTH,
   POLITICAL_TYPES,
   ECONOMY_TYPES,
   type PoliticalType, type EconomyType, type GoodName,
@@ -69,7 +69,7 @@ function clusterOf(p: PoliticalType): PoliticalType[] {
 
 function derivePolitics(systemId: number, era: number, prevEra: number | null): PoliticalType {
   const rng = PRNG.fromIndex(
-    (GALAXY_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7)) >>> 0,
+    (CLUSTER_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7)) >>> 0,
     era,
   );
 
@@ -79,7 +79,7 @@ function derivePolitics(systemId: number, era: number, prevEra: number | null): 
     const stay = rng.next() < 0.70;
     if (stay) {
       const clusterRng = PRNG.fromIndex(
-        (GALAXY_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7 + 1)) >>> 0,
+        (CLUSTER_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7 + 1)) >>> 0,
         era,
       );
       return clusterRng.pick(cluster);
@@ -87,14 +87,14 @@ function derivePolitics(systemId: number, era: number, prevEra: number | null): 
   }
 
   return PRNG.fromIndex(
-    (GALAXY_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7 + 2)) >>> 0,
+    (CLUSTER_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7 + 2)) >>> 0,
     era,
   ).pick(POLITICAL_TYPES);
 }
 
 function derivePoliticsRaw(systemId: number, era: number): PoliticalType {
   return PRNG.fromIndex(
-    (GALAXY_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7)) >>> 0,
+    (CLUSTER_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7)) >>> 0,
     era,
   ).pick(POLITICAL_TYPES);
 }
@@ -118,7 +118,7 @@ export function getCivState(
   const politics = derivePolitics(systemId, era, prevEra);
 
   const econRng = PRNG.fromIndex(
-    (GALAXY_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7 + 3)) >>> 0,
+    (CLUSTER_SEED ^ (systemId * 0x9E3779B9) ^ (era * 0x517CC1B7 + 3)) >>> 0,
     era,
   );
   const economy = deriveEconomy(baseEconomy, politics, econRng);

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { SolarSystemData } from '../generation/SystemGenerator';
 import type { GoodName } from '../constants';
 import { PRNG } from '../generation/prng';
-import { GALAXY_SEED, GOODS } from '../constants';
+import { CLUSTER_SEED, GOODS } from '../constants';
 
 export interface NPCCargoEntry {
   good: GoodName;
@@ -79,7 +79,7 @@ export function generateNPCShips(
   if (planetPositions.length < 2) return [];
 
   const era = Math.floor((galaxyYear - 3200) / 250);
-  const rng = PRNG.fromIndex(GALAXY_SEED, systemId * 79 + 3 + era * 500);
+  const rng = PRNG.fromIndex(CLUSTER_SEED, systemId * 79 + 3 + era * 500);
 
   const count = rng.int(2, 4);
   const ships: NPCShipSpawnData[] = [];
@@ -93,7 +93,7 @@ export function generateNPCShips(
     const wpB = planetPositions[idxB].clone();
 
     // Seed cargo deterministically per (system, npc index, era)
-    const cargoRng = PRNG.fromIndex(GALAXY_SEED, systemId * 1009 + i * 31 + era * 137);
+    const cargoRng = PRNG.fromIndex(CLUSTER_SEED, systemId * 1009 + i * 31 + era * 137);
     const cargoCount = cargoRng.int(1, 3);
     const cargo: NPCCargoEntry[] = [];
     const usedGoods = new Set<string>();

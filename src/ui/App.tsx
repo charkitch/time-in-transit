@@ -4,7 +4,7 @@ import type { UIMode } from '../game/GameState';
 import { Game } from '../game/Game';
 import { HUD } from './HUD/HUD';
 import { SystemEntryText } from './HUD/SystemEntryText';
-import { GalaxyMap } from './GalaxyMap/GalaxyMap';
+import { ClusterMap } from './ClusterMap/ClusterMap';
 import { SystemMap } from './SystemMap/SystemMap';
 import { StationUI } from './StationUI/StationUI';
 import { LandingDialog } from './LandingDialog/LandingDialog';
@@ -67,9 +67,9 @@ export function App() {
     gameRef.current?.completeLanding(choiceId);
   };
 
-  const handleCloseGalaxyMap = () => setUIMode('flight');
+  const handleCloseClusterMap = () => setUIMode('flight');
   const handleCloseSystemMap = () => setUIMode('flight');
-  const handleGalaxyMapJump = () => {
+  const handleClusterMapJump = () => {
     gameRef.current?.requestJump();
   };
 
@@ -146,8 +146,8 @@ export function App() {
         <CommDialog onTrade={handleNPCTrade} onDismiss={handleCommDismiss} />
       )}
 
-      {uiMode === 'galaxy_map' && (
-        <GalaxyMap onClose={handleCloseGalaxyMap} onJump={handleGalaxyMapJump} />
+      {uiMode === 'cluster_map' && (
+        <ClusterMap onClose={handleCloseClusterMap} onJump={handleClusterMapJump} />
       )}
       {uiMode === 'system_map' && <SystemMap onClose={handleCloseSystemMap} />}
       {uiMode === 'landing' && <LandingDialog onChoice={handleLandingChoice} />}
