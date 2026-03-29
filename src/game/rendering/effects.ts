@@ -103,6 +103,8 @@ export interface BattleProjectileData {
   colors: Float32Array; // r,g,b per projectile
   colorA: THREE.Color;
   colorB: THREE.Color;
+  aliveA: boolean[];
+  aliveB: boolean[];
 }
 
 export function createBattleProjectiles(
@@ -166,6 +168,8 @@ export function createBattleProjectiles(
     colors,
     colorA: cA,
     colorB: cB,
+    aliveA: shipsA.map(() => true),
+    aliveB: shipsB.map(() => true),
   };
   (points as any)._battleData = data;
   (points as any)._shipsA = shipsA;

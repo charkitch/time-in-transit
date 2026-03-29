@@ -47,7 +47,9 @@ export function Scanner({ getEntities }: ScannerProps) {
       const px = player.position.x;
       const pz = player.position.z;
 
-      for (const [, entity] of entities) {
+      const now = Date.now();
+
+      for (const [id, entity] of entities) {
         const ex = entity.worldPos.x;
         const ez = entity.worldPos.z;
         const ey = entity.worldPos.y;
@@ -59,8 +61,21 @@ export function Scanner({ getEntities }: ScannerProps) {
         const sx = SIZE / 2 + (dx / SCAN_RADIUS) * (SIZE / 2 - 4);
         const sy = SIZE / 2 + (dz / SCAN_RADIUS) * (SIZE / 2 - 4);
 
+        const isSecretBase = id.includes('-secret-');
+
         // Color by type
-        if (entity.type === 'star') {
+        if (isSecretBase) {
+          // Pulsing signal — blinks between bright and dim
+          const pulse = Math.sin(now * 0.006 + id.length * 2) * 0.5 + 0.5;
+          const alpha = 0.4 + pulse * 0.6;
+          if (id.includes('-secret-asteroid')) {
+            ctx.fillStyle = `rgba(170,119,68,${alpha})`;
+          } else if (id.includes('-secret-oort')) {
+            ctx.fillStyle = `rgba(68,136,204,${alpha})`;
+          } else {
+            ctx.fillStyle = `rgba(136,68,255,${alpha})`;
+          }
+        } else if (entity.type === 'star') {
           ctx.fillStyle = '#FFEE88';
         } else if (entity.type === 'station') {
           ctx.fillStyle = '#44CCFF';
@@ -68,10 +83,22 @@ export function Scanner({ getEntities }: ScannerProps) {
           ctx.fillStyle = '#33FF88';
         }
 
-        const dotSize = entity.type === 'star' ? 4 : entity.type === 'station' ? 3 : 2;
+        const dotSize = entity.type === 'star' ? 4 : isSecretBase ? 2 : entity.type === 'station' ? 3 : 2;
         ctx.beginPath();
         ctx.arc(sx, sy, dotSize, 0, Math.PI * 2);
         ctx.fill();
+
+        // Pulsing ring for secret bases
+        if (isSecretBase) {
+          const ringPulse = Math.sin(now * 0.004) * 0.3 + 0.3;
+          ctx.strokeStyle = ctx.fillStyle;
+          ctx.lineWidth = 0.5;
+          ctx.globalAlpha = ringPulse;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
 
         // Y offset indicator
         if (Math.abs(ey) > 100) {

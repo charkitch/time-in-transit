@@ -1,13 +1,13 @@
 import { create } from 'zustand';
-import type { StarSystemData } from './generation/GalaxyGenerator';
+import type { StarSystemData } from './generation/ClusterGenerator';
 import type { SolarSystemData } from './generation/SystemGenerator';
-import { generateGalaxy } from './generation/GalaxyGenerator';
+import { generateCluster } from './generation/ClusterGenerator';
 import { STARTING_CREDITS, STARTING_FUEL, HYPERSPACE, GALAXY_YEAR_START, type GoodName } from './constants';
 import type { CivilizationState } from './mechanics/CivilizationSystem';
 import type { LandingEvent } from './data/events';
 import type { NPCCargoEntry } from './mechanics/NPCSystem';
 
-export type UIMode = 'flight' | 'galaxy_map' | 'system_map' | 'docked' | 'hyperspace' | 'landing' | 'comms' | 'dead';
+export type UIMode = 'flight' | 'cluster_map' | 'system_map' | 'docked' | 'hyperspace' | 'landing' | 'comms' | 'dead';
 
 export interface PendingCommContext {
   npcId: string;
@@ -64,7 +64,7 @@ export interface GameStateData {
   player: PlayerState;
   currentSystemId: number;
   currentSystem: SolarSystemData | null;
-  galaxy: StarSystemData[];
+  cluster: StarSystemData[];
   visitedSystems: Set<number>;
   ui: {
     mode: UIMode;
@@ -126,7 +126,7 @@ export interface GameActions {
   setSystemEntryLines: (lines: string[] | null) => void;
 }
 
-const GALAXY = generateGalaxy();
+const CLUSTER = generateCluster();
 
 const DEFAULT_PLAYER: PlayerState = {
   position: { x: 0, y: 0, z: 2000 },
@@ -159,12 +159,9 @@ interface SaveData {
 
 function migrateLegacyGoodKeys<T>(record: Partial<Record<GoodName, T>> | undefined): Partial<Record<GoodName, T>> | undefined {
   if (!record) return record;
-  const migrated = { ...record } as Partial<Record<GoodName, T>> & { Slaves?: T };
-  const legacyValue = migrated.Slaves;
-  if (legacyValue !== undefined) {
-    migrated['Enslaved People'] = legacyValue;
-    delete migrated.Slaves;
-  }
+  const migrated = { ...record } as Partial<Record<GoodName, T>> & { Slaves?: T; 'Enslaved People'?: T };
+  delete migrated.Slaves;
+  delete migrated['Enslaved People'];
   return migrated;
 }
 
@@ -180,7 +177,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   player: { ...DEFAULT_PLAYER },
   currentSystemId: 0,
   currentSystem: null,
-  galaxy: GALAXY,
+  cluster: CLUSTER,
   visitedSystems: new Set(),
   ui: {
     mode: 'flight',

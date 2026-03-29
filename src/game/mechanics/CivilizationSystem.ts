@@ -24,11 +24,9 @@ export interface CivilizationState {
 // ─── Politics price tables ────────────────────────────────────────────────────
 
 const BANNED_GOODS: Partial<Record<PoliticalType, GoodName[]>> = {
-  'Theocracy':            ['Narcotics', 'Enslaved People', 'Liquor'],
+  'Theocracy':            ['Narcotics', 'Liquor'],
   'Military Dictatorship':['Narcotics', 'Luxuries'],
   'Feudal':               ['Computers', 'Narcotics'],
-  'Democracy':            ['Enslaved People'],
-  'Technocracy':          ['Enslaved People'],
 };
 
 const PRICE_MODIFIERS: Partial<Record<PoliticalType, number>> = {

@@ -7,7 +7,7 @@ import { HyperspaceSystem } from './mechanics/HyperspaceSystem';
 import { jumpYearsElapsed } from './mechanics/RelativisticTime';
 import { getCivState } from './mechanics/CivilizationSystem';
 import { getSystemFactionState, getFaction } from './mechanics/FactionSystem';
-import { selectEvent } from './data/events';
+import { selectEvent, selectSecretBaseEvent } from './data/events';
 import { generateSolarSystem } from './generation/SystemGenerator';
 import { useGameState } from './GameState';
 import type { SystemChoices } from './GameState';
@@ -38,7 +38,7 @@ export class Game {
 
     // Wire up one-shot input events
     this.input.onDockRequest(() => this.tryDock());
-    this.input.onGalaxyMapToggle(() => this.toggleGalaxyMap());
+    this.input.onClusterMapToggle(() => this.toggleClusterMap());
     this.input.onSystemMapToggle(() => this.toggleSystemMap());
     this.input.onCycleTargetEvent(() => this.cycleTarget());
     this.input.onJumpRequestEvent(() => this.tryJump());
@@ -53,7 +53,7 @@ export class Game {
 
   private loadCurrentSystem(): void {
     const state = useGameState.getState();
-    const starData = state.galaxy[state.currentSystemId];
+    const starData = state.cluster[state.currentSystemId];
     const systemData = generateSolarSystem(starData);
     state.setCurrentSystem(state.currentSystemId, systemData);
     state.markVisited(state.currentSystemId);
@@ -248,7 +248,7 @@ export class Game {
       this.flightModel.reset(nearest.pos);
 
       // Set up landing event then switch to landing mode
-      this.prepareLanding(state.currentSystemId);
+      this.prepareLanding(state.currentSystemId, nearest.id);
     } else {
       const reason = nearest.dist > 80 ? 'TOO FAR FROM STATION' : 'SPEED TOO HIGH';
       state.setAlert(reason);
@@ -256,16 +256,21 @@ export class Game {
     }
   }
 
-  private prepareLanding(systemId: number): void {
+  private prepareLanding(systemId: number, stationId?: string): void {
     const state = useGameState.getState();
-    const starData = state.galaxy[systemId];
+    const starData = state.cluster[systemId];
     const civState = getCivState(systemId, state.galaxyYear, starData.economy);
     const systemChoices = state.playerChoices[systemId];
     const lastYear = state.lastVisitYear[systemId] ?? null;
     const yearsSinceLastVisit = lastYear !== null ? state.galaxyYear - lastYear : null;
 
     const eventSeed = (state.galaxyYear * 31337 + systemId * 1009) >>> 0;
-    const event = selectEvent(civState, systemChoices, eventSeed);
+
+    // Check if docking at a secret base
+    const secretBase = state.currentSystem?.secretBases.find(b => b.id === stationId);
+    const event = secretBase
+      ? selectSecretBaseEvent(secretBase.type, systemChoices, eventSeed)
+      : selectEvent(civState, systemChoices, eventSeed);
 
     state.setPendingLandingEvent({ systemId, civState, event, yearsSinceLastVisit });
     state.setUIMode('landing');
@@ -305,12 +310,12 @@ export class Game {
     state.setUIMode('docked');
   }
 
-  private toggleGalaxyMap(): void {
+  private toggleClusterMap(): void {
     const state = useGameState.getState();
-    if (state.ui.mode === 'galaxy_map') {
+    if (state.ui.mode === 'cluster_map') {
       state.setUIMode('flight');
     } else if (state.ui.mode === 'flight') {
-      state.setUIMode('galaxy_map');
+      state.setUIMode('cluster_map');
     }
   }
 
@@ -337,20 +342,20 @@ export class Game {
   private tryJump(): void {
     const state = useGameState.getState();
     const mode = state.ui.mode;
-    if (mode !== 'flight' && mode !== 'galaxy_map') return;
+    if (mode !== 'flight' && mode !== 'cluster_map') return;
 
-    // Close galaxy map if open so we return to flight
-    if (mode === 'galaxy_map') state.setUIMode('flight');
+    // Close cluster map if open so we return to flight
+    if (mode === 'cluster_map') state.setUIMode('flight');
 
     if (state.ui.hyperspaceTarget === null) {
-      state.setAlert('Open galaxy map (G) to select jump target');
+      state.setAlert('Open cluster map (G) to select jump target');
       setTimeout(() => useGameState.getState().setAlert(null), 2000);
       return;
     }
     if (state.ui.hyperspaceCountdown > 0) return;
 
-    const currentSys = state.galaxy[state.currentSystemId];
-    const targetSys = state.galaxy[state.ui.hyperspaceTarget];
+    const currentSys = state.cluster[state.currentSystemId];
+    const targetSys = state.cluster[state.ui.hyperspaceTarget];
     const check = this.hyperspace.canJump(currentSys, targetSys, state.player.fuel);
     if (!check.ok) {
       state.setAlert(check.reason ?? 'Cannot jump');
@@ -366,18 +371,8 @@ export class Game {
     const targetId = state.ui.hyperspaceTarget;
     if (targetId === null) return;
 
-    const enslavedPeopleInHold = state.player.cargo['Enslaved People'] ?? 0;
-    if (enslavedPeopleInHold > 0) {
-      this.triggerDeath([
-        'The enslaved people in your hold rebelled during the jump and killed you.',
-        'They seized your ship and used it to free enslaved people across the galaxy.',
-        'Your body floated in space for billions of years, unmourned.',
-      ]);
-      return;
-    }
-
-    const currentSys = state.galaxy[state.currentSystemId];
-    const targetSys = state.galaxy[targetId];
+    const currentSys = state.cluster[state.currentSystemId];
+    const targetSys = state.cluster[targetId];
     const cost = this.hyperspace.jumpCost(currentSys, targetSys);
 
     // Calculate years elapsed
@@ -413,7 +408,7 @@ export class Game {
     this.hyperspaceActive = false;
     this.sceneRenderer.stopHyperspace();
 
-    const starData = state.galaxy[targetId];
+    const starData = state.cluster[targetId];
     const systemData = generateSolarSystem(starData);
     state.setCurrentSystem(targetId, systemData);
     state.markVisited(targetId);
@@ -466,6 +461,21 @@ export class Game {
       const battlePlanet = systemData.planets.find(p => p.id === battle.planetId);
       const planetName = battlePlanet ? battlePlanet.id.replace(`${systemId}-`, '') : 'UNKNOWN';
       lines.push(`FLEET ENGAGEMENT DETECTED NEAR ${planetName.toUpperCase()}`);
+    }
+
+    // Secret base hints
+    for (const base of systemData.secretBases) {
+      switch (base.type) {
+        case 'asteroid':
+          lines.push('FAINT SIGNAL DETECTED IN ASTEROID BELT');
+          break;
+        case 'oort_cloud':
+          lines.push('ANOMALOUS BEACON — EXTREME OUTER SYSTEM');
+          break;
+        case 'maximum_space':
+          lines.push('UNKNOWN TRANSMISSION FROM BEYOND SYSTEM EDGE');
+          break;
+      }
     }
 
     // Check faction memory for changes
@@ -604,7 +614,7 @@ export class Game {
       this.undock();
       return;
     }
-    if (state.ui.mode === 'galaxy_map' || state.ui.mode === 'system_map') {
+    if (state.ui.mode === 'cluster_map' || state.ui.mode === 'system_map') {
       state.setUIMode('flight');
     }
   }

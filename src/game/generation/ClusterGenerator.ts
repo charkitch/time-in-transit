@@ -1,10 +1,10 @@
 import { PRNG } from './prng';
-import { GALAXY_SEED, GALAXY_SIZE, ECONOMY_TYPES, type EconomyType } from '../constants';
+import { CLUSTER_SEED, CLUSTER_SIZE, ECONOMY_TYPES, type EconomyType } from '../constants';
 
 export interface StarSystemData {
   id: number;
   name: string;
-  x: number;  // galaxy map coords [0..100]
+  x: number;  // cluster map coords [0..100]
   y: number;
   starType: 'G' | 'K' | 'M' | 'F' | 'A';
   economy: EconomyType;
@@ -37,13 +37,13 @@ function pickStarType(rng: PRNG): 'G' | 'K' | 'M' | 'F' | 'A' {
   return 'G';
 }
 
-export function generateGalaxy(): StarSystemData[] {
-  const rng = new PRNG(GALAXY_SEED);
+export function generateCluster(): StarSystemData[] {
+  const rng = new PRNG(CLUSTER_SEED);
   const systems: StarSystemData[] = [];
   const MIN_DIST = 8;
 
   let attempts = 0;
-  while (systems.length < GALAXY_SIZE && attempts < 2000) {
+  while (systems.length < CLUSTER_SIZE && attempts < 2000) {
     attempts++;
     const x = rng.float(5, 95);
     const y = rng.float(5, 95);
@@ -57,7 +57,7 @@ export function generateGalaxy(): StarSystemData[] {
     if (tooClose) continue;
 
     const id = systems.length;
-    const sysRng = PRNG.fromIndex(GALAXY_SEED, id);
+    const sysRng = PRNG.fromIndex(CLUSTER_SEED, id);
     const starType = pickStarType(sysRng);
     const techLevel = sysRng.int(1, 14);
     const economy = sysRng.pick(ECONOMY_TYPES);

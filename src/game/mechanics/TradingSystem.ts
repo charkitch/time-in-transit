@@ -7,7 +7,6 @@ const BASE_PRICES: Record<GoodName, number> = {
   'Food':          40,
   'Textiles':      65,
   'Radioactives':  162,
-  'Enslaved People': 52,
   'Liquor':        220,
   'Luxuries':      440,
   'Narcotics':     490,
@@ -19,7 +18,7 @@ const ECONOMY_MODIFIERS: Record<EconomyType, Partial<Record<GoodName, number>>> 
   'Industrial':       { Computers: -100, Textiles: -20, Food: +30 },
   'High Tech':        { Computers: -200, Radioactives: -40, Luxuries: -50 },
   'Rich Industrial':  { Computers: -150, Textiles: -30, Liquor: -30 },
-  'Poor Agricultural':{ Food: -30, 'Enslaved People': -20, Luxuries: +100 },
+  'Poor Agricultural':{ Food: -30, Luxuries: +100 },
   'Refinery':         { Radioactives: -60, Liquor: -40, Food: +20 },
 };
 

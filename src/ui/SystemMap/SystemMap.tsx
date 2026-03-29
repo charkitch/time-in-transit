@@ -32,8 +32,11 @@ export function SystemMap({ onClose }: SystemMapProps) {
     const cx = W / 2;
     const cy = H / 2;
 
-    // Find max orbit for scaling
-    const maxOrbit = Math.max(...currentSystem.planets.map(p => p.orbitRadius));
+    // Find max orbit for scaling (include secret bases)
+    const secretMaxOrbit = currentSystem.secretBases.length > 0
+      ? Math.max(...currentSystem.secretBases.map(b => b.orbitRadius))
+      : 0;
+    const maxOrbit = Math.max(...currentSystem.planets.map(p => p.orbitRadius), secretMaxOrbit);
     const scale = (Math.min(W, H) * 0.45) / maxOrbit;
 
     // Star
@@ -114,6 +117,54 @@ export function SystemMap({ onClose }: SystemMapProps) {
       ctx.arc(cx, cy, ir, 0, Math.PI * 2, true);
       ctx.fill();
     }
+    // Secret bases
+    for (const base of currentSystem.secretBases) {
+      const orbitPx = base.orbitRadius * scale;
+
+      // Faint orbit ring
+      ctx.strokeStyle = 'rgba(136,68,255,0.08)';
+      ctx.lineWidth = 0.5;
+      ctx.setLineDash([3, 6]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, orbitPx, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Base position
+      const angle = base.orbitPhase + time * base.orbitSpeed;
+      const bx = cx + Math.cos(angle) * orbitPx;
+      const by = cy + Math.sin(angle) * orbitPx;
+
+      // Draw base marker
+      const baseColors: Record<string, string> = {
+        asteroid: '#AA7744',
+        oort_cloud: '#4488CC',
+        maximum_space: '#8844FF',
+      };
+      const color = baseColors[base.type] ?? '#8844FF';
+
+      // Diamond shape
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(bx, by - 4);
+      ctx.lineTo(bx + 3, by);
+      ctx.lineTo(bx, by + 4);
+      ctx.lineTo(bx - 3, by);
+      ctx.closePath();
+      ctx.fill();
+
+      // Glow ring
+      ctx.strokeStyle = color + '66';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.arc(bx, by, 6, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Name
+      ctx.fillStyle = color;
+      ctx.font = '8px Courier New';
+      ctx.fillText(base.name, bx + 8, by + 3);
+    }
   }, [currentSystem, time]);
 
   return (
@@ -125,6 +176,9 @@ export function SystemMap({ onClose }: SystemMapProps) {
           <span><span className={styles.dot} style={{ background: '#33FF88' }} />Planet</span>
           <span><span className={styles.dot} style={{ background: '#44CCFF', outline: '1px solid #44CCFF' }} />Station</span>
           <span><span className={styles.dot} style={{ background: '#888877' }} />Asteroids</span>
+          {currentSystem && currentSystem.secretBases.length > 0 && (
+            <span><span className={styles.dot} style={{ background: '#8844FF' }} />Secret Base</span>
+          )}
         </div>
         <button className={styles.closeBtn} onClick={onClose}>CLOSE [1]</button>
       </div>

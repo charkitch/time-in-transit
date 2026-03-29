@@ -10,6 +10,7 @@ import {
 import {
   makePlanet, makeGasGiant, makeStation, makeGlowSprite,
   makeAsteroidBelt, makeRingMesh, makeNPCShipMesh, makeFleetShipMesh,
+  makeAsteroidBase, makeOortCloudBase, makeMaximumSpaceBase,
 } from './meshFactory';
 import type { SolarSystemData } from '../generation/SystemGenerator';
 import type { StarSystemData } from '../generation/GalaxyGenerator';
@@ -198,6 +199,78 @@ export class SceneRenderer {
       const belt = makeAsteroidBelt(ab.innerRadius, ab.outerRadius, ab.count, () => rng.next());
       this.scene.add(belt);
       this.systemObjects.push(belt);
+    }
+
+    // Secret bases
+    for (const base of data.secretBases) {
+      let baseGroup: THREE.Group;
+      switch (base.type) {
+        case 'asteroid':
+          baseGroup = makeAsteroidBase(35);
+          break;
+        case 'oort_cloud':
+          baseGroup = makeOortCloudBase(45);
+          break;
+        case 'maximum_space':
+          baseGroup = makeMaximumSpaceBase(55);
+          break;
+      }
+      baseGroup.position.set(
+        Math.cos(base.orbitPhase) * base.orbitRadius,
+        0,
+        Math.sin(base.orbitPhase) * base.orbitRadius,
+      );
+      this.scene.add(baseGroup);
+      this.systemObjects.push(baseGroup);
+
+      this.entities.set(base.id, {
+        id: base.id,
+        group: baseGroup,
+        orbitRadius: base.orbitRadius,
+        orbitSpeed: base.orbitSpeed,
+        orbitPhase: base.orbitPhase,
+        type: 'station', // reuse station type so docking works
+        worldPos: new THREE.Vector3(),
+      });
+
+      // Ambient particles around secret bases
+      if (base.type === 'oort_cloud') {
+        // Sparse icy debris cloud
+        const iceGeo = new THREE.BufferGeometry();
+        const iceCount = 120;
+        const icePositions = new Float32Array(iceCount * 3);
+        for (let i = 0; i < iceCount; i++) {
+          const angle2 = rng.next() * Math.PI * 2;
+          const dist = base.orbitRadius + (rng.next() - 0.5) * 2000;
+          const y2 = (rng.next() - 0.5) * 600;
+          icePositions[i * 3] = Math.cos(angle2) * dist;
+          icePositions[i * 3 + 1] = y2;
+          icePositions[i * 3 + 2] = Math.sin(angle2) * dist;
+        }
+        iceGeo.setAttribute('position', new THREE.BufferAttribute(icePositions, 3));
+        const iceMat = new THREE.PointsMaterial({ color: 0x88BBDD, size: 15, transparent: true, opacity: 0.3 });
+        const icePoints = new THREE.Points(iceGeo, iceMat);
+        this.scene.add(icePoints);
+        this.systemObjects.push(icePoints);
+      } else if (base.type === 'maximum_space') {
+        // Faint void motes — strange purple specks at the edge of nothing
+        const voidGeo = new THREE.BufferGeometry();
+        const voidCount = 60;
+        const voidPositions = new Float32Array(voidCount * 3);
+        for (let i = 0; i < voidCount; i++) {
+          const angle2 = rng.next() * Math.PI * 2;
+          const dist = base.orbitRadius + (rng.next() - 0.5) * 3000;
+          const y2 = (rng.next() - 0.5) * 1000;
+          voidPositions[i * 3] = Math.cos(angle2) * dist;
+          voidPositions[i * 3 + 1] = y2;
+          voidPositions[i * 3 + 2] = Math.sin(angle2) * dist;
+        }
+        voidGeo.setAttribute('position', new THREE.BufferAttribute(voidPositions, 3));
+        const voidMat = new THREE.PointsMaterial({ color: 0x6622CC, size: 20, transparent: true, opacity: 0.2 });
+        const voidPoints = new THREE.Points(voidGeo, voidMat);
+        this.scene.add(voidPoints);
+        this.systemObjects.push(voidPoints);
+      }
     }
 
     // NPC trade ships — waypoints derived from planet initial positions

@@ -31,17 +31,42 @@ export interface AsteroidBeltData {
   count: number;
 }
 
+export type SecretBaseType = 'asteroid' | 'oort_cloud' | 'maximum_space';
+
+export interface SecretBaseData {
+  id: string;
+  name: string;
+  type: SecretBaseType;
+  orbitRadius: number;
+  orbitPhase: number;
+  orbitSpeed: number;
+}
+
 export interface SolarSystemData {
   starType: string;
   starRadius: number;
   planets: PlanetData[];
   asteroidBelt: AsteroidBeltData | null;
   mainStationPlanetId: string;
+  secretBases: SecretBaseData[];
 }
 
 const ROCKY_COLORS  = [0x8B6914, 0xA0522D, 0x7a6248, 0xB87333, 0x996633, 0xCC9966];
 const GAS_COLORS    = [0x6688AA, 0x7A9B8C, 0x9B7A6A, 0x5577AA, 0x886699, 0x4466AA];
 const MOON_COLORS   = [0x777788, 0x888877, 0xAA9988, 0x667788];
+
+const ASTEROID_BASE_NAMES = [
+  'Hollowed Rock', 'Cinder Station', 'Belt Refuge', 'The Burrow',
+  'Slag Haven', 'Tumbling Dock', 'Ore Shadow', 'Gravel Nest',
+];
+const OORT_CLOUD_BASE_NAMES = [
+  'Frost Haven', 'Deep Ice', 'Outer Dark Relay', 'Frozen Whisper',
+  'The Cold Cradle', 'Ice Tomb Station', 'Frostbite Dock', 'Pale Signal',
+];
+const MAXIMUM_SPACE_NAMES = [
+  'The Terminus', "Void's Edge", 'The Last Light', 'Absolute Zero',
+  'The Final Signal', 'Edge of Nothing', 'The Farthest Shore', 'Silence Station',
+];
 
 function planetName(systemName: string, index: number): string {
   const roman = ['I', 'II', 'III', 'IV', 'V', 'VI'];
@@ -131,5 +156,46 @@ export function generateSolarSystem(star: StarSystemData): SolarSystemData {
 
   const mainStationPlanetId = planets.find(p => p.hasStation)?.id ?? planets[0].id;
 
-  return { starType: star.starType, starRadius, planets, asteroidBelt, mainStationPlanetId };
+  // ── Secret bases ─────────────────────────────────────────────────────────
+  const secretBases: SecretBaseData[] = [];
+  const outerEdge = orbitBase; // current orbit frontier after all planets
+
+  // Asteroid belt base (~25% of systems with belts)
+  if (asteroidBelt && rng.next() < 0.25) {
+    const midBelt = (asteroidBelt.innerRadius + asteroidBelt.outerRadius) / 2;
+    secretBases.push({
+      id: `${star.id}-secret-asteroid`,
+      name: rng.pick(ASTEROID_BASE_NAMES),
+      type: 'asteroid',
+      orbitRadius: midBelt + rng.float(-100, 100),
+      orbitPhase: rng.float(0, Math.PI * 2),
+      orbitSpeed: rng.float(0.000015, 0.00004),
+    });
+  }
+
+  // Oort cloud base (~15% — far beyond the gas giants)
+  if (rng.next() < 0.15) {
+    secretBases.push({
+      id: `${star.id}-secret-oort`,
+      name: rng.pick(OORT_CLOUD_BASE_NAMES),
+      type: 'oort_cloud',
+      orbitRadius: outerEdge + rng.float(5000, 10000),
+      orbitPhase: rng.float(0, Math.PI * 2),
+      orbitSpeed: rng.float(0.000002, 0.000008),
+    });
+  }
+
+  // Maximum space (~8% — the absolute edge of the system, the void between stars)
+  if (rng.next() < 0.08) {
+    secretBases.push({
+      id: `${star.id}-secret-void`,
+      name: rng.pick(MAXIMUM_SPACE_NAMES),
+      type: 'maximum_space',
+      orbitRadius: outerEdge + rng.float(20000, 35000),
+      orbitPhase: rng.float(0, Math.PI * 2),
+      orbitSpeed: rng.float(0.0000005, 0.000002),
+    });
+  }
+
+  return { starType: star.starType, starRadius, planets, asteroidBelt, mainStationPlanetId, secretBases };
 }

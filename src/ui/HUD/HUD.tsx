@@ -5,6 +5,7 @@ import { TargetIndicator } from './TargetIndicator';
 import type { SceneEntity } from '../../game/rendering/SceneRenderer';
 import { getCivState } from '../../game/mechanics/CivilizationSystem';
 import { getSystemFactionState, getFaction } from '../../game/mechanics/FactionSystem';
+import type { SecretBaseData } from '../../game/generation/SystemGenerator';
 import styles from './HUD.module.css';
 import * as THREE from 'three';
 
@@ -26,6 +27,8 @@ export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
   const currentStar = galaxy[currentSystemId];
   const targetStar = hyperspaceTarget !== null ? galaxy[hyperspaceTarget] : null;
 
+  const currentSystem = useGameState(s => s.currentSystem);
+
   // Target info
   const targetEntity = player.targetId ? getEntities().get(player.targetId) : null;
   let targetDist = 0;
@@ -33,6 +36,12 @@ export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
     const sp = getShipPos();
     targetDist = Math.round(sp.distanceTo(targetEntity.worldPos));
   }
+
+  // Check if target is a secret base
+  const targetSecretBase: SecretBaseData | undefined =
+    player.targetId && currentSystem
+      ? currentSystem.secretBases.find(b => b.id === player.targetId)
+      : undefined;
 
   return (
     <div className={styles.hud}>
@@ -71,7 +80,7 @@ export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
         <div className={styles.controls}>
           W/S Pitch · A/D Roll · Q/E Yaw<br />
           SPACE Thrust · SHIFT Boost · TAB Target<br />
-          F Dock · G Galaxy Map · 1 System Map · J Jump · H Hail
+          F Dock · G Cluster Map · 1 System Map · J Jump · H Hail
         </div>
       </div>
 
@@ -79,14 +88,43 @@ export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
       <div className={styles.topRight}>
         {targetEntity ? (
           <div className={styles.targetInfo}>
-            <div className={styles.targetLabel}>TARGET</div>
-            <div>{targetEntity.id.replace(`${currentSystemId}-`, '')}</div>
-            <div style={{ color: 'var(--color-hud-dim)', fontSize: '11px' }}>
-              DIST: {targetDist} wu
-            </div>
-            <div style={{ fontSize: '10px', opacity: 0.6 }}>
-              TYPE: {targetEntity.type.toUpperCase()}
-            </div>
+            {targetSecretBase ? (
+              <>
+                <div className={styles.targetLabel} style={{
+                  color: targetSecretBase.type === 'asteroid' ? '#AA7744'
+                    : targetSecretBase.type === 'oort_cloud' ? '#4488CC'
+                    : '#8844FF',
+                }}>SIGNAL</div>
+                <div>{targetSecretBase.name.toUpperCase()}</div>
+                <div style={{ color: 'var(--color-hud-dim)', fontSize: '11px' }}>
+                  DIST: {targetDist} wu
+                </div>
+                <div style={{ fontSize: '10px', opacity: 0.6 }}>
+                  TYPE: {targetSecretBase.type === 'asteroid' ? 'ASTEROID BASE'
+                    : targetSecretBase.type === 'oort_cloud' ? 'OORT CLOUD BASE'
+                    : 'VOID STATION'}
+                </div>
+                <div style={{
+                  color: targetSecretBase.type === 'asteroid' ? '#AA7744'
+                    : targetSecretBase.type === 'oort_cloud' ? '#4488CC'
+                    : '#8844FF',
+                  fontSize: '10px', marginTop: '4px', letterSpacing: '1px',
+                }}>
+                  F TO DOCK
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={styles.targetLabel}>TARGET</div>
+                <div>{targetEntity.id.replace(`${currentSystemId}-`, '')}</div>
+                <div style={{ color: 'var(--color-hud-dim)', fontSize: '11px' }}>
+                  DIST: {targetDist} wu
+                </div>
+                <div style={{ fontSize: '10px', opacity: 0.6 }}>
+                  TYPE: {targetEntity.type.toUpperCase()}
+                </div>
+              </>
+            )}
             {targetEntity.type === 'npc_ship' && (
               <div style={{ color: 'var(--color-station)', fontSize: '10px', marginTop: '4px', letterSpacing: '1px' }}>
                 H TO HAIL

@@ -1,5 +1,5 @@
-export const GALAXY_SEED = 0xDEADBEEF;
-export const GALAXY_SIZE = 30;
+export const CLUSTER_SEED = 0xDEADBEEF;
+export const CLUSTER_SIZE = 30;
 
 export const PALETTE = {
   bg:               0x020408,
@@ -57,7 +57,6 @@ export const GOODS = [
   'Food',
   'Textiles',
   'Radioactives',
-  'Enslaved People',
   'Liquor',
   'Luxuries',
   'Narcotics',

@@ -5,7 +5,7 @@ export interface InputState {
   thrust: number;  // 0 or 1
   boost: boolean;
   dockRequest: boolean;
-  galaxyMap: boolean;
+  clusterMap: boolean;
   systemMap: boolean;
   cycleTarget: boolean;
   jumpRequest: boolean;
@@ -20,7 +20,7 @@ function isDown(key: string): boolean {
 
 export class InputSystem {
   private onDock?: () => void;
-  private onGalaxyMap?: () => void;
+  private onClusterMap?: () => void;
   private onSystemMap?: () => void;
   private onCycleTarget?: () => void;
   private onJumpRequest?: () => void;
@@ -36,7 +36,7 @@ export class InputSystem {
     KEYS.add(e.code);
     // one-shot actions
     if (e.code === 'KeyF' && !e.repeat) this.onDock?.();
-    if (e.code === 'KeyG' && !e.repeat) this.onGalaxyMap?.();
+    if (e.code === 'KeyG' && !e.repeat) this.onClusterMap?.();
     if (e.code === 'Digit1' && !e.repeat) this.onSystemMap?.();
     if (e.code === 'Tab') { e.preventDefault(); if (!e.repeat) this.onCycleTarget?.(); }
     if (e.code === 'KeyJ' && !e.repeat) this.onJumpRequest?.();
@@ -56,7 +56,7 @@ export class InputSystem {
       thrust:      isDown('ArrowUp') || isDown('Space') ? 1 : 0,
       boost:       isDown('ShiftLeft') || isDown('ShiftRight'),
       dockRequest: false,
-      galaxyMap:   false,
+      clusterMap:  false,
       systemMap:   false,
       cycleTarget: false,
       jumpRequest: false,
@@ -65,7 +65,7 @@ export class InputSystem {
   }
 
   onDockRequest(fn: () => void) { this.onDock = fn; }
-  onGalaxyMapToggle(fn: () => void) { this.onGalaxyMap = fn; }
+  onClusterMapToggle(fn: () => void) { this.onClusterMap = fn; }
   onSystemMapToggle(fn: () => void) { this.onSystemMap = fn; }
   onCycleTargetEvent(fn: () => void) { this.onCycleTarget = fn; }
   onJumpRequestEvent(fn: () => void) { this.onJumpRequest = fn; }

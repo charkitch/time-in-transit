@@ -4,4 +4,5 @@ gas giants
 many moon systems around gas giants
 different types of planets
 scan planets
-
+zereshi world fleet has arrived
+hyperspace should be named something else
