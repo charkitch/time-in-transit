@@ -87,13 +87,30 @@ export function SystemMap({ onClose }: SystemMapProps) {
         ctx.stroke();
       }
 
-      // Rings
+      // Rings — multiple bands with inclination-based tilt
       if (planet.hasRings) {
-        ctx.strokeStyle = 'rgba(170,187,204,0.5)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.ellipse(px, py, pR * 2.2, pR * 0.4, 0.3, 0, Math.PI * 2);
-        ctx.stroke();
+        const RING_BAND_MULS: Record<number, [number, number][]> = {
+          1: [[1.40, 2.20]],
+          2: [[1.40, 1.85], [2.00, 2.60]],
+          3: [[1.40, 1.70], [1.90, 2.22], [2.42, 2.80]],
+        };
+        const bands = RING_BAND_MULS[Math.max(1, Math.min(3, planet.ringCount))] ?? RING_BAND_MULS[1];
+        const incl = planet.ringInclination;
+        const baseMinorScale = 0.18 + Math.abs(Math.sin(incl)) * 0.5;
+        const tiltAngle = 0.3 + incl * 0.4;
+
+        for (const [innerMul, outerMul] of bands) {
+          const outerA = pR * outerMul;
+          const innerA = pR * innerMul;
+          const outerB = outerA * baseMinorScale;
+          const innerB = innerA * baseMinorScale;
+
+          ctx.strokeStyle = 'rgba(170,187,204,0.55)';
+          ctx.lineWidth = (outerA - innerA) * 0.5;
+          ctx.beginPath();
+          ctx.ellipse(px, py, (outerA + innerA) / 2, (outerB + innerB) / 2, tiltAngle, 0, Math.PI * 2);
+          ctx.stroke();
+        }
       }
 
       // Name

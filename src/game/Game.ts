@@ -11,7 +11,7 @@ import { selectEvent, selectSecretBaseEvent } from './data/events';
 import { generateSolarSystem } from './generation/SystemGenerator';
 import { useGameState } from './GameState';
 import type { SystemChoices } from './GameState';
-import { HYPERSPACE, FUEL_HARVEST } from './constants';
+import { HYPERSPACE, FUEL_HARVEST, GAS_GIANT_SCOOP } from './constants';
 import type { GoodName } from './constants';
 import type { ChoiceEffect } from './data/events';
 import { MAX_CARGO } from './constants';
@@ -28,6 +28,7 @@ export class Game {
   private hyperspaceTimer = 0;
   private hyperspaceActive = false;
   private scoopingFuel = false;
+  private gasGiantScoopingFuel = false;
   private harvestingFuel = false;
   private isDead = false;
 
@@ -129,10 +130,8 @@ export class Game {
     const collidables = this.sceneRenderer.getCollidables();
     const hit = this.flightModel.resolveCollisions(this.sceneRenderer.shipGroup, collidables);
     if (hit) {
-      state.setShields(state.player.shields - 5 * dt);
-      state.setAlert('COLLISION!');
-      if (state.player.shields <= 0 && !this.isDead) {
-        this.triggerDeath();
+      if (!this.isDead) {
+        this.triggerDeath(['SHIP DESTROYED', 'Impact with stellar body']);
         return;
       }
     }
@@ -144,6 +143,7 @@ export class Game {
     // Fuel scooping near star
     const starEntity = this.sceneRenderer.getAllEntities().get('star');
     const starPos = starEntity?.worldPos ?? null;
+    let coolingAllowed = true;
     if (starPos && starEntity) {
       const distToStar = pos.distanceTo(starPos);
       const scoopRange = starEntity.collisionRadius + 200;
@@ -152,14 +152,13 @@ export class Game {
         state.setFuel(state.player.fuel + scoopRate);
         state.setHeat(state.player.heat + 15 * dt);
         this.scoopingFuel = true;
+        this.gasGiantScoopingFuel = false;
         state.setAlert('FUEL SCOOPING');
+        coolingAllowed = false;
       } else {
         if (this.scoopingFuel) {
           this.scoopingFuel = false;
           state.setAlert(null);
-        }
-        if (state.player.heat > 0) {
-          state.setHeat(state.player.heat - 10 * dt);
         }
       }
 
@@ -175,8 +174,39 @@ export class Game {
       }
     }
 
-    // Fuel harvesting near outer solar bases
+    // Fuel scooping from gas giants
     if (!this.scoopingFuel) {
+      const planets = state.currentSystem?.planets ?? [];
+      let scoopingGasGiant = false;
+      for (const planet of planets) {
+        if (planet.type !== 'gas_giant') continue;
+        const entity = this.sceneRenderer.getAllEntities().get(planet.id);
+        if (!entity) continue;
+        const dist = pos.distanceTo(entity.worldPos);
+        const scoopRange = entity.collisionRadius + GAS_GIANT_SCOOP.rangePadding;
+        if (dist < scoopRange) {
+          state.setFuel(state.player.fuel + GAS_GIANT_SCOOP.rate * dt);
+          state.setHeat(state.player.heat + GAS_GIANT_SCOOP.heatRate * dt);
+          state.setAlert(GAS_GIANT_SCOOP.alert);
+          scoopingGasGiant = true;
+          coolingAllowed = false;
+          break;
+        }
+      }
+      if (this.gasGiantScoopingFuel && !scoopingGasGiant) {
+        state.setAlert(null);
+      }
+      this.gasGiantScoopingFuel = scoopingGasGiant;
+    } else {
+      this.gasGiantScoopingFuel = false;
+    }
+
+    if (coolingAllowed && state.player.heat > 0) {
+      state.setHeat(state.player.heat - 10 * dt);
+    }
+
+    // Fuel harvesting near outer solar bases
+    if (!this.scoopingFuel && !this.gasGiantScoopingFuel) {
       const bases = state.currentSystem?.secretBases ?? [];
       let harvesting = false;
       for (const base of bases) {
@@ -227,6 +257,8 @@ export class Game {
     pos: THREE.Vector3,
     state: ReturnType<typeof useGameState.getState>
   ): void {
+    if (this.scoopingFuel || this.gasGiantScoopingFuel || this.harvestingFuel) return;
+
     const entities = this.sceneRenderer.getAllEntities();
     for (const [, entity] of entities) {
       const alertDist = entity.collisionRadius > 0
@@ -239,7 +271,7 @@ export class Game {
       }
     }
 
-    if (!this.scoopingFuel && state.ui.hyperspaceCountdown === 0) {
+    if (!this.scoopingFuel && !this.gasGiantScoopingFuel && state.ui.hyperspaceCountdown === 0) {
       state.setAlert(null);
     }
   }

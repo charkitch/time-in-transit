@@ -59,6 +59,13 @@ export const FUEL_HARVEST = {
   },
 } as const;
 
+export const GAS_GIANT_SCOOP = {
+  rangePadding: 180,     // extra distance beyond the visible radius
+  rate: 0.08,            // fuel units per second
+  heatRate: 2.5,         // much safer than stellar scooping
+  alert: 'GAS GIANT SCOOPING',
+} as const;
+
 export const STAR_COLORS: Record<string, number> = {
   G: PALETTE.starG,
   K: PALETTE.starK,

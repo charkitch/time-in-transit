@@ -12,6 +12,7 @@ import {
   makeAsteroidBelt, makeRingMesh, makeNPCShipMesh, makeFleetShipMesh,
   makeAsteroidBase, makeOortCloudBase, makeMaximumSpaceBase,
   makeTexturedPlanet, makeTexturedGasGiant, makeTexturedRing,
+  makeRingSystem,
   addCityLights, addSunAtmosphere, addLightning,
 } from './meshFactory';
 import { selectSkin } from './planetSkins';
@@ -135,7 +136,7 @@ export class SceneRenderer {
       orbitPhase: 0,
       type: 'star',
       worldPos: new THREE.Vector3(),
-      collisionRadius: data.starRadius * 1.2,
+      collisionRadius: data.starRadius,
     });
 
     const rng = PRNG.fromIndex(CLUSTER_SEED, systemId * 97 + 13);
@@ -180,21 +181,20 @@ export class SceneRenderer {
         orbitPhase: planet.orbitPhase,
         type: 'planet',
         worldPos: new THREE.Vector3(),
-        collisionRadius: planet.radius * 1.3,
+        collisionRadius: planet.radius,
       });
 
       // Rings
       if (planet.hasRings) {
-        if (texturesEnabled) {
-          const skin = selectSkin('rocky', skinRng); // reuse skinRng for ring skin lookup
-          const ringMesh = skin?.ring
-            ? makeTexturedRing(planet.radius * 1.4, planet.radius * 2.2, skin)
-            : makeRingMesh(planet.radius * 1.4, planet.radius * 2.2);
-          planetGroup.add(ringMesh);
-        } else {
-          const ring = makeRingMesh(planet.radius * 1.4, planet.radius * 2.2);
-          planetGroup.add(ring);
-        }
+        const ringSeed = Math.floor(rng.next() * 0xFFFFFF);
+        const ringGroup = makeRingSystem(
+          planet.radius,
+          planet.ringCount,
+          planet.ringInclination,
+          ringSeed,
+          planet.gasType,
+        );
+        planetGroup.add(ringGroup);
       }
 
       // Station
@@ -222,11 +222,11 @@ export class SceneRenderer {
         let moonGroup: THREE.Group;
         if (texturesEnabled) {
           const skin = selectSkin('moon', skinRng);
-          moonGroup = makeTexturedPlanet(moon.radius, moon.color, skin, wireOverlay, moonSeed);
+          moonGroup = makeTexturedPlanet(moon.radius, moon.color, skin, wireOverlay, moonSeed, moon.surfaceType);
         } else {
-          moonGroup = makePlanet(moon.radius, moon.color, 0, moonSeed);
+          moonGroup = makePlanet(moon.radius, moon.color, 0, moonSeed, moon.surfaceType);
         }
-        addCityLights(moonGroup, moon.radius, moonSeed);
+        addCityLights(moonGroup, moon.radius, moonSeed, moon.surfaceType);
         addSunAtmosphere(moonGroup, moon.radius);
         this.lightningMaterials.push(addLightning(moonGroup, moon.radius, moonSeed));
         this.scene.add(moonGroup);
@@ -240,7 +240,7 @@ export class SceneRenderer {
           parentId: planet.id,
           type: 'moon',
           worldPos: new THREE.Vector3(),
-          collisionRadius: moon.radius * 1.3,
+          collisionRadius: moon.radius,
         });
       }
     }

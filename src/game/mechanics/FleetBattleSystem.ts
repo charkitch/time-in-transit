@@ -254,7 +254,8 @@ export function generateFleetBattle(
   );
 
   // Push battle outside the star if it landed inside
-  const starSafeRadius = systemData.starRadius * 1.3;
+  // Account for fleet spread (±200) + jitter (±75) + margin (75) = 350
+  const starSafeRadius = systemData.starRadius + 350;
   const distFromStar = battlePos.length();
   if (distFromStar < starSafeRadius) {
     battlePos.normalize().multiplyScalar(starSafeRadius);

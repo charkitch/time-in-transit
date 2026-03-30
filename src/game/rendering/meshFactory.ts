@@ -3,6 +3,7 @@ import { PALETTE } from '../constants';
 import { loadTexture } from './textureCache';
 import type { PlanetSkin } from './planetSkins';
 import type { SurfaceType, GasGiantType } from '../generation/SystemGenerator';
+import { PRNG } from '../generation/prng';
 
 /** Creates a group with filled mesh + wireframe overlay */
 export function makeWireframeObject(
@@ -92,9 +93,17 @@ const GLSL_NOISE = `
   }
 `;
 
-// Surface type index for GLSL: 0=continental, 1=ocean, 2=marsh, 3=venus
+// Surface type index for GLSL
 const SURFACE_TYPE_INDEX: Record<SurfaceType, number> = {
-  continental: 0, ocean: 1, marsh: 2, venus: 3,
+  continental: 0,
+  ocean: 1,
+  marsh: 2,
+  venus: 3,
+  barren: 4,
+  desert: 5,
+  ice: 6,
+  volcanic: 7,
+  forest_moon: 8,
 };
 
 /** Procedural planet — surface type drives palette and land/ocean ratio */
@@ -180,7 +189,7 @@ export function makePlanet(
           vec3 land = mix(wetland, dryLand, h);
           surfaceColor = mix(waterC, land, landMask);
 
-        } else {
+        } else if (surfType == 3) {
           // ── Venus: thick atmosphere, no visible ocean, hazy yellow-orange ──
           vec3 hazeLight = vec3(0.85, 0.7, 0.35);
           vec3 hazeDark = vec3(0.55, 0.35, 0.15);
@@ -193,6 +202,61 @@ export function makePlanet(
           // Faint hot glow in deeper cracks
           float crack = smoothstep(0.3, 0.5, n);
           surfaceColor = mix(surfaceColor, hotSurface, crack * 0.3);
+
+        } else if (surfType == 4) {
+          // ── Barren world: dusty, rocky, nearly airless ──
+          float ridge = smoothstep(-0.15, 0.45, n);
+          vec3 dust = vec3(0.42, 0.36, 0.30);
+          vec3 stone = vec3(0.56, 0.49, 0.40);
+          vec3 pale = vec3(0.70, 0.65, 0.58);
+          surfaceColor = mix(dust, stone, ridge);
+          surfaceColor = mix(surfaceColor, pale, smoothstep(0.35, 0.7, n));
+
+        } else if (surfType == 5) {
+          // ── Desert world: sand seas with dark rock uplands ──
+          float dune = sin(normalize(vLocalPos).x * 18.0 + n * 4.0 + seed) * 0.5 + 0.5;
+          float highland = smoothstep(0.12, 0.55, n);
+          vec3 sand = vec3(0.78, 0.66, 0.38);
+          vec3 duneGold = vec3(0.88, 0.75, 0.46);
+          vec3 rock = vec3(0.50, 0.34, 0.20);
+          surfaceColor = mix(sand, duneGold, dune * 0.35);
+          surfaceColor = mix(surfaceColor, rock, highland * 0.55);
+
+        } else if (surfType == 6) {
+          // ── Ice world: frozen seas, blue shadows, bright caps ──
+          float crack = smoothstep(0.15, 0.6, abs(snoise(noisePos * 2.4)));
+          float ridge = smoothstep(-0.05, 0.45, n);
+          vec3 deepIce = vec3(0.52, 0.68, 0.82);
+          vec3 paleIce = vec3(0.82, 0.90, 0.97);
+          vec3 snow = vec3(0.96, 0.98, 1.0);
+          surfaceColor = mix(deepIce, paleIce, ridge);
+          surfaceColor = mix(surfaceColor, snow, smoothstep(0.25, 0.65, n));
+          surfaceColor = mix(surfaceColor, deepIce * 0.75, crack * 0.25);
+
+        } else if (surfType == 7) {
+          // ── Volcanic world: basalt plains with hot fissures ──
+          float lava = smoothstep(0.35, 0.62, abs(snoise(noisePos * 3.2)));
+          float ash = smoothstep(-0.25, 0.35, n);
+          vec3 basalt = vec3(0.12, 0.11, 0.12);
+          vec3 ashGray = vec3(0.28, 0.24, 0.22);
+          vec3 lavaCore = vec3(1.0, 0.38, 0.06);
+          vec3 lavaGlow = vec3(1.0, 0.72, 0.12);
+          surfaceColor = mix(basalt, ashGray, ash);
+          surfaceColor = mix(surfaceColor, lavaCore, lava);
+          surfaceColor = mix(surfaceColor, lavaGlow, lava * smoothstep(0.0, 0.6, sunDot + 0.2) * 0.35);
+
+        } else {
+          // ── Forest moon: dense green canopy, muted seas, Endor-like and rare ──
+          float landMask = smoothstep(-0.18, 0.02, n);
+          vec3 deepWater = vec3(0.03, 0.09, 0.13);
+          vec3 shallow = vec3(0.07, 0.16, 0.12);
+          vec3 lowForest = vec3(0.08, 0.24, 0.10);
+          vec3 highForest = vec3(0.18, 0.32, 0.12);
+          vec3 rock = vec3(0.42, 0.34, 0.24);
+          vec3 waterC = mix(deepWater, shallow, smoothstep(-0.4, -0.08, n));
+          vec3 forest = mix(lowForest, highForest, smoothstep(0.0, 0.4, n));
+          forest = mix(forest, rock, smoothstep(0.35, 0.65, n) * 0.2);
+          surfaceColor = mix(waterC, forest, landMask);
         }
 
         // Lighting: sun side brighter, dark side very dim
@@ -579,7 +643,7 @@ export function makeTexturedPlanet(
   seed: number = 0,
   surfaceType: SurfaceType = 'continental',
 ): THREE.Group {
-  // No skin available — use procedural continent/ocean shader
+  // No skin available — use the procedural surface variant for this body.
   if (!skin) {
     return makePlanet(radius, fallbackColor, 1, seed, surfaceType);
   }
@@ -676,13 +740,155 @@ export function makeTexturedRing(
   return mesh;
 }
 
-/** City lights on the dark side of a planet (skip gas giants + venus) */
+// ── Procedural ring system ────────────────────────────────────────────────────
+
+type RGB = readonly [number, number, number];
+
+const RING_PALETTES: Record<GasGiantType, readonly RGB[]> = {
+  jovian:    [[185, 145,  88], [205, 165,  98], [165, 125,  68], [195, 152,  78]],
+  saturnian: [[218, 198, 142], [235, 218, 168], [202, 182, 122], [225, 205, 152]],
+  neptunian: [[118, 142, 178], [98,  122, 168], [138, 162, 188], [108, 135, 172]],
+  inferno:   [[205, 98,  52],  [225, 118,  62], [182,  78,  42], [215, 108,  58]],
+  chromatic: [[168, 118, 208], [118, 208, 168], [208, 168, 118], [168, 208, 118]],
+};
+
+/** Generate a procedural ring canvas texture with radial bands and Cassini-style gaps */
+function makeRingCanvasTexture(
+  seed: number,
+  innerFrac: number,
+  gasType: GasGiantType,
+): THREE.CanvasTexture {
+  const SIZE = 512;
+  const rng = new PRNG(seed ^ 0xAB3D7F);
+  const palette = RING_PALETTES[gasType];
+
+  // Build 1D band profile (opacity + color) over BANDS samples
+  const BANDS = 256;
+  const opacities = new Float32Array(BANDS);
+  const colors: RGB[] = [];
+
+  // Variable-width bands with randomized opacity
+  let pos = 0;
+  let bandWidth = rng.int(6, 22);
+  let bandOpacity = rng.float(0.35, 0.92);
+  let colorIdx = Math.floor(rng.next() * palette.length);
+  for (let i = 0; i < BANDS; i++) {
+    if (pos >= bandWidth) {
+      pos = 0;
+      bandWidth = rng.int(6, 22);
+      bandOpacity = rng.float(0.25, 0.92);
+      colorIdx = (colorIdx + rng.int(0, palette.length - 1)) % palette.length;
+    }
+    opacities[i] = bandOpacity;
+    colors.push(palette[colorIdx]);
+    pos++;
+  }
+
+  // Cassini-style sharp gaps
+  const numGaps = rng.int(1, 4);
+  for (let g = 0; g < numGaps; g++) {
+    const gapCenter = rng.float(0.08, 0.92);
+    const gapHalf = rng.float(0.018, 0.07);
+    for (let i = 0; i < BANDS; i++) {
+      const dist = Math.abs(i / BANDS - gapCenter);
+      if (dist < gapHalf) {
+        opacities[i] *= dist / gapHalf;
+      }
+    }
+  }
+
+  // Fade at both edges so the ring has soft boundaries
+  for (let i = 0; i < BANDS; i++) {
+    const t = i / (BANDS - 1);
+    const fade = Math.min(t * 6, 1) * Math.min((1 - t) * 6, 1);
+    opacities[i] *= fade;
+  }
+
+  // Paint canvas — UVs are a flat projection: center (0.5,0.5) = planet center,
+  // UV dist 0.5 = outerR.  So uvDist = sqrt(dx²+dy²) where dx = (px/SIZE - 0.5)*2.
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext('2d')!;
+  const imgData = ctx.createImageData(SIZE, SIZE);
+  const data = imgData.data;
+
+  for (let py = 0; py < SIZE; py++) {
+    for (let px = 0; px < SIZE; px++) {
+      const dx = (px / SIZE - 0.5) * 2;   // -1 … +1  (1 = outerR in UV)
+      const dy = (py / SIZE - 0.5) * 2;
+      const uvDist = Math.sqrt(dx * dx + dy * dy);
+      const t = (uvDist - innerFrac) / (1.0 - innerFrac);
+      if (t < 0 || t > 1) continue;
+
+      const bi = Math.min(BANDS - 1, Math.floor(t * BANDS));
+      const alpha = Math.max(0, opacities[bi]);
+      const col = colors[bi];
+      const idx = (py * SIZE + px) * 4;
+      data[idx]     = col[0];
+      data[idx + 1] = col[1];
+      data[idx + 2] = col[2];
+      data[idx + 3] = Math.round(alpha * 220);
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+  return new THREE.CanvasTexture(canvas);
+}
+
+/** Ring band definitions [innerMul, outerMul] for each ring count variant */
+const RING_BAND_CONFIGS: Record<number, [number, number][]> = {
+  1: [[1.40, 2.20]],
+  2: [[1.40, 1.85], [2.00, 2.60]],
+  3: [[1.40, 1.70], [1.90, 2.22], [2.42, 2.80]],
+};
+
+/**
+ * Build a ring system group: 1–3 rings with procedural band textures and a
+ * random inclination baked into the group's rotation.
+ */
+export function makeRingSystem(
+  radius: number,
+  ringCount: number,
+  ringInclination: number,
+  seed: number,
+  gasType: GasGiantType,
+): THREE.Group {
+  const group = new THREE.Group();
+  const rng = new PRNG(seed ^ 0x4E2B9C);
+  const configs = RING_BAND_CONFIGS[Math.max(1, Math.min(3, ringCount))] ?? RING_BAND_CONFIGS[1];
+
+  for (const [innerMul, outerMul] of configs) {
+    const innerR = radius * innerMul;
+    const outerR = radius * outerMul;
+    const innerFrac = innerMul / outerMul;
+    const ringSeed = Math.floor(rng.next() * 0xFFFFFF);
+
+    const tex = makeRingCanvasTexture(ringSeed, innerFrac, gasType);
+    const geo = new THREE.RingGeometry(innerR, outerR, 128);
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex,
+      alphaMap: tex,
+      side: THREE.DoubleSide,
+      transparent: true,
+      depthWrite: false,
+    });
+    group.add(new THREE.Mesh(geo, mat));
+  }
+
+  // Flat orbital plane + inclination tilt
+  group.rotation.x = Math.PI / 2;
+  group.rotation.z = ringInclination;
+  return group;
+}
+
+/** City lights on the dark side of a planet (skip clearly uninhabited worlds) */
 export function addCityLights(
   group: THREE.Group, radius: number, seed: number,
   surfaceType: SurfaceType = 'continental',
 ): void {
-  // Venus: thick atmosphere hides everything — no city lights
-  if (surfaceType === 'venus') return;
+  // Atmospherically hostile or obviously barren worlds should stay dark.
+  if (surfaceType === 'venus' || surfaceType === 'barren' || surfaceType === 'ice' || surfaceType === 'volcanic') return;
 
   const geo = new THREE.SphereGeometry(radius * 1.005, 32, 24);
 
@@ -737,6 +943,12 @@ export function addCityLights(
         } else if (surfType == 2) {
           // Marsh — most land is soggy but buildable
           landMask = smoothstep(-0.15, 0.1, n);
+        } else if (surfType == 5) {
+          // Desert — sparser buildable pockets
+          landMask = smoothstep(-0.05, 0.2, n) * 0.45;
+        } else if (surfType == 8) {
+          // Forest moon — sparse settlements beneath dense canopy
+          landMask = smoothstep(-0.1, 0.12, n) * 0.35;
         } else {
           // Continental
           landMask = smoothstep(-0.05, 0.15, n);
@@ -887,7 +1099,7 @@ export function addLightning(
       void main() {
         vec3 toStar = normalize(-vWorldPosition);
         float sunDot = dot(vWorldNormal, toStar);
-        // Only on dark side; fade away near the terminator
+        // Only on dark side; fade out near the terminator
         float darkMask = smoothstep(0.05, -0.2, sunDot);
         if (darkMask <= 0.001) discard;
 
@@ -897,18 +1109,20 @@ export function addLightning(
         float phi   = acos(clamp(n.y, -1.0, 1.0)) / 3.14159265; // 0..1
 
         float gridScale = 9.0;
-        vec2 uvGrid  = vec2(theta * gridScale, phi * gridScale * 0.55);
+        vec2 uvGrid    = vec2(theta * gridScale, phi * gridScale * 0.55);
         vec2 cellCoord = floor(uvGrid);
         vec2 local     = fract(uvGrid) - 0.5; // -0.5..0.5
 
-        // ~12% of cells are storm cells
+        // ~20% of cells can produce storms
         float cHash = hashv(cellCoord, seed);
-        if (cHash < 0.88) discard;
+        if (cHash < 0.80) discard;
 
-        // Rare, brief flash — 0.15-0.35 Hz, visible ~4% of period
-        float flashRate = 0.15 + cHash * 0.2;
+        // Flash timing: 0.3-0.8 Hz, visible for ~12% of period
+        // Avoid reversed smoothstep args (undefined GLSL behaviour)
+        float flashRate = 0.3 + cHash * 0.5;
         float phase = fract(uTime * flashRate + cHash * 17.3);
-        float flash = smoothstep(0.0, 0.008, phase) * smoothstep(0.04, 0.022, phase);
+        float flash = smoothstep(0.0, 0.02, phase)
+                    * (1.0 - smoothstep(0.10, 0.14, phase));
         if (flash <= 0.001) discard;
 
         // Jagged bolt: 3 connected segments
@@ -923,28 +1137,28 @@ export function addLightning(
         vec2 p2 = vec2((h4 - 0.5) * 0.3,   0.12);
         vec2 p3 = vec2((h5 - 0.5) * 0.22,  0.43);
 
-        float w = 0.013;
+        float w = 0.022;
         float d = min(distToSeg(local, p0, p1),
                   min(distToSeg(local, p1, p2),
                       distToSeg(local, p2, p3)));
-        float bolt = smoothstep(w, w * 0.15, d);
+        float bolt = smoothstep(w, w * 0.1, d);
 
         // One sub-branch off the mid-segment
         float h6 = hashv(cellCoord, seed + 6.0);
         float h7 = hashv(cellCoord, seed + 7.0);
         vec2 bStart = mix(p1, p2, 0.45);
-        vec2 bEnd   = bStart + vec2((h6 - 0.5) * 0.17, (h7 * 0.12 + 0.08));
-        float branch = smoothstep(w * 0.8, w * 0.12,
-                         distToSeg(local, bStart, bEnd)) * 0.6;
+        vec2 bEnd   = bStart + vec2((h6 - 0.5) * 0.17, h7 * 0.12 + 0.08);
+        float branch = smoothstep(w * 0.75, w * 0.1,
+                         distToSeg(local, bStart, bEnd)) * 0.65;
 
-        // Soft glow halo
-        float glow = smoothstep(w * 5.0, 0.0, d) * 0.25;
+        // Soft glow halo around the bolt
+        float glow = smoothstep(w * 6.0, 0.0, d) * 0.4;
 
         float total = max(bolt, branch) + glow;
         float alpha = total * flash * darkMask;
         if (alpha <= 0.001) discard;
 
-        vec3 color = mix(vec3(0.55, 0.75, 1.0), vec3(1.0, 1.0, 1.0), bolt);
+        vec3 color = mix(vec3(0.55, 0.78, 1.0), vec3(1.0, 1.0, 1.0), bolt);
         gl_FragColor = vec4(color, alpha);
       }
     `,
@@ -954,7 +1168,7 @@ export function addLightning(
   return mat;
 }
 
-/** Planetary ring */
+/** Planetary ring (plain fallback — prefer makeRingSystem) */
 export function makeRingMesh(innerR: number, outerR: number): THREE.Mesh {
   const geo = new THREE.RingGeometry(innerR, outerR, 64);
   const mat = new THREE.MeshBasicMaterial({
