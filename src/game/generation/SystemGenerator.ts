@@ -1,6 +1,6 @@
 import { PRNG } from './prng';
 import { CLUSTER_SEED } from '../constants';
-import type { StarSystemData } from './GalaxyGenerator';
+import type { StarSystemData } from './ClusterGenerator';
 
 export interface PlanetData {
   id: string;

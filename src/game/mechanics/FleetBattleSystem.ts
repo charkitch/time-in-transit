@@ -4,7 +4,7 @@ import { CLUSTER_SEED, ERA_LENGTH } from '../constants';
 import { getSystemFactionState } from './FactionSystem';
 import { getCivState } from './CivilizationSystem';
 import type { SolarSystemData, PlanetData } from '../generation/SystemGenerator';
-import type { StarSystemData } from '../generation/GalaxyGenerator';
+import type { StarSystemData } from '../generation/ClusterGenerator';
 
 export interface FleetShip {
   id: string;
@@ -252,6 +252,13 @@ export function generateFleetBattle(
     0,
     planetZ + Math.sin(battleAngle) * battleOffset,
   );
+
+  // Push battle outside the star if it landed inside
+  const starSafeRadius = systemData.starRadius * 1.3;
+  const distFromStar = battlePos.length();
+  if (distFromStar < starSafeRadius) {
+    battlePos.normalize().multiplyScalar(starSafeRadius);
+  }
 
   // Generate two fleets
   const countA = rng.int(5, 8);

@@ -11,10 +11,11 @@ import { selectEvent, selectSecretBaseEvent } from './data/events';
 import { generateSolarSystem } from './generation/SystemGenerator';
 import { useGameState } from './GameState';
 import type { SystemChoices } from './GameState';
-import { HYPERSPACE } from './constants';
+import { HYPERSPACE, FUEL_HARVEST } from './constants';
 import type { GoodName } from './constants';
 import type { ChoiceEffect } from './data/events';
 import { MAX_CARGO } from './constants';
+import type { SecretBaseType } from './generation/SystemGenerator';
 
 export class Game {
   private sceneRenderer: SceneRenderer;
@@ -27,6 +28,7 @@ export class Game {
   private hyperspaceTimer = 0;
   private hyperspaceActive = false;
   private scoopingFuel = false;
+  private harvestingFuel = false;
   private isDead = false;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -171,6 +173,30 @@ export class Game {
         }
         state.setAlert('OVERHEAT!');
       }
+    }
+
+    // Fuel harvesting near outer solar bases
+    if (!this.scoopingFuel) {
+      const bases = state.currentSystem?.secretBases ?? [];
+      let harvesting = false;
+      for (const base of bases) {
+        const entity = this.sceneRenderer.getAllEntities().get(base.id);
+        if (!entity) continue;
+        const dist = pos.distanceTo(entity.worldPos);
+        if (dist < FUEL_HARVEST.range) {
+          const baseType = base.type as SecretBaseType;
+          const rate = FUEL_HARVEST.rates[baseType] * dt;
+          state.setFuel(state.player.fuel + rate);
+          state.setAlert(FUEL_HARVEST.alerts[baseType]);
+          harvesting = true;
+          break;
+        }
+      }
+      if (this.harvestingFuel && !harvesting) {
+        this.harvestingFuel = false;
+        state.setAlert(null);
+      }
+      this.harvestingFuel = harvesting;
     }
 
     // Passive shield regen when cool

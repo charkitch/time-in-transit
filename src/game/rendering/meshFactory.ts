@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { PALETTE } from '../constants';
+import { loadTexture } from './textureCache';
+import type { PlanetSkin } from './planetSkins';
 
 /** Creates a group with filled mesh + wireframe overlay */
 export function makeWireframeObject(
@@ -26,10 +28,150 @@ export function makeWireframeObject(
   return group;
 }
 
-/** Icosahedron planet */
-export function makePlanet(radius: number, color: number, detail: number = 1): THREE.Group {
-  const geo = new THREE.IcosahedronGeometry(radius, detail);
-  return makeWireframeObject(geo, color, PALETTE.wireframe);
+// ── Shared GLSL noise used by procedural planet + city lights ──────────────
+const GLSL_NOISE = `
+  vec3 mod289(vec3 x) { return x - floor(x * (1.0/289.0)) * 289.0; }
+  vec4 mod289(vec4 x) { return x - floor(x * (1.0/289.0)) * 289.0; }
+  vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+  vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+
+  float snoise(vec3 v) {
+    const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+    vec3 i  = floor(v + dot(v, C.yyy));
+    vec3 x0 = v - i + dot(i, C.xxx);
+    vec3 g = step(x0.yzx, x0.xyz);
+    vec3 l = 1.0 - g;
+    vec3 i1 = min(g.xyz, l.zxy);
+    vec3 i2 = max(g.xyz, l.zxy);
+    vec3 x1 = x0 - i1 + C.xxx;
+    vec3 x2 = x0 - i2 + C.yyy;
+    vec3 x3 = x0 - D.yyy;
+    i = mod289(i);
+    vec4 p = permute(permute(permute(
+      i.z + vec4(0.0, i1.z, i2.z, 1.0))
+      + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+      + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+    float n_ = 0.142857142857;
+    vec3 ns = n_ * D.wyz - D.xzx;
+    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+    vec4 x_ = floor(j * ns.z);
+    vec4 y_ = floor(j - 7.0 * x_);
+    vec4 x = x_ * ns.x + ns.yyyy;
+    vec4 y = y_ * ns.x + ns.yyyy;
+    vec4 h = 1.0 - abs(x) - abs(y);
+    vec4 b0 = vec4(x.xy, y.xy);
+    vec4 b1 = vec4(x.zw, y.zw);
+    vec4 s0 = floor(b0)*2.0 + 1.0;
+    vec4 s1 = floor(b1)*2.0 + 1.0;
+    vec4 sh = -step(h, vec4(0.0));
+    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+    vec3 p0 = vec3(a0.xy, h.x);
+    vec3 p1 = vec3(a0.zw, h.y);
+    vec3 p2 = vec3(a1.xy, h.z);
+    vec3 p3 = vec3(a1.zw, h.w);
+    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+    p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+    vec4 m = max(0.6 - vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)), 0.0);
+    m = m * m;
+    return 42.0 * dot(m*m, vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+  }
+
+  float fbm(vec3 p) {
+    float v = 0.0;
+    float a = 0.5;
+    vec3 shift = vec3(100.0);
+    for (int i = 0; i < 5; i++) {
+      v += a * snoise(p);
+      p = p * 2.0 + shift;
+      a *= 0.5;
+    }
+    return v;
+  }
+`;
+
+/** Procedural planet with continents and oceans */
+export function makePlanet(radius: number, color: number, detail: number = 1, seed: number = 0): THREE.Group {
+  const group = new THREE.Group();
+  const geo = new THREE.SphereGeometry(radius, 32, 24);
+
+  const baseColor = new THREE.Color(color);
+
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      seed: { value: seed },
+      baseColor: { value: baseColor },
+    },
+    vertexShader: `
+      varying vec3 vWorldNormal;
+      varying vec3 vWorldPosition;
+      varying vec3 vLocalPos;
+      void main() {
+        vLocalPos = position;
+        vec4 worldPos = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPos.xyz;
+        vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+        gl_Position = projectionMatrix * viewMatrix * worldPos;
+      }
+    `,
+    fragmentShader: `
+      ${GLSL_NOISE}
+      uniform float seed;
+      uniform vec3 baseColor;
+      varying vec3 vWorldNormal;
+      varying vec3 vWorldPosition;
+      varying vec3 vLocalPos;
+
+      void main() {
+        vec3 toStar = normalize(-vWorldPosition);
+        float sunDot = dot(vWorldNormal, toStar);
+
+        // Continent noise — use normalized local position so it tiles on sphere
+        vec3 noisePos = normalize(vLocalPos) * 2.0 + vec3(seed * 13.37, seed * 7.13, seed * 3.71);
+        float n = fbm(noisePos);
+
+        // Land vs ocean threshold
+        float landMask = smoothstep(-0.05, 0.1, n);
+
+        // Ocean: deep blue-teal tones
+        vec3 ocean = vec3(0.05, 0.12, 0.25);
+        vec3 shallowOcean = vec3(0.08, 0.2, 0.35);
+
+        // Land: vary from green lowlands to brown highlands using baseColor influence
+        vec3 lowland = mix(vec3(0.15, 0.35, 0.12), baseColor * 0.5, 0.3);
+        vec3 highland = mix(vec3(0.45, 0.35, 0.2), baseColor * 0.7, 0.3);
+        float height = smoothstep(0.1, 0.5, n);
+        vec3 land = mix(lowland, highland, height);
+
+        // Blend ocean depth
+        float oceanDepth = smoothstep(-0.4, -0.05, n);
+        vec3 oceanColor = mix(ocean, shallowOcean, oceanDepth);
+
+        vec3 surfaceColor = mix(oceanColor, land, landMask);
+
+        // Lighting: sun side brighter, dark side very dim
+        float lighting = smoothstep(-0.3, 0.8, sunDot) * 0.85 + 0.15;
+
+        gl_FragColor = vec4(surfaceColor * lighting, 1.0);
+      }
+    `,
+  });
+
+  group.add(new THREE.Mesh(geo, mat));
+
+  // Subtle wireframe overlay
+  if (detail >= 0) {
+    const edgesGeo = new THREE.EdgesGeometry(geo, 15);
+    const wireMat = new THREE.LineBasicMaterial({
+      color: PALETTE.wireframe,
+      transparent: true,
+      opacity: 0.12,
+    });
+    group.add(new THREE.LineSegments(edgesGeo, wireMat));
+  }
+
+  return group;
 }
 
 /** Gas giant with vertex color banding */
@@ -250,6 +392,245 @@ export function makeMaximumSpaceBase(size = 55): THREE.Group {
   group.add(light);
 
   return group;
+}
+
+/** Textured rocky/terrestrial planet — falls back to procedural when no skin */
+export function makeTexturedPlanet(
+  radius: number,
+  fallbackColor: number,
+  skin: PlanetSkin | null,
+  wireOverlay: boolean,
+  seed: number = 0,
+): THREE.Group {
+  // No skin available — use procedural continent/ocean shader
+  if (!skin) {
+    return makePlanet(radius, fallbackColor, 1, seed);
+  }
+
+  const geo = new THREE.SphereGeometry(radius, 32, 24);
+  const mat = new THREE.MeshStandardMaterial({
+    color: fallbackColor,
+    roughness: 0.8,
+    metalness: 0.1,
+  });
+
+  mat.map = loadTexture(skin.albedo);
+  if (skin.normal) mat.normalMap = loadTexture(skin.normal);
+  if (skin.roughness) mat.roughnessMap = loadTexture(skin.roughness);
+
+  const group = new THREE.Group();
+  group.add(new THREE.Mesh(geo, mat));
+
+  if (wireOverlay) {
+    const edgesGeo = new THREE.EdgesGeometry(geo, 15);
+    const wireMat = new THREE.LineBasicMaterial({
+      color: PALETTE.wireframe,
+      transparent: true,
+      opacity: 0.15,
+    });
+    group.add(new THREE.LineSegments(edgesGeo, wireMat));
+  }
+
+  return group;
+}
+
+/** Textured gas giant — sphere with banding texture, or solid fallback */
+export function makeTexturedGasGiant(
+  radius: number,
+  fallbackColor: number,
+  skin: PlanetSkin | null,
+  wireOverlay: boolean,
+): THREE.Group {
+  const geo = new THREE.SphereGeometry(radius, 32, 24);
+  const mat = new THREE.MeshStandardMaterial({
+    color: fallbackColor,
+    roughness: 0.9,
+    metalness: 0.0,
+  });
+
+  if (skin) {
+    mat.map = loadTexture(skin.albedo);
+    if (skin.normal) mat.normalMap = loadTexture(skin.normal);
+  }
+
+  const group = new THREE.Group();
+  group.add(new THREE.Mesh(geo, mat));
+
+  if (wireOverlay) {
+    const edgesGeo = new THREE.EdgesGeometry(geo, 15);
+    const wireMat = new THREE.LineBasicMaterial({
+      color: PALETTE.wireframe,
+      transparent: true,
+      opacity: 0.15,
+    });
+    group.add(new THREE.LineSegments(edgesGeo, wireMat));
+  }
+
+  return group;
+}
+
+/** Textured planetary ring */
+export function makeTexturedRing(
+  innerR: number,
+  outerR: number,
+  skin: PlanetSkin,
+): THREE.Mesh {
+  const geo = new THREE.RingGeometry(innerR, outerR, 64);
+  const mat = new THREE.MeshStandardMaterial({
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.6,
+    roughness: 1.0,
+    metalness: 0.0,
+  });
+
+  if (skin.ring) {
+    mat.map = loadTexture(skin.ring);
+    mat.alphaMap = loadTexture(skin.ring);
+  }
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.x = Math.PI / 2;
+  return mesh;
+}
+
+/** City lights on the dark side of a planet (skip gas giants) */
+export function addCityLights(group: THREE.Group, radius: number, seed: number): void {
+  const geo = new THREE.SphereGeometry(radius * 1.005, 32, 24);
+
+  const mat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    uniforms: {
+      seed: { value: seed },
+    },
+    vertexShader: `
+      varying vec3 vWorldNormal;
+      varying vec3 vWorldPosition;
+      varying vec3 vLocalPos;
+      void main() {
+        vLocalPos = position;
+        vec4 worldPos = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPos.xyz;
+        vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+        gl_Position = projectionMatrix * viewMatrix * worldPos;
+      }
+    `,
+    fragmentShader: `
+      ${GLSL_NOISE}
+      varying vec3 vWorldNormal;
+      varying vec3 vWorldPosition;
+      varying vec3 vLocalPos;
+      uniform float seed;
+
+      float hash(vec2 p) {
+        return fract(sin(dot(p, vec2(127.1, 311.7)) + seed) * 43758.5453);
+      }
+
+      void main() {
+        vec3 toStar = normalize(-vWorldPosition);
+        float sunDot = dot(vWorldNormal, toStar);
+
+        // Only visible on dark side
+        float darkMask = smoothstep(0.0, -0.2, sunDot);
+
+        // Same continent noise as the planet surface — cities only on land
+        vec3 noisePos = normalize(vLocalPos) * 2.0
+          + vec3(seed * 13.37, seed * 7.13, seed * 3.71);
+        float n = fbm(noisePos);
+        float landMask = smoothstep(-0.05, 0.15, n);
+
+        // Dense city grid — small tight dots clustered on land
+        // Use spherical coords for even distribution
+        vec3 norm = normalize(vLocalPos);
+        float theta = atan(norm.z, norm.x);
+        float phi = acos(clamp(norm.y, -1.0, 1.0));
+        vec2 gridUv = vec2(theta * 20.0, phi * 12.0);
+        vec2 cell = floor(gridUv);
+        vec2 local = fract(gridUv) - 0.5;
+
+        float h = hash(cell);
+        float city = 0.0;
+        // Multiple tiny dots per cell for clustered feel
+        if (h > 0.45) {
+          // Main city dot
+          vec2 offset1 = vec2(hash(cell + 1.0) - 0.5, hash(cell + 2.0) - 0.5) * 0.4;
+          float d1 = length(local - offset1);
+          city += smoothstep(0.12, 0.02, d1);
+
+          // Secondary dots for sprawl
+          if (h > 0.6) {
+            vec2 offset2 = vec2(hash(cell + 3.0) - 0.5, hash(cell + 4.0) - 0.5) * 0.35;
+            float d2 = length(local - offset2);
+            city += smoothstep(0.08, 0.01, d2) * 0.7;
+          }
+          if (h > 0.75) {
+            vec2 offset3 = vec2(hash(cell + 5.0) - 0.5, hash(cell + 6.0) - 0.5) * 0.3;
+            float d3 = length(local - offset3);
+            city += smoothstep(0.06, 0.01, d3) * 0.5;
+          }
+        }
+
+        city = min(city, 1.0);
+        float alpha = darkMask * landMask * city * 0.9;
+        vec3 color = mix(vec3(1.0, 0.82, 0.4), vec3(1.0, 0.95, 0.7), h);
+
+        gl_FragColor = vec4(color, alpha);
+      }
+    `,
+  });
+
+  group.add(new THREE.Mesh(geo, mat));
+}
+
+/** Atmospheric glow on the sunlit side of a planet (skip gas giants) */
+export function addSunAtmosphere(group: THREE.Group, radius: number): void {
+  const geo = new THREE.SphereGeometry(radius * 1.06, 32, 24);
+
+  const mat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.FrontSide,
+    vertexShader: `
+      varying vec3 vWorldNormal;
+      varying vec3 vWorldPosition;
+      varying vec3 vViewDir;
+      void main() {
+        vec4 worldPos = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPos.xyz;
+        vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+        vViewDir = normalize(cameraPosition - worldPos.xyz);
+        gl_Position = projectionMatrix * viewMatrix * worldPos;
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vWorldNormal;
+      varying vec3 vWorldPosition;
+      varying vec3 vViewDir;
+
+      void main() {
+        vec3 toStar = normalize(-vWorldPosition);
+        float sunDot = dot(vWorldNormal, toStar);
+
+        // Fresnel rim — strongest at edges, visible from all angles
+        float rim = 1.0 - max(dot(vWorldNormal, vViewDir), 0.0);
+        rim = pow(rim, 2.0);
+
+        // Broad sunlit glow — covers most of the sun-facing hemisphere
+        float sunMask = smoothstep(-0.2, 0.6, sunDot);
+
+        // Diffuse brightening across the whole lit face (not just rim)
+        float faceBright = max(sunDot, 0.0) * 0.25;
+
+        float alpha = (rim * 0.7 + faceBright) * sunMask;
+        vec3 color = vec3(0.7, 0.88, 1.0);
+
+        gl_FragColor = vec4(color, alpha);
+      }
+    `,
+  });
+
+  group.add(new THREE.Mesh(geo, mat));
 }
 
 /** Planetary ring */

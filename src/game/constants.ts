@@ -45,6 +45,20 @@ export const HYPERSPACE = {
   duration:    2,  // tunnel animation seconds
 } as const;
 
+export const FUEL_HARVEST = {
+  range: 400,            // units from base to begin harvesting
+  rates: {               // fuel units per second
+    asteroid:      0.15,
+    oort_cloud:    0.25,
+    maximum_space: 0.10,
+  },
+  alerts: {
+    asteroid:      'ICE MINING',
+    oort_cloud:    'ICE HARVESTING',
+    maximum_space: 'HYDROGEN COLLECTION',
+  },
+} as const;
+
 export const STAR_COLORS: Record<string, number> = {
   G: PALETTE.starG,
   K: PALETTE.starK,
@@ -96,3 +110,10 @@ export const FACTION_COLORS: number[] = [
   0x44DDAA, // teal
   0xFFCC22, // gold
 ];
+
+/** Mutable — settings UI can toggle at runtime */
+export const RENDER_CONFIG = {
+  planetTexturesEnabled: false,
+  planetWireOverlayEnabled: true,
+  planetTextureQuality: 'balanced' as 'low' | 'balanced' | 'high',
+};

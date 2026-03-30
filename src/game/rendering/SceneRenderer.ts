@@ -11,16 +11,20 @@ import {
   makePlanet, makeGasGiant, makeStation, makeGlowSprite,
   makeAsteroidBelt, makeRingMesh, makeNPCShipMesh, makeFleetShipMesh,
   makeAsteroidBase, makeOortCloudBase, makeMaximumSpaceBase,
+  makeTexturedPlanet, makeTexturedGasGiant, makeTexturedRing,
+  addCityLights, addSunAtmosphere,
 } from './meshFactory';
+import { selectSkin } from './planetSkins';
+import { disposeAll as disposeTextureCache } from './textureCache';
 import type { SolarSystemData } from '../generation/SystemGenerator';
-import type { StarSystemData } from '../generation/GalaxyGenerator';
+import type { StarSystemData } from '../generation/ClusterGenerator';
 import { generateNPCShips } from '../mechanics/NPCSystem';
 import type { NPCShipState } from '../mechanics/NPCSystem';
 import { generateFleetBattle } from '../mechanics/FleetBattleSystem';
 import type { FleetBattle } from '../mechanics/FleetBattleSystem';
 import { getFaction } from '../mechanics/FactionSystem';
 import { PRNG } from '../generation/prng';
-import { CLUSTER_SEED } from '../constants';
+import { CLUSTER_SEED, RENDER_CONFIG } from '../constants';
 
 const _npcCollisionVec = new THREE.Vector3();
 
@@ -133,15 +137,34 @@ export class SceneRenderer {
     });
 
     const rng = PRNG.fromIndex(CLUSTER_SEED, systemId * 97 + 13);
+    // Fork an isolated PRNG for skin selection — parent rng stream is unaffected
+    // by how many skins are picked, and determinism holds whether textures are on or off.
+    const skinRng = rng.fork();
+    const texturesEnabled = RENDER_CONFIG.planetTexturesEnabled;
+    const wireOverlay = RENDER_CONFIG.planetWireOverlayEnabled;
 
     // Planets
     for (const planet of data.planets) {
       let planetGroup: THREE.Group;
-      if (planet.type === 'gas_giant') {
-        planetGroup = makeGasGiant(planet.radius, planet.color, () => rng.next());
+      // Stable seed per planet — shared between continent shader and city lights
+      const planetSeed = rng.next() * 100;
+      if (texturesEnabled) {
+        const category = planet.type === 'gas_giant' ? 'gas' : 'rocky';
+        const skin = selectSkin(category, skinRng);
+        planetGroup = planet.type === 'gas_giant'
+          ? makeTexturedGasGiant(planet.radius, planet.color, skin, wireOverlay)
+          : makeTexturedPlanet(planet.radius, planet.color, skin, wireOverlay, planetSeed);
       } else {
-        planetGroup = makePlanet(planet.radius, planet.color);
+        planetGroup = planet.type === 'gas_giant'
+          ? makeGasGiant(planet.radius, planet.color, () => rng.next())
+          : makePlanet(planet.radius, planet.color, 1, planetSeed);
       }
+      // City lights + sun atmosphere for non-gas-giant planets
+      if (planet.type !== 'gas_giant') {
+        addCityLights(planetGroup, planet.radius, planetSeed);
+        addSunAtmosphere(planetGroup, planet.radius);
+      }
+
       planetGroup.position.set(planet.orbitRadius, 0, 0);
       this.scene.add(planetGroup);
       this.systemObjects.push(planetGroup);
@@ -159,8 +182,16 @@ export class SceneRenderer {
 
       // Rings
       if (planet.hasRings) {
-        const ring = makeRingMesh(planet.radius * 1.4, planet.radius * 2.2);
-        planetGroup.add(ring);
+        if (texturesEnabled) {
+          const skin = selectSkin('rocky', skinRng); // reuse skinRng for ring skin lookup
+          const ringMesh = skin?.ring
+            ? makeTexturedRing(planet.radius * 1.4, planet.radius * 2.2, skin)
+            : makeRingMesh(planet.radius * 1.4, planet.radius * 2.2);
+          planetGroup.add(ringMesh);
+        } else {
+          const ring = makeRingMesh(planet.radius * 1.4, planet.radius * 2.2);
+          planetGroup.add(ring);
+        }
       }
 
       // Station
@@ -184,7 +215,16 @@ export class SceneRenderer {
 
       // Moons
       for (const moon of planet.moons) {
-        const moonGroup = makePlanet(moon.radius, moon.color, 0);
+        const moonSeed = rng.next() * 100;
+        let moonGroup: THREE.Group;
+        if (texturesEnabled) {
+          const skin = selectSkin('moon', skinRng);
+          moonGroup = makeTexturedPlanet(moon.radius, moon.color, skin, wireOverlay, moonSeed);
+        } else {
+          moonGroup = makePlanet(moon.radius, moon.color, 0, moonSeed);
+        }
+        addCityLights(moonGroup, moon.radius, moonSeed);
+        addSunAtmosphere(moonGroup, moon.radius);
         this.scene.add(moonGroup);
         this.systemObjects.push(moonGroup);
         this.entities.set(moon.id, {
@@ -531,6 +571,7 @@ export class SceneRenderer {
 
   dispose(): void {
     window.removeEventListener('resize', this.handleResize);
+    disposeTextureCache();
     this.renderer.dispose();
   }
 }
