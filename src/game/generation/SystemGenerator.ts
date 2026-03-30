@@ -2,10 +2,13 @@ import { PRNG } from './prng';
 import { CLUSTER_SEED } from '../constants';
 import type { StarSystemData } from './ClusterGenerator';
 
+export type SurfaceType = 'continental' | 'ocean' | 'marsh' | 'venus';
+
 export interface PlanetData {
   id: string;
   name: string;
   type: 'rocky' | 'gas_giant';
+  surfaceType: SurfaceType;
   radius: number;       // world units
   orbitRadius: number;  // wu from star
   orbitSpeed: number;   // rad/s
@@ -51,6 +54,7 @@ export interface SolarSystemData {
   secretBases: SecretBaseData[];
 }
 
+const SURFACE_TYPES: SurfaceType[] = ['continental', 'ocean', 'marsh', 'venus'];
 const ROCKY_COLORS  = [0x8B6914, 0xA0522D, 0x7a6248, 0xB87333, 0x996633, 0xCC9966];
 const GAS_COLORS    = [0x6688AA, 0x7A9B8C, 0x9B7A6A, 0x5577AA, 0x886699, 0x4466AA];
 const MOON_COLORS   = [0x777788, 0x888877, 0xAA9988, 0x667788];
@@ -104,6 +108,7 @@ export function generateSolarSystem(star: StarSystemData): SolarSystemData {
       id: `${star.id}-p${i}`,
       name: planetName(star.name, i),
       type: 'rocky',
+      surfaceType: rng.pick(SURFACE_TYPES),
       radius: rng.float(60, 120),
       orbitRadius,
       orbitSpeed: rng.float(0.00005, 0.0002),
@@ -143,6 +148,7 @@ export function generateSolarSystem(star: StarSystemData): SolarSystemData {
       id: `${star.id}-g${i}`,
       name: planetName(star.name, innerCount + i),
       type: 'gas_giant',
+      surfaceType: 'continental',
       radius: rng.float(180, 300),
       orbitRadius,
       orbitSpeed: rng.float(0.000008, 0.00003),

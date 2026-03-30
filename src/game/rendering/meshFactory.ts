@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { PALETTE } from '../constants';
 import { loadTexture } from './textureCache';
 import type { PlanetSkin } from './planetSkins';
+import type { SurfaceType } from '../generation/SystemGenerator';
 
 /** Creates a group with filled mesh + wireframe overlay */
 export function makeWireframeObject(
@@ -91,8 +92,16 @@ const GLSL_NOISE = `
   }
 `;
 
-/** Procedural planet with continents and oceans */
-export function makePlanet(radius: number, color: number, detail: number = 1, seed: number = 0): THREE.Group {
+// Surface type index for GLSL: 0=continental, 1=ocean, 2=marsh, 3=venus
+const SURFACE_TYPE_INDEX: Record<SurfaceType, number> = {
+  continental: 0, ocean: 1, marsh: 2, venus: 3,
+};
+
+/** Procedural planet — surface type drives palette and land/ocean ratio */
+export function makePlanet(
+  radius: number, color: number, detail: number = 1,
+  seed: number = 0, surfaceType: SurfaceType = 'continental',
+): THREE.Group {
   const group = new THREE.Group();
   const geo = new THREE.SphereGeometry(radius, 32, 24);
 
@@ -102,6 +111,7 @@ export function makePlanet(radius: number, color: number, detail: number = 1, se
     uniforms: {
       seed: { value: seed },
       baseColor: { value: baseColor },
+      surfType: { value: SURFACE_TYPE_INDEX[surfaceType] },
     },
     vertexShader: `
       varying vec3 vWorldNormal;
@@ -119,6 +129,7 @@ export function makePlanet(radius: number, color: number, detail: number = 1, se
       ${GLSL_NOISE}
       uniform float seed;
       uniform vec3 baseColor;
+      uniform int surfType;
       varying vec3 vWorldNormal;
       varying vec3 vWorldPosition;
       varying vec3 vLocalPos;
@@ -127,28 +138,62 @@ export function makePlanet(radius: number, color: number, detail: number = 1, se
         vec3 toStar = normalize(-vWorldPosition);
         float sunDot = dot(vWorldNormal, toStar);
 
-        // Continent noise — use normalized local position so it tiles on sphere
         vec3 noisePos = normalize(vLocalPos) * 2.0 + vec3(seed * 13.37, seed * 7.13, seed * 3.71);
         float n = fbm(noisePos);
 
-        // Land vs ocean threshold
-        float landMask = smoothstep(-0.05, 0.1, n);
+        vec3 surfaceColor;
 
-        // Ocean: deep blue-teal tones
-        vec3 ocean = vec3(0.05, 0.12, 0.25);
-        vec3 shallowOcean = vec3(0.08, 0.2, 0.35);
+        if (surfType == 0) {
+          // ── Continental: balanced land/ocean ──
+          float landMask = smoothstep(-0.05, 0.1, n);
+          vec3 ocean = vec3(0.05, 0.12, 0.25);
+          vec3 shallow = vec3(0.08, 0.2, 0.35);
+          vec3 lowland = mix(vec3(0.15, 0.35, 0.12), baseColor * 0.5, 0.3);
+          vec3 highland = mix(vec3(0.45, 0.35, 0.2), baseColor * 0.7, 0.3);
+          float h = smoothstep(0.1, 0.5, n);
+          vec3 land = mix(lowland, highland, h);
+          float depth = smoothstep(-0.4, -0.05, n);
+          vec3 oceanC = mix(ocean, shallow, depth);
+          surfaceColor = mix(oceanC, land, landMask);
 
-        // Land: vary from green lowlands to brown highlands using baseColor influence
-        vec3 lowland = mix(vec3(0.15, 0.35, 0.12), baseColor * 0.5, 0.3);
-        vec3 highland = mix(vec3(0.45, 0.35, 0.2), baseColor * 0.7, 0.3);
-        float height = smoothstep(0.1, 0.5, n);
-        vec3 land = mix(lowland, highland, height);
+        } else if (surfType == 1) {
+          // ── Ocean world: mostly water, tiny island chains ──
+          float landMask = smoothstep(0.25, 0.35, n);
+          vec3 deepOcean = vec3(0.02, 0.06, 0.2);
+          vec3 midOcean = vec3(0.04, 0.14, 0.35);
+          vec3 shallow = vec3(0.08, 0.25, 0.45);
+          float depth = smoothstep(-0.5, 0.25, n);
+          vec3 oceanC = mix(deepOcean, mix(midOcean, shallow, depth), depth);
+          vec3 island = mix(vec3(0.6, 0.55, 0.35), vec3(0.2, 0.4, 0.15), smoothstep(0.35, 0.5, n));
+          surfaceColor = mix(oceanC, island, landMask);
 
-        // Blend ocean depth
-        float oceanDepth = smoothstep(-0.4, -0.05, n);
-        vec3 oceanColor = mix(ocean, shallowOcean, oceanDepth);
+        } else if (surfType == 2) {
+          // ── Marsh world: murky, swampy, green-brown ──
+          float landMask = smoothstep(-0.15, 0.05, n);
+          vec3 swampWater = vec3(0.05, 0.1, 0.08);
+          vec3 murkyShallow = vec3(0.1, 0.15, 0.08);
+          vec3 wetland = vec3(0.12, 0.25, 0.08);
+          vec3 dryLand = mix(vec3(0.3, 0.25, 0.12), baseColor * 0.4, 0.3);
+          float depth = smoothstep(-0.4, -0.15, n);
+          vec3 waterC = mix(swampWater, murkyShallow, depth);
+          float h = smoothstep(0.05, 0.4, n);
+          vec3 land = mix(wetland, dryLand, h);
+          surfaceColor = mix(waterC, land, landMask);
 
-        vec3 surfaceColor = mix(oceanColor, land, landMask);
+        } else {
+          // ── Venus: thick atmosphere, no visible ocean, hazy yellow-orange ──
+          vec3 hazeLight = vec3(0.85, 0.7, 0.35);
+          vec3 hazeDark = vec3(0.55, 0.35, 0.15);
+          vec3 hotSurface = vec3(0.7, 0.4, 0.1);
+          // Swirling cloud bands
+          vec3 cloudPos = normalize(vLocalPos) * 1.5 + vec3(seed * 5.0, seed * 2.3, seed * 8.1);
+          float cloud = fbm(cloudPos + vec3(0.0, n * 0.3, 0.0));
+          float band = smoothstep(-0.3, 0.3, cloud);
+          surfaceColor = mix(hazeDark, hazeLight, band);
+          // Faint hot glow in deeper cracks
+          float crack = smoothstep(0.3, 0.5, n);
+          surfaceColor = mix(surfaceColor, hotSurface, crack * 0.3);
+        }
 
         // Lighting: sun side brighter, dark side very dim
         float lighting = smoothstep(-0.3, 0.8, sunDot) * 0.85 + 0.15;
@@ -401,10 +446,11 @@ export function makeTexturedPlanet(
   skin: PlanetSkin | null,
   wireOverlay: boolean,
   seed: number = 0,
+  surfaceType: SurfaceType = 'continental',
 ): THREE.Group {
   // No skin available — use procedural continent/ocean shader
   if (!skin) {
-    return makePlanet(radius, fallbackColor, 1, seed);
+    return makePlanet(radius, fallbackColor, 1, seed, surfaceType);
   }
 
   const geo = new THREE.SphereGeometry(radius, 32, 24);
@@ -494,8 +540,14 @@ export function makeTexturedRing(
   return mesh;
 }
 
-/** City lights on the dark side of a planet (skip gas giants) */
-export function addCityLights(group: THREE.Group, radius: number, seed: number): void {
+/** City lights on the dark side of a planet (skip gas giants + venus) */
+export function addCityLights(
+  group: THREE.Group, radius: number, seed: number,
+  surfaceType: SurfaceType = 'continental',
+): void {
+  // Venus: thick atmosphere hides everything — no city lights
+  if (surfaceType === 'venus') return;
+
   const geo = new THREE.SphereGeometry(radius * 1.005, 32, 24);
 
   const mat = new THREE.ShaderMaterial({
@@ -503,6 +555,7 @@ export function addCityLights(group: THREE.Group, radius: number, seed: number):
     depthWrite: false,
     uniforms: {
       seed: { value: seed },
+      surfType: { value: SURFACE_TYPE_INDEX[surfaceType] },
     },
     vertexShader: `
       varying vec3 vWorldNormal;
@@ -522,6 +575,7 @@ export function addCityLights(group: THREE.Group, radius: number, seed: number):
       varying vec3 vWorldPosition;
       varying vec3 vLocalPos;
       uniform float seed;
+      uniform int surfType;
 
       float hash(vec2 p) {
         return fract(sin(dot(p, vec2(127.1, 311.7)) + seed) * 43758.5453);
@@ -538,36 +592,51 @@ export function addCityLights(group: THREE.Group, radius: number, seed: number):
         vec3 noisePos = normalize(vLocalPos) * 2.0
           + vec3(seed * 13.37, seed * 7.13, seed * 3.71);
         float n = fbm(noisePos);
-        float landMask = smoothstep(-0.05, 0.15, n);
 
-        // Dense city grid — small tight dots clustered on land
-        // Use spherical coords for even distribution
+        // Land mask matches planet surface type thresholds
+        float landMask;
+        if (surfType == 1) {
+          // Ocean world — only tiny islands
+          landMask = smoothstep(0.25, 0.4, n);
+        } else if (surfType == 2) {
+          // Marsh — most land is soggy but buildable
+          landMask = smoothstep(-0.15, 0.1, n);
+        } else {
+          // Continental
+          landMask = smoothstep(-0.05, 0.15, n);
+        }
+
+        // Denser city grid — tighter cells, more dots per cluster
         vec3 norm = normalize(vLocalPos);
         float theta = atan(norm.z, norm.x);
         float phi = acos(clamp(norm.y, -1.0, 1.0));
-        vec2 gridUv = vec2(theta * 20.0, phi * 12.0);
+        vec2 gridUv = vec2(theta * 35.0, phi * 20.0);
         vec2 cell = floor(gridUv);
         vec2 local = fract(gridUv) - 0.5;
 
         float h = hash(cell);
         float city = 0.0;
-        // Multiple tiny dots per cell for clustered feel
-        if (h > 0.45) {
-          // Main city dot
-          vec2 offset1 = vec2(hash(cell + 1.0) - 0.5, hash(cell + 2.0) - 0.5) * 0.4;
-          float d1 = length(local - offset1);
-          city += smoothstep(0.12, 0.02, d1);
 
-          // Secondary dots for sprawl
-          if (h > 0.6) {
-            vec2 offset2 = vec2(hash(cell + 3.0) - 0.5, hash(cell + 4.0) - 0.5) * 0.35;
-            float d2 = length(local - offset2);
-            city += smoothstep(0.08, 0.01, d2) * 0.7;
-          }
-          if (h > 0.75) {
-            vec2 offset3 = vec2(hash(cell + 5.0) - 0.5, hash(cell + 6.0) - 0.5) * 0.3;
-            float d3 = length(local - offset3);
-            city += smoothstep(0.06, 0.01, d3) * 0.5;
+        // Tight cluster of 3-5 dots per populated cell
+        if (h > 0.4) {
+          // Core city
+          vec2 o1 = vec2(hash(cell + 1.0) - 0.5, hash(cell + 2.0) - 0.5) * 0.25;
+          city += smoothstep(0.10, 0.01, length(local - o1));
+
+          // Inner sprawl — always present in populated cells
+          vec2 o2 = o1 + vec2(hash(cell + 3.0) - 0.5, hash(cell + 4.0) - 0.5) * 0.15;
+          city += smoothstep(0.07, 0.005, length(local - o2)) * 0.8;
+
+          vec2 o3 = o1 + vec2(hash(cell + 5.0) - 0.5, hash(cell + 6.0) - 0.5) * 0.18;
+          city += smoothstep(0.06, 0.005, length(local - o3)) * 0.6;
+
+          if (h > 0.55) {
+            // Outer suburbs
+            vec2 o4 = o1 + vec2(hash(cell + 7.0) - 0.5, hash(cell + 8.0) - 0.5) * 0.2;
+            city += smoothstep(0.05, 0.005, length(local - o4)) * 0.5;
+
+            vec2 o5 = o1 + vec2(hash(cell + 9.0) - 0.5, hash(cell + 10.0) - 0.5) * 0.22;
+            city += smoothstep(0.04, 0.005, length(local - o5)) * 0.4;
           }
         }
 
