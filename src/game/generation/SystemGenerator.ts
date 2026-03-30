@@ -28,6 +28,11 @@ export interface PlanetData {
   hasRings: boolean;
   ringCount: number;        // 1, 2, or 3
   ringInclination: number;  // tilt from equatorial plane (radians)
+  hasClouds: boolean;
+  cloudDensity: number;     // 0.0–1.0
+  greatSpot: boolean;
+  greatSpotLat: number;     // -1.0 to 1.0
+  greatSpotSize: number;    // 0.0–1.0
   moons: MoonData[];
   hasStation: boolean;
 }
@@ -40,6 +45,8 @@ export interface MoonData {
   orbitSpeed: number;
   orbitPhase: number;
   color: number;
+  hasClouds: boolean;
+  cloudDensity: number;
 }
 
 export interface AsteroidBeltData {
@@ -139,6 +146,56 @@ function generateRockyMoonRadius(rng: PRNG): number {
     : rng.float(16, 30);
 }
 
+function generateRockyClouds(rng: PRNG, surfaceType: SurfaceType): [boolean, number] {
+  switch (surfaceType) {
+    case 'continental': case 'ocean': case 'marsh': case 'forest_moon': {
+      const chance = surfaceType === 'ocean' ? 0.90
+        : (surfaceType === 'continental' || surfaceType === 'marsh') ? 0.80
+        : surfaceType === 'forest_moon' ? 0.70 : 0.75;
+      const has = rng.next() < chance;
+      const density = has
+        ? (surfaceType === 'ocean' ? rng.float(0.35, 0.70)
+          : (surfaceType === 'continental' || surfaceType === 'marsh') ? rng.float(0.25, 0.60)
+          : surfaceType === 'forest_moon' ? rng.float(0.20, 0.50) : rng.float(0.20, 0.55))
+        : rng.float(0, 1); // consume RNG
+      return [has, density];
+    }
+    case 'venus': {
+      rng.next(); // consume chance roll
+      return [true, rng.float(0.50, 0.70)];
+    }
+    case 'ice': {
+      const has = rng.next() < 0.30;
+      const density = has ? rng.float(0.10, 0.30) : rng.float(0, 1);
+      return [has, density];
+    }
+    default: { // barren, desert, volcanic
+      rng.next();
+      rng.float(0, 1);
+      return [false, 0];
+    }
+  }
+}
+
+function generateMoonClouds(rng: PRNG, surfaceType: SurfaceType): [boolean, number] {
+  const [has, density] = generateRockyClouds(rng, surfaceType);
+  return [has, density * 0.6];
+}
+
+function generateGreatSpot(rng: PRNG, gasType: GasGiantType): [boolean, number, number] {
+  const chance = gasType === 'jovian' ? 0.60
+    : gasType === 'neptunian' ? 0.50
+    : gasType === 'inferno' ? 0.40
+    : gasType === 'chromatic' ? 0.35 : 0.25;
+  const has = rng.next() < chance;
+  const lat = gasType === 'jovian' ? rng.float(0.1, 0.5)
+    : gasType === 'neptunian' ? rng.float(-0.6, -0.1)
+    : gasType === 'saturnian' ? rng.float(0.6, 0.9)
+    : rng.float(-0.5, 0.5);
+  const size = rng.float(0.3, 1.0);
+  return [has, lat, size];
+}
+
 export function generateSolarSystem(star: StarSystemData): SolarSystemData {
   const rng = PRNG.fromIndex(CLUSTER_SEED, star.id * 97 + 13);
 
@@ -163,21 +220,27 @@ export function generateSolarSystem(star: StarSystemData): SolarSystemData {
       const moonRadius = generateRockyMoonRadius(rng);
       const moonOrbit = moonOrbitMin + moonRadius + rng.float(20, 80);
       moonOrbitMin = moonOrbit + moonRadius;
+      const moonSurface = pickWeightedSurfaceType(rng, MOON_SURFACE_WEIGHTS);
+      const [moonHasClouds, moonCloudDensity] = generateMoonClouds(rng, moonSurface);
       moons.push({
         id: `${star.id}-p${i}-m${m}`,
-        surfaceType: pickWeightedSurfaceType(rng, MOON_SURFACE_WEIGHTS),
+        surfaceType: moonSurface,
         radius: moonRadius,
         orbitRadius: moonOrbit,
         orbitSpeed: rng.float(0.0003, 0.001),
         orbitPhase: rng.float(0, Math.PI * 2),
         color: rng.pick(MOON_COLORS),
+        hasClouds: moonHasClouds,
+        cloudDensity: moonCloudDensity,
       });
     }
+    const rockySurface = pickWeightedSurfaceType(rng, ROCKY_SURFACE_WEIGHTS);
+    const [hasClouds, cloudDensity] = generateRockyClouds(rng, rockySurface);
     planets.push({
       id: `${star.id}-p${i}`,
       name: planetName(star.name, i),
       type: 'rocky',
-      surfaceType: pickWeightedSurfaceType(rng, ROCKY_SURFACE_WEIGHTS),
+      surfaceType: rockySurface,
       gasType: 'jovian',
       radius: planetRadius,
       orbitRadius,
@@ -187,6 +250,11 @@ export function generateSolarSystem(star: StarSystemData): SolarSystemData {
       hasRings: false,
       ringCount: 1,
       ringInclination: 0,
+      hasClouds,
+      cloudDensity,
+      greatSpot: false,
+      greatSpotLat: 0,
+      greatSpotSize: 0,
       moons,
       hasStation: star.techLevel >= 3 || i === 0,
     });
@@ -222,16 +290,21 @@ export function generateSolarSystem(star: StarSystemData): SolarSystemData {
       const moonRadius = rng.float(25, 55);
       const moonOrbit = moonOrbitMin + moonRadius + rng.float(40, 180);
       moonOrbitMin = moonOrbit + moonRadius;
+      const gmSurface = pickWeightedSurfaceType(rng, MOON_SURFACE_WEIGHTS);
+      const [gmHasClouds, gmCloudDensity] = generateMoonClouds(rng, gmSurface);
       moons.push({
         id: `${star.id}-g${i}-m${m}`,
-        surfaceType: pickWeightedSurfaceType(rng, MOON_SURFACE_WEIGHTS),
+        surfaceType: gmSurface,
         radius: moonRadius,
         orbitRadius: moonOrbit,
         orbitSpeed: rng.float(0.0001, 0.0006),
         orbitPhase: rng.float(0, Math.PI * 2),
         color: rng.pick(MOON_COLORS),
+        hasClouds: gmHasClouds,
+        cloudDensity: gmCloudDensity,
       });
     }
+    const [greatSpot, greatSpotLat, greatSpotSize] = generateGreatSpot(rng, gasType);
     planets.push({
       id: `${star.id}-g${i}`,
       name: planetName(star.name, innerCount + i),
@@ -246,6 +319,11 @@ export function generateSolarSystem(star: StarSystemData): SolarSystemData {
       hasRings,
       ringCount,
       ringInclination,
+      hasClouds: false,
+      cloudDensity: 0,
+      greatSpot,
+      greatSpotLat,
+      greatSpotSize,
       moons,
       hasStation: false,
     });

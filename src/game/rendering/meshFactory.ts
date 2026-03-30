@@ -283,6 +283,77 @@ export function makePlanet(
   return group;
 }
 
+/** Translucent cloud layer over a rocky planet or moon */
+export function addCloudLayer(
+  group: THREE.Group, radius: number, seed: number, density: number,
+  surfaceType: SurfaceType = 'continental',
+): void {
+  const geo = new THREE.SphereGeometry(radius * 1.04, 32, 24);
+  const isIce = surfaceType === 'ice';
+
+  const mat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.FrontSide,
+    uniforms: {
+      seed: { value: seed },
+      density: { value: density },
+      isIce: { value: isIce ? 1 : 0 },
+    },
+    vertexShader: `
+      varying vec3 vWorldNormal;
+      varying vec3 vWorldPosition;
+      varying vec3 vLocalPos;
+      void main() {
+        vLocalPos = position;
+        vec4 worldPos = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPos.xyz;
+        vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+        gl_Position = projectionMatrix * viewMatrix * worldPos;
+      }
+    `,
+    fragmentShader: `
+      ${GLSL_NOISE}
+      uniform float seed;
+      uniform float density;
+      uniform int isIce;
+      varying vec3 vWorldNormal;
+      varying vec3 vWorldPosition;
+      varying vec3 vLocalPos;
+
+      void main() {
+        vec3 toStar = normalize(-vWorldPosition);
+        float sunDot = dot(vWorldNormal, toStar);
+
+        // Cloud noise at a different scale/offset from surface
+        vec3 cloudPos = normalize(vLocalPos) * 3.0
+          + vec3(seed * 5.17, seed * 11.31, seed * 2.93);
+        float n1 = fbm(cloudPos);
+        float n2 = snoise(cloudPos * 2.0 + vec3(77.0));
+
+        // Wispy, patchy pattern
+        float cloud = smoothstep(-0.1, 0.4, n1) * smoothstep(-0.3, 0.2, n2);
+        cloud = cloud * cloud; // sharpen edges
+
+        // Tint — white-ish, slight blue for ice
+        vec3 color = isIce == 1
+          ? vec3(0.85, 0.92, 1.0)
+          : vec3(0.95, 0.95, 0.97);
+
+        // Lit by sun, fades on dark side
+        float lighting = smoothstep(-0.2, 0.7, sunDot) * 0.85 + 0.15;
+        color *= lighting;
+
+        float alpha = cloud * density;
+
+        gl_FragColor = vec4(color, alpha);
+      }
+    `,
+  });
+
+  group.add(new THREE.Mesh(geo, mat));
+}
+
 // Gas giant type index for GLSL: 0=jovian, 1=saturnian, 2=neptunian, 3=inferno, 4=chromatic
 const GAS_TYPE_INDEX: Record<GasGiantType, number> = {
   jovian: 0, saturnian: 1, neptunian: 2, inferno: 3, chromatic: 4,
@@ -292,6 +363,7 @@ const GAS_TYPE_INDEX: Record<GasGiantType, number> = {
 export function makeGasGiant(
   radius: number, baseColor: number, rng: () => number,
   seed: number = 0, gasType: GasGiantType = 'jovian',
+  greatSpot = false, greatSpotLat = 0, greatSpotSize = 0.5,
 ): THREE.Group {
   const group = new THREE.Group();
   const geo = new THREE.SphereGeometry(radius, 32, 24);
@@ -301,6 +373,9 @@ export function makeGasGiant(
       seed: { value: seed },
       baseColor: { value: new THREE.Color(baseColor) },
       gasType: { value: GAS_TYPE_INDEX[gasType] },
+      uGreatSpot: { value: greatSpot ? 1 : 0 },
+      uSpotLat: { value: greatSpotLat },
+      uSpotSize: { value: greatSpotSize },
     },
     vertexShader: `
       varying vec3 vWorldNormal;
@@ -319,6 +394,9 @@ export function makeGasGiant(
       uniform float seed;
       uniform vec3 baseColor;
       uniform int gasType;
+      uniform int uGreatSpot;
+      uniform float uSpotLat;
+      uniform float uSpotSize;
       varying vec3 vWorldNormal;
       varying vec3 vWorldPosition;
       varying vec3 vLocalPos;
@@ -416,6 +494,43 @@ export function makeGasGiant(
           // Deep vortex swirls
           float vortex = smoothstep(0.45, 0.7, abs(snoise(np * 3.0)));
           surfaceColor = mix(surfaceColor, surfaceColor * 0.4, vortex * 0.3);
+        }
+
+        // ── Great Spot ──
+        if (uGreatSpot == 1) {
+          // Elliptical spot: tighter in latitude, wider in longitude
+          float spotLatDist = abs(lat - uSpotLat);
+          float lonAngle = atan(norm.z, norm.x);
+          // Anchor longitude based on seed for determinism
+          float spotLon = seed * 2.71828;
+          float spotLonDist = abs(sin((lonAngle - spotLon) * 0.5));
+          float spotRadius = 0.08 + uSpotSize * 0.12;
+          float spotMask = smoothstep(spotRadius * 1.3, spotRadius * 0.3,
+            sqrt(spotLatDist * spotLatDist + spotLonDist * spotLonDist * 0.6));
+          // Add swirl distortion
+          float swirl = snoise(norm * 8.0 + vec3(seed * 3.0)) * 0.3;
+          spotMask *= (1.0 + swirl * 0.5);
+          spotMask = clamp(spotMask, 0.0, 1.0);
+
+          vec3 spotColor;
+          if (gasType == 0) {
+            // Jovian: warm red/orange oval
+            spotColor = mix(vec3(0.7, 0.25, 0.1), vec3(0.9, 0.4, 0.15), swirl + 0.5);
+          } else if (gasType == 1) {
+            // Saturnian: pale golden swirl
+            spotColor = mix(vec3(0.75, 0.68, 0.4), vec3(0.85, 0.78, 0.5), swirl + 0.5);
+          } else if (gasType == 2) {
+            // Neptunian: dark blue-black oval
+            spotColor = mix(vec3(0.02, 0.03, 0.15), vec3(0.05, 0.08, 0.25), swirl + 0.5);
+          } else if (gasType == 3) {
+            // Inferno: intensely bright convection mega-cell
+            spotColor = mix(vec3(1.0, 0.6, 0.1), vec3(1.0, 0.9, 0.3), swirl + 0.5);
+          } else {
+            // Chromatic: iridescent vortex eye with contrasting hue
+            float spotHue = fract(uSpotLat * 0.5 + 0.5);
+            spotColor = 0.5 + 0.5 * cos(6.28318 * (spotHue + vec3(0.5, 0.83, 0.17)));
+          }
+          surfaceColor = mix(surfaceColor, spotColor, spotMask * 0.85);
         }
 
         // Lighting

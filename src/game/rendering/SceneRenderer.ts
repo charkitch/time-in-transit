@@ -13,7 +13,7 @@ import {
   makeAsteroidBase, makeOortCloudBase, makeMaximumSpaceBase,
   makeTexturedPlanet, makeTexturedGasGiant, makeTexturedRing,
   makeRingSystem,
-  addCityLights, addSunAtmosphere, addLightning,
+  addCityLights, addSunAtmosphere, addLightning, addCloudLayer,
 } from './meshFactory';
 import { selectSkin } from './planetSkins';
 import { disposeAll as disposeTextureCache } from './textureCache';
@@ -159,8 +159,13 @@ export class SceneRenderer {
           : makeTexturedPlanet(planet.radius, planet.color, skin, wireOverlay, planetSeed, planet.surfaceType);
       } else {
         planetGroup = planet.type === 'gas_giant'
-          ? makeGasGiant(planet.radius, planet.color, () => rng.next(), planetSeed, planet.gasType)
+          ? makeGasGiant(planet.radius, planet.color, () => rng.next(), planetSeed, planet.gasType,
+              planet.greatSpot, planet.greatSpotLat, planet.greatSpotSize)
           : makePlanet(planet.radius, planet.color, 1, planetSeed, planet.surfaceType);
+      }
+      // Cloud layer for rocky planets
+      if (planet.hasClouds && planet.type !== 'gas_giant') {
+        addCloudLayer(planetGroup, planet.radius, planetSeed, planet.cloudDensity, planet.surfaceType);
       }
       // City lights + sun atmosphere for non-gas-giant planets
       if (planet.type !== 'gas_giant') {
@@ -225,6 +230,9 @@ export class SceneRenderer {
           moonGroup = makeTexturedPlanet(moon.radius, moon.color, skin, wireOverlay, moonSeed, moon.surfaceType);
         } else {
           moonGroup = makePlanet(moon.radius, moon.color, 0, moonSeed, moon.surfaceType);
+        }
+        if (moon.hasClouds) {
+          addCloudLayer(moonGroup, moon.radius, moonSeed, moon.cloudDensity, moon.surfaceType);
         }
         addCityLights(moonGroup, moon.radius, moonSeed, moon.surfaceType);
         addSunAtmosphere(moonGroup, moon.radius);
@@ -461,7 +469,7 @@ export class SceneRenderer {
 
   updateOrbits(time: number, dt = 0): void {
     for (const [, entity] of this.entities) {
-      if (entity.type === 'star' || entity.type === 'npc_ship') continue;
+      if (entity.type === 'star' || entity.type === 'npc_ship' || entity.type === 'fleet_ship') continue;
 
       const angle = entity.orbitPhase + time * entity.orbitSpeed;
 
@@ -483,6 +491,14 @@ export class SceneRenderer {
       }
 
       entity.worldPos.copy(entity.group.position);
+    }
+
+    // Fleet ships are children of the battle group, so their local position is
+    // not their world position. Keep scanner/targeting coordinates in world
+    // space and avoid the generic orbit code snapping them back to the origin.
+    for (const [, entity] of this.entities) {
+      if (entity.type !== 'fleet_ship') continue;
+      entity.group.getWorldPosition(entity.worldPos);
     }
 
     // Station slowly rotates

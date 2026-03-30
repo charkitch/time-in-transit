@@ -242,24 +242,30 @@ export function generateFleetBattle(
   const planet: PlanetData = rng.pick(stationPlanets);
 
   // Calculate planet position at orbit phase (initial position)
-  const planetX = Math.cos(planet.orbitPhase) * planet.orbitRadius;
-  const planetZ = Math.sin(planet.orbitPhase) * planet.orbitRadius;
-
-  // Offset from planet
-  const battleOffset = planet.radius * 4 + 300;
-  const battleAngle = rng.next() * Math.PI * 2;
-  const battlePos = new THREE.Vector3(
-    planetX + Math.cos(battleAngle) * battleOffset,
+  const planetPos = new THREE.Vector3(
+    Math.cos(planet.orbitPhase) * planet.orbitRadius,
     0,
-    planetZ + Math.sin(battleAngle) * battleOffset,
+    Math.sin(planet.orbitPhase) * planet.orbitRadius,
   );
 
-  // Push battle outside the star if it landed inside
-  // Account for fleet spread (±200) + jitter (±75) + margin (75) = 350
+  // Anchor battles on the side of the station planet facing away from the star.
+  // A small tangential offset keeps placement varied without allowing the center
+  // of the engagement to drift back through the star.
+  const outward = planetPos.clone().normalize();
+  const tangent = new THREE.Vector3(-outward.z, 0, outward.x);
+  const battleOffset = planet.radius * 4 + 300;
+  const tangentialOffset = rng.float(-140, 140);
+  const battlePos = planetPos
+    .clone()
+    .addScaledVector(outward, battleOffset)
+    .addScaledVector(tangent, tangentialOffset);
+
+  // Keep the entire battle footprint outside the star.
+  // Account for fleet spread (±200) + jitter (±75) + margin (75) = 350.
   const starSafeRadius = systemData.starRadius + 350;
   const distFromStar = battlePos.length();
   if (distFromStar < starSafeRadius) {
-    battlePos.normalize().multiplyScalar(starSafeRadius);
+    battlePos.copy(outward).multiplyScalar(starSafeRadius);
   }
 
   // Generate two fleets

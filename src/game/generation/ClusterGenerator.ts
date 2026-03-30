@@ -74,5 +74,8 @@ export function generateCluster(): StarSystemData[] {
     });
   }
 
+  // Keep the home system visually distinctive.
+  if (systems[0]) systems[0].starType = 'A';
+
   return systems;
 }

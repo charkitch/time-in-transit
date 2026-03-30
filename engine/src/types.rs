@@ -161,6 +161,8 @@ pub struct MoonData {
     pub orbit_speed: f64,
     pub orbit_phase: f64,
     pub color: u32,
+    pub has_clouds: bool,
+    pub cloud_density: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -179,6 +181,11 @@ pub struct PlanetData {
     pub has_rings: bool,
     pub ring_count: u32,
     pub ring_inclination: f64,
+    pub has_clouds: bool,
+    pub cloud_density: f64,
+    pub great_spot: bool,
+    pub great_spot_lat: f64,
+    pub great_spot_size: f64,
     pub moons: Vec<MoonData>,
     pub has_station: bool,
 }

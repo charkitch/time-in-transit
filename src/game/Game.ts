@@ -74,12 +74,21 @@ export class Game {
       const radialX = Math.cos(angle);
       const radialZ = Math.sin(angle);
       const spawnDist = mainPlanet.radius * 3 + 80;
+      // Bias the opening shot slightly left so the first view reads closer to
+      // a planetary eclipse against the star.
+      const lateralOffset = -10;
       this.sceneRenderer.shipGroup.position.set(
-        planetX + radialX * spawnDist,
-        50,
-        planetZ + radialZ * spawnDist,
+        planetX + radialX * spawnDist + radialZ * lateralOffset,
+        0,
+        planetZ + radialZ * spawnDist - radialX * lateralOffset,
       );
       this.sceneRenderer.shipGroup.rotation.set(0.1, Math.atan2(radialX, radialZ), 0);
+
+      // Align station between ship and planet for the opening shot
+      const stationEntity = this.sceneRenderer.getAllEntities().get(`station-${mainPlanetId}`);
+      if (stationEntity) {
+        stationEntity.orbitPhase = angle + Math.PI;
+      }
     }
 
     this.flightModel.reset(this.sceneRenderer.shipGroup.position);
@@ -528,11 +537,12 @@ export class Game {
     const currentEra = Math.floor(state.galaxyYear / ERA_LENGTH);
     if (currentEra !== this.preJumpEra) {
       const erasCrossed = currentEra - this.preJumpEra;
-      lines.push(`— ERA ${currentEra} — GALAXY YEAR ${state.galaxyYear.toLocaleString()} —`);
+      lines.push(`— GALAXY YEAR ${state.galaxyYear.toLocaleString()} —`);
       if (erasCrossed === 1) {
         lines.push('Centuries have passed. Empires have risen and fallen in your absence.');
       } else {
-        lines.push(`${erasCrossed} eras have passed. The galaxy you knew is ancient history.`);
+        const yearsElapsed = erasCrossed * ERA_LENGTH;
+        lines.push(`${yearsElapsed.toLocaleString()} years have passed. The galaxy you knew is ancient history.`);
       }
       lines.push('');
     }

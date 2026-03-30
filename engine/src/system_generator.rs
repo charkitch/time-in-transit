@@ -80,6 +80,71 @@ fn generate_rocky_moon_radius(rng: &mut PRNG) -> f64 {
     }
 }
 
+fn generate_rocky_clouds(rng: &mut PRNG, surface_type: SurfaceType) -> (bool, f64) {
+    match surface_type {
+        SurfaceType::Continental | SurfaceType::Ocean | SurfaceType::Marsh | SurfaceType::ForestMoon => {
+            let chance = match surface_type {
+                SurfaceType::Ocean => 0.90,
+                SurfaceType::Continental | SurfaceType::Marsh => 0.80,
+                SurfaceType::ForestMoon => 0.70,
+                _ => 0.75,
+            };
+            let has = rng.next() < chance;
+            let density = if has {
+                match surface_type {
+                    SurfaceType::Ocean => rng.float(0.35, 0.70),
+                    SurfaceType::Continental | SurfaceType::Marsh => rng.float(0.25, 0.60),
+                    SurfaceType::ForestMoon => rng.float(0.20, 0.50),
+                    _ => rng.float(0.20, 0.55),
+                }
+            } else {
+                rng.float(0.0, 1.0) // consume RNG to stay deterministic
+            };
+            (has, density)
+        }
+        SurfaceType::Venus => {
+            let _consume = rng.next(); // consume the chance roll
+            let density = rng.float(0.50, 0.70);
+            (true, density)
+        }
+        SurfaceType::Ice => {
+            let has = rng.next() < 0.30;
+            let density = if has { rng.float(0.10, 0.30) } else { rng.float(0.0, 1.0) };
+            (has, density)
+        }
+        _ => {
+            // Barren, Desert, Volcanic — no clouds
+            let _consume = rng.next();
+            let _consume2 = rng.float(0.0, 1.0);
+            (false, 0.0)
+        }
+    }
+}
+
+fn generate_moon_clouds(rng: &mut PRNG, surface_type: SurfaceType) -> (bool, f64) {
+    let (has, density) = generate_rocky_clouds(rng, surface_type);
+    (has, density * 0.6) // moons have thinner atmospheres
+}
+
+fn generate_great_spot(rng: &mut PRNG, gas_type: GasGiantType) -> (bool, f64, f64) {
+    let chance = match gas_type {
+        GasGiantType::Jovian => 0.60,
+        GasGiantType::Neptunian => 0.50,
+        GasGiantType::Inferno => 0.40,
+        GasGiantType::Chromatic => 0.35,
+        GasGiantType::Saturnian => 0.25,
+    };
+    let has = rng.next() < chance;
+    let lat = match gas_type {
+        GasGiantType::Jovian => rng.float(0.1, 0.5),       // mid-latitudes
+        GasGiantType::Neptunian => rng.float(-0.6, -0.1),  // southern
+        GasGiantType::Saturnian => rng.float(0.6, 0.9),    // polar
+        _ => rng.float(-0.5, 0.5),                          // anywhere mid
+    };
+    let size = rng.float(0.3, 1.0);
+    (has, lat, size)
+}
+
 pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
     let mut rng = PRNG::from_index(CLUSTER_SEED, star.id.wrapping_mul(97).wrapping_add(13));
 
@@ -103,21 +168,27 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             let moon_radius = generate_rocky_moon_radius(&mut rng);
             let moon_orbit = moon_orbit_min + moon_radius + rng.float(20.0, 80.0);
             moon_orbit_min = moon_orbit + moon_radius;
+            let moon_surface = pick_weighted_surface(&mut rng, MOON_SURFACE_WEIGHTS);
+            let (moon_has_clouds, moon_cloud_density) = generate_moon_clouds(&mut rng, moon_surface);
             moons.push(MoonData {
                 id: format!("{}-p{}-m{}", star.id, i, m),
-                surface_type: pick_weighted_surface(&mut rng, MOON_SURFACE_WEIGHTS),
+                surface_type: moon_surface,
                 radius: moon_radius,
                 orbit_radius: moon_orbit,
                 orbit_speed: rng.float(0.0003, 0.001),
                 orbit_phase: rng.float(0.0, PI * 2.0),
                 color: *rng.pick(MOON_COLORS),
+                has_clouds: moon_has_clouds,
+                cloud_density: moon_cloud_density,
             });
         }
+        let rocky_surface = pick_weighted_surface(&mut rng, ROCKY_SURFACE_WEIGHTS);
+        let (has_clouds, cloud_density) = generate_rocky_clouds(&mut rng, rocky_surface);
         planets.push(PlanetData {
             id: format!("{}-p{}", star.id, i),
             name: planet_name(&star.name, i as usize),
             planet_type: PlanetType::Rocky,
-            surface_type: pick_weighted_surface(&mut rng, ROCKY_SURFACE_WEIGHTS),
+            surface_type: rocky_surface,
             gas_type: GasGiantType::Jovian,
             radius: planet_radius,
             orbit_radius,
@@ -127,6 +198,11 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             has_rings: false,
             ring_count: 1,
             ring_inclination: 0.0,
+            has_clouds,
+            cloud_density,
+            great_spot: false,
+            great_spot_lat: 0.0,
+            great_spot_size: 0.0,
             moons,
             has_station: star.tech_level >= 3 || i == 0,
         });
@@ -166,16 +242,21 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             let moon_radius = rng.float(25.0, 55.0);
             let moon_orbit = moon_orbit_min + moon_radius + rng.float(40.0, 180.0);
             moon_orbit_min = moon_orbit + moon_radius;
+            let moon_surface = pick_weighted_surface(&mut rng, MOON_SURFACE_WEIGHTS);
+            let (moon_has_clouds, moon_cloud_density) = generate_moon_clouds(&mut rng, moon_surface);
             moons.push(MoonData {
                 id: format!("{}-g{}-m{}", star.id, i, m),
-                surface_type: pick_weighted_surface(&mut rng, MOON_SURFACE_WEIGHTS),
+                surface_type: moon_surface,
                 radius: moon_radius,
                 orbit_radius: moon_orbit,
                 orbit_speed: rng.float(0.0001, 0.0006),
                 orbit_phase: rng.float(0.0, PI * 2.0),
                 color: *rng.pick(MOON_COLORS),
+                has_clouds: moon_has_clouds,
+                cloud_density: moon_cloud_density,
             });
         }
+        let (great_spot, great_spot_lat, great_spot_size) = generate_great_spot(&mut rng, gas_type);
         planets.push(PlanetData {
             id: format!("{}-g{}", star.id, i),
             name: planet_name(&star.name, (inner_count + i) as usize),
@@ -190,6 +271,11 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             has_rings,
             ring_count,
             ring_inclination,
+            has_clouds: false,
+            cloud_density: 0.0,
+            great_spot,
+            great_spot_lat,
+            great_spot_size,
             moons,
             has_station: false,
         });
