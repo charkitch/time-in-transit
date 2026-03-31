@@ -66,3 +66,12 @@ Today, you learned, yet again, that things that cannot be sometimes are, and tha
 The system around the Iron Star has a Dyson Shell in the habitable zone. Iron Stars don't have habitable zones.
 
 Today will be a good day. You might not think of the past even once.
+
+---
+A planet around a Pulsar, born in the aftermath of a supernova.
+
+It has, against the odds, become inhabited.
+
+"We were born on a world forged in the light of a burning corpse. We know there were others, who came before. They did not see what we see now."
+
+---

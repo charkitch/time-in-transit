@@ -18,7 +18,7 @@ import type { GoodName, EconomyType, PoliticalType } from './constants';
 
 // ─── Types matching Rust camelCase serde output ─────────────────────────────
 
-export type StarType = 'G' | 'K' | 'M' | 'F' | 'A' | 'WD' | 'HE' | 'NS' | 'PU' | 'XB' | 'MG' | 'BH' | 'SBH' | 'XBB' | 'SGR';
+export type StarType = 'G' | 'K' | 'M' | 'F' | 'A' | 'WD' | 'HE' | 'NS' | 'PU' | 'XB' | 'MG' | 'BH' | 'XBB' | 'SGR';
 
 export type SurfaceType =
   | 'continental'

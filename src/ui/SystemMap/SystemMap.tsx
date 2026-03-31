@@ -42,19 +42,48 @@ export function SystemMap({ onClose }: SystemMapProps) {
     // Star
     const starColor = '#' + new THREE.Color(STAR_COLORS[currentSystem.starType] ?? 0xFFEE88).getHexString();
     const starR = Math.max(6, currentSystem.starRadius * scale);
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, starR * 2);
-    grad.addColorStop(0, starColor);
-    grad.addColorStop(0.5, starColor + '88');
-    grad.addColorStop(1, 'transparent');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, starR * 2, 0, Math.PI * 2);
-    ctx.fill();
+    if (currentSystem.starType === 'BH') {
+      const halo = ctx.createRadialGradient(cx, cy, starR * 0.9, cx, cy, starR * 2.8);
+      halo.addColorStop(0, 'rgba(255,170,110,0)');
+      halo.addColorStop(0.35, 'rgba(255,170,110,0.38)');
+      halo.addColorStop(0.62, 'rgba(255,110,54,0.16)');
+      halo.addColorStop(1, 'rgba(255,110,54,0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(cx, cy, starR * 2.8, 0, Math.PI * 2);
+      ctx.fill();
 
-    ctx.fillStyle = starColor;
-    ctx.beginPath();
-    ctx.arc(cx, cy, starR, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.strokeStyle = 'rgba(255,214,170,0.88)';
+      ctx.lineWidth = Math.max(2, starR * 0.4);
+      ctx.beginPath();
+      ctx.ellipse(cx + starR * 0.22, cy - starR * 0.08, starR * 1.6, starR * 1.08, -0.3, Math.PI * 0.1, Math.PI * 1.14);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255,120,54,0.42)';
+      ctx.lineWidth = Math.max(2, starR * 0.55);
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, starR * 1.9, starR * 1.15, -0.3, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#030303';
+      ctx.beginPath();
+      ctx.arc(cx, cy, starR, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, starR * 2);
+      grad.addColorStop(0, starColor);
+      grad.addColorStop(0.5, starColor + '88');
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, starR * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = starColor;
+      ctx.beginPath();
+      ctx.arc(cx, cy, starR, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     for (const planet of currentSystem.planets) {
       const orbitPx = planet.orbitRadius * scale;

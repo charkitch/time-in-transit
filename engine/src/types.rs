@@ -106,8 +106,6 @@ pub enum StarType {
     MG,
     #[serde(rename = "BH")]
     BH,
-    #[serde(rename = "SBH")]
-    SBH,
     #[serde(rename = "XBB")]
     XBB,
     #[serde(rename = "SGR")]
@@ -118,12 +116,12 @@ impl StarType {
     pub const ALL: &'static [StarType] = &[
         StarType::G, StarType::K, StarType::M, StarType::F, StarType::A,
         StarType::WD, StarType::HE, StarType::NS, StarType::PU, StarType::XB,
-        StarType::MG, StarType::BH, StarType::SBH, StarType::XBB, StarType::SGR,
+        StarType::MG, StarType::BH, StarType::XBB, StarType::SGR,
     ];
     pub const WEIGHTS: &'static [f64] = &[
         0.12, 0.10, 0.08, 0.06, 0.04,
         0.08, 0.07, 0.06, 0.05, 0.06,
-        0.05, 0.06, 0.04, 0.07, 0.06,
+        0.05, 0.08, 0.07, 0.08,
     ];
 }
 

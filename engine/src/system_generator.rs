@@ -20,7 +20,6 @@ fn star_color(st: StarType) -> u32 {
         StarType::XB  => 0xFF6688,
         StarType::MG  => 0xDD44FF,
         StarType::BH  => 0x220022,
-        StarType::SBH => 0x110011,
         StarType::XBB => 0xFF4466,
         StarType::SGR => 0xFFAA22,
     }
@@ -35,7 +34,6 @@ fn star_radius_range(st: StarType) -> (f64, f64) {
         StarType::XB  => (60.0, 100.0),
         StarType::MG  => (8.0, 12.0),
         StarType::BH  => (150.0, 250.0),
-        StarType::SBH => (500.0, 800.0),
         StarType::XBB => (280.0, 400.0),
         StarType::SGR => (8.0, 12.0),
         _ => (400.0, 600.0),
@@ -198,18 +196,28 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             star_type: companion_type,
             radius: rng.float(350.0, 550.0),
             color: star_color(companion_type),
-            orbit_radius: rng.float(400.0, 600.0),
-            orbit_speed: rng.float(0.0003, 0.0006),
+            orbit_radius: rng.float(850.0, 1150.0),
+            orbit_speed: rng.float(0.00016, 0.00034),
             orbit_phase: rng.float(0.0, PI * 2.0),
         })
     } else {
         None
     };
 
+    let binary_outer_edge = companion.as_ref().map_or(0.0, |binary_companion| {
+        let compact_outer_edge = binary_companion.orbit_radius * 0.4 + star_radius;
+        let companion_outer_edge = binary_companion.orbit_radius + binary_companion.radius;
+        f64::max(compact_outer_edge, companion_outer_edge)
+    });
+
     let mut planets: Vec<PlanetData> = Vec::new();
 
     // Inner rocky planets
-    let mut orbit_base: f64 = 1000.0;
+    let mut orbit_base: f64 = if companion.is_some() {
+        binary_outer_edge + 400.0
+    } else {
+        1000.0
+    };
     for i in 0..inner_count {
         let orbit_radius = orbit_base + rng.float(200.0, 600.0);
         orbit_base = orbit_radius + rng.float(300.0, 500.0);
@@ -417,5 +425,31 @@ mod tests {
             assert_eq!(pa.id, pb.id);
             assert_eq!(pa.orbit_radius, pb.orbit_radius);
         }
+    }
+
+    #[test]
+    fn xb_systems_leave_clear_space_around_binary_pair() {
+        let xb_star = StarSystemData {
+            id: 999,
+            name: "Test XB".to_string(),
+            x: 0.0,
+            y: 0.0,
+            star_type: StarType::XB,
+            economy: EconomyType::HighTech,
+            tech_level: 5,
+            population: 9,
+        };
+
+        let system = generate_solar_system(&xb_star);
+        let companion = system.companion.as_ref().expect("XB systems should have a companion");
+        let compact_outer_edge = companion.orbit_radius * 0.4 + system.star_radius;
+        let companion_outer_edge = companion.orbit_radius + companion.radius;
+        let binary_outer_edge = f64::max(compact_outer_edge, companion_outer_edge);
+        let innermost_planet = system.planets.iter()
+            .map(|planet| planet.orbit_radius)
+            .fold(f64::INFINITY, f64::min);
+
+        assert!(companion.orbit_radius >= 850.0);
+        assert!(innermost_planet >= binary_outer_edge + 200.0);
     }
 }

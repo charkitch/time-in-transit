@@ -21,7 +21,6 @@ export const PALETTE = {
   starXB:           0xFF6688,
   starMG:           0xDD44FF,
   starBH:           0x220022,
-  starSBH:          0x110011,
   starXBB:          0xFF4466,
   starSGR:          0xFFAA22,
   ambient:          0x112244,
@@ -88,7 +87,6 @@ export const STAR_COLORS: Record<string, number> = {
   XB: PALETTE.starXB,
   MG: PALETTE.starMG,
   BH: PALETTE.starBH,
-  SBH: PALETTE.starSBH,
   XBB: PALETTE.starXBB,
   SGR: PALETTE.starSGR,
 };
@@ -106,7 +104,6 @@ export const STAR_TYPE_DISPLAY: Record<string, string> = {
   XB: 'X-RAY BINARY',
   MG: 'MAGNETAR',
   BH: 'BLACK HOLE',
-  SBH: 'SUPERMASSIVE BLACK HOLE',
   XBB: 'X-RAY BURSTER',
   SGR: 'SGR',
 };

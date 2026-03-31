@@ -18,7 +18,7 @@ function toCanvas(x: number, y: number): [number, number] {
 const STAR_TYPE_COLOR: Record<string, string> = {
   G: '#FFEE88', K: '#FFAA44', M: '#FF6633', F: '#FFFFFF', A: '#AABBFF',
   WD: '#F0F0FF', HE: '#88CCAA', NS: '#CCDDFF', PU: '#44AAFF', XB: '#FF6688',
-  MG: '#DD44FF', BH: '#220022', SBH: '#110011', XBB: '#FF4466', SGR: '#FFAA22',
+  MG: '#DD44FF', BH: '#220022', XBB: '#FF4466', SGR: '#FFAA22',
 };
 
 function applyAlpha(hex: string, alpha: number): string {
@@ -164,7 +164,7 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
       }
 
       // Accretion ring indicator for black holes
-      if (sys.starType === 'BH' || sys.starType === 'SBH') {
+      if (sys.starType === 'BH') {
         ctx.strokeStyle = 'rgba(255,102,34,0.7)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
