@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { PALETTE } from '../constants';
 import { loadTexture } from './textureCache';
 import type { PlanetSkin } from './planetSkins';
-import type { SurfaceType, GasGiantType } from '../generation/SystemGenerator';
+import type { SurfaceType, GasGiantType } from '../engine';
 import { PRNG } from '../generation/prng';
 
 /** Creates a group with filled mesh + wireframe overlay */

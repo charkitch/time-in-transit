@@ -17,13 +17,12 @@ import {
 } from './meshFactory';
 import { selectSkin } from './planetSkins';
 import { disposeAll as disposeTextureCache } from './textureCache';
-import type { SolarSystemData } from '../generation/SystemGenerator';
-import type { StarSystemData } from '../generation/ClusterGenerator';
+import type { SolarSystemData, SystemFactionState } from '../engine';
 import { generateNPCShips } from '../mechanics/NPCSystem';
 import type { NPCShipState } from '../mechanics/NPCSystem';
 import { generateFleetBattle } from '../mechanics/FleetBattleSystem';
 import type { FleetBattle } from '../mechanics/FleetBattleSystem';
-import { getFaction } from '../mechanics/FactionSystem';
+import { getFaction } from '../data/factions';
 import { PRNG } from '../generation/prng';
 import { CLUSTER_SEED, RENDER_CONFIG } from '../constants';
 
@@ -100,7 +99,13 @@ export class SceneRenderer {
     this.camera.updateProjectionMatrix();
   };
 
-  loadSystem(data: SolarSystemData, systemId: number, galaxyYear = 0, systemName = '', starData?: StarSystemData): void {
+  loadSystem(
+    data: SolarSystemData,
+    systemId: number,
+    galaxyYear = 0,
+    systemName = '',
+    factionState?: SystemFactionState,
+  ): void {
     // Remove old system objects
     this.systemObjects.forEach(o => this.scene.remove(o));
     this.systemObjects = [];
@@ -113,29 +118,187 @@ export class SceneRenderer {
 
     // Star
     const starColor = STAR_COLORS[data.starType] ?? PALETTE.starG;
-    const starGeo = new THREE.SphereGeometry(data.starRadius, 8, 8);
-    const starMat = new THREE.MeshBasicMaterial({ color: starColor });
-    const starMesh = new THREE.Mesh(starGeo, starMat);
-
-    const glow = makeGlowSprite(starColor, data.starRadius * 6);
+    const isBlackHole = data.starType === 'BH' || data.starType === 'SBH';
+    const isIntense = data.starType === 'NS' || data.starType === 'PU' || data.starType === 'MG';
     const starGroup = new THREE.Group();
-    starGroup.add(starMesh, glow);
+    let starOrbitRadius = 0;
+    let starOrbitSpeed = 0;
+    let starOrbitPhase = 0;
+
+    if (isBlackHole) {
+      // Black sphere core
+      const bhGeo = new THREE.SphereGeometry(data.starRadius, 16, 16);
+      const bhMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+      starGroup.add(new THREE.Mesh(bhGeo, bhMat));
+
+      // Accretion disk(s)
+      const diskColor = 0xFF6622;
+      const diskMat = new THREE.MeshBasicMaterial({
+        color: diskColor,
+        transparent: true,
+        opacity: 0.6,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+      });
+      const innerR = data.starRadius * 1.4;
+      const outerR = data.starRadius * 2.2;
+      const diskGeo = new THREE.TorusGeometry((innerR + outerR) / 2, (outerR - innerR) / 2, 8, 48);
+      const disk = new THREE.Mesh(diskGeo, diskMat);
+      disk.rotation.x = Math.PI / 2;
+      starGroup.add(disk);
+
+      if (data.starType === 'SBH') {
+        // Second larger ring
+        const outerR2 = data.starRadius * 3.0;
+        const diskGeo2 = new THREE.TorusGeometry((outerR + outerR2) / 2, (outerR2 - outerR) / 2, 8, 48);
+        const diskMat2 = diskMat.clone();
+        diskMat2.opacity = 0.35;
+        const disk2 = new THREE.Mesh(diskGeo2, diskMat2);
+        disk2.rotation.x = Math.PI / 2;
+        disk2.rotation.z = 0.3;
+        starGroup.add(disk2);
+      }
+
+      // Dim purple point light for black holes
+      if (this.starLight) this.scene.remove(this.starLight);
+      this.starLight = new THREE.PointLight(0x6622AA, 0.5, 60000);
+      this.scene.add(this.starLight);
+      this.systemObjects.push(this.starLight);
+    } else if (data.starType === 'XB' && data.companion) {
+      const companion = data.companion;
+
+      // Compact object (neutron star / X-ray source) — built into starGroup
+      starGroup.add(new THREE.Mesh(
+        new THREE.SphereGeometry(data.starRadius, 8, 8),
+        new THREE.MeshBasicMaterial({ color: starColor }),
+      ));
+      starGroup.add(makeGlowSprite(starColor, data.starRadius * 10));
+
+      // Accretion disk around compact object
+      const diskInnerR = data.starRadius * 1.5;
+      const diskOuterR = data.starRadius * 3.5;
+      const diskGeo = new THREE.TorusGeometry((diskInnerR + diskOuterR) / 2, (diskOuterR - diskInnerR) / 2, 8, 48);
+      const diskMat = new THREE.MeshBasicMaterial({
+        color: 0xFF4466,
+        transparent: true,
+        opacity: 0.55,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const disk = new THREE.Mesh(diskGeo, diskMat);
+      disk.rotation.x = Math.PI / 2;
+      starGroup.add(disk);
+
+      // Light travels with the compact object group (no static starLight needed)
+      if (this.starLight) this.scene.remove(this.starLight);
+      this.starLight = null;
+      starGroup.add(new THREE.PointLight(starColor, 2, 60000));
+
+      // Compact object orbits opposite the companion, closer to CoM
+      starOrbitRadius = companion.orbitRadius * 0.4;
+      starOrbitSpeed = companion.orbitSpeed;
+      starOrbitPhase = companion.orbitPhase + Math.PI;
+      starGroup.position.set(
+        Math.cos(starOrbitPhase) * starOrbitRadius, 0,
+        Math.sin(starOrbitPhase) * starOrbitRadius,
+      );
+
+      // Companion star
+      const companionGroup = new THREE.Group();
+      companionGroup.add(new THREE.Mesh(
+        new THREE.SphereGeometry(companion.radius, 8, 8),
+        new THREE.MeshBasicMaterial({ color: companion.color }),
+      ));
+      companionGroup.add(makeGlowSprite(companion.color, companion.radius * 6));
+      companionGroup.add(new THREE.PointLight(companion.color, 1.5, 60000));
+      companionGroup.position.set(
+        Math.cos(companion.orbitPhase) * companion.orbitRadius, 0,
+        Math.sin(companion.orbitPhase) * companion.orbitRadius,
+      );
+      this.scene.add(companionGroup);
+      this.systemObjects.push(companionGroup);
+
+      this.entities.set('companion-star', {
+        id: 'companion-star',
+        group: companionGroup,
+        orbitRadius: companion.orbitRadius,
+        orbitSpeed: companion.orbitSpeed,
+        orbitPhase: companion.orbitPhase,
+        type: 'star',
+        worldPos: new THREE.Vector3(
+          Math.cos(companion.orbitPhase) * companion.orbitRadius, 0,
+          Math.sin(companion.orbitPhase) * companion.orbitRadius,
+        ),
+        collisionRadius: companion.radius,
+      });
+    } else {
+      // Normal/exotic star sphere
+      const starGeo = new THREE.SphereGeometry(data.starRadius, 8, 8);
+      const starMat = new THREE.MeshBasicMaterial({ color: starColor });
+      starGroup.add(new THREE.Mesh(starGeo, starMat));
+
+      // Glow sprite — larger for intense objects, slightly larger for WD
+      const glowMul = isIntense ? 12
+        : data.starType === 'WD' ? 8
+        : 6;
+      const glow = makeGlowSprite(starColor, data.starRadius * glowMul);
+      starGroup.add(glow);
+
+      // Pulsar beam jets — tapered cones anchored at the star surface
+      if (data.starType === 'PU') {
+        const beamColor = 0x44AAFF;
+        const beamLen = data.starRadius * 12;
+        const baseWidth = data.starRadius * 0.6;
+        const tipWidth = data.starRadius * 0.05;
+        const beamMat = new THREE.MeshBasicMaterial({
+          color: beamColor,
+          transparent: true,
+          opacity: 0.45,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        });
+        for (const sign of [1, -1]) {
+          const beamGeo = new THREE.CylinderGeometry(tipWidth, baseWidth, beamLen, 8, 1, true);
+          const beam = new THREE.Mesh(beamGeo, beamMat);
+          // Position so the wide base sits at the star surface
+          beam.position.set(0, sign * (data.starRadius + beamLen / 2), 0);
+          if (sign < 0) beam.rotation.x = Math.PI;
+          starGroup.add(beam);
+          // Inner brighter core
+          const coreGeo = new THREE.CylinderGeometry(tipWidth * 0.3, baseWidth * 0.3, beamLen, 6, 1, true);
+          const coreMat = beamMat.clone();
+          coreMat.opacity = 0.7;
+          const core = new THREE.Mesh(coreGeo, coreMat);
+          core.position.copy(beam.position);
+          if (sign < 0) core.rotation.x = Math.PI;
+          starGroup.add(core);
+        }
+      }
+
+      // Point light
+      const lightIntensity = isIntense ? 3 : 2;
+      if (this.starLight) this.scene.remove(this.starLight);
+      this.starLight = new THREE.PointLight(starColor, lightIntensity, 60000);
+      this.scene.add(this.starLight);
+      this.systemObjects.push(this.starLight);
+    }
+
     this.scene.add(starGroup);
     this.systemObjects.push(starGroup);
-
-    if (this.starLight) this.scene.remove(this.starLight);
-    this.starLight = new THREE.PointLight(starColor, 2, 60000);
-    this.scene.add(this.starLight);
-    this.systemObjects.push(this.starLight);
 
     this.entities.set('star', {
       id: 'star',
       group: starGroup,
-      orbitRadius: 0,
-      orbitSpeed: 0,
-      orbitPhase: 0,
+      orbitRadius: starOrbitRadius,
+      orbitSpeed: starOrbitSpeed,
+      orbitPhase: starOrbitPhase,
       type: 'star',
-      worldPos: new THREE.Vector3(),
+      worldPos: new THREE.Vector3(
+        Math.cos(starOrbitPhase) * starOrbitRadius, 0,
+        Math.sin(starOrbitPhase) * starOrbitRadius,
+      ),
       collisionRadius: data.starRadius,
     });
 
@@ -172,7 +335,9 @@ export class SceneRenderer {
         addCityLights(planetGroup, planet.radius, planetSeed, planet.surfaceType);
         addSunAtmosphere(planetGroup, planet.radius);
       }
-      this.lightningMaterials.push(addLightning(planetGroup, planet.radius, planetSeed));
+      if (rng.next() < 0.05) {
+        this.lightningMaterials.push(addLightning(planetGroup, planet.radius, planetSeed));
+      }
 
       planetGroup.position.set(planet.orbitRadius, 0, 0);
       this.scene.add(planetGroup);
@@ -236,7 +401,9 @@ export class SceneRenderer {
         }
         addCityLights(moonGroup, moon.radius, moonSeed, moon.surfaceType);
         addSunAtmosphere(moonGroup, moon.radius);
-        this.lightningMaterials.push(addLightning(moonGroup, moon.radius, moonSeed));
+        if (rng.next() < 0.05) {
+          this.lightningMaterials.push(addLightning(moonGroup, moon.radius, moonSeed));
+        }
         this.scene.add(moonGroup);
         this.systemObjects.push(moonGroup);
         this.entities.set(moon.id, {
@@ -335,6 +502,7 @@ export class SceneRenderer {
     }
 
     // NPC trade ships — waypoints derived from planet initial positions
+    const planetIds = data.planets.map(p => p.id);
     const planetPositions = data.planets.map(p =>
       new THREE.Vector3(
         Math.cos(p.orbitPhase) * p.orbitRadius,
@@ -343,7 +511,7 @@ export class SceneRenderer {
       )
     );
 
-    const npcData = generateNPCShips(data, systemId, galaxyYear, systemName, planetPositions);
+    const npcData = generateNPCShips(data, systemId, galaxyYear, systemName, planetPositions, planetIds, data.mainStationPlanetId);
     for (const shipData of npcData) {
       const mesh = makeNPCShipMesh(shipData.color);
       const startPos = shipData.waypointA.clone().lerp(shipData.waypointB, shipData.t);
@@ -368,6 +536,8 @@ export class SceneRenderer {
         originSystemName: shipData.originSystemName,
         waypointA: shipData.waypointA,
         waypointB: shipData.waypointB,
+        planetIdA: shipData.planetIdA,
+        planetIdB: shipData.planetIdB,
         t: shipData.t,
         direction: shipData.direction,
         speed: shipData.speed,
@@ -378,8 +548,8 @@ export class SceneRenderer {
     }
 
     // Fleet battle
-    if (starData) {
-      const battle = generateFleetBattle(data, systemId, galaxyYear, starData);
+    if (factionState) {
+      const battle = generateFleetBattle(data, systemId, galaxyYear, factionState);
       this.fleetBattleData = battle;
 
       if (battle) {
@@ -469,7 +639,8 @@ export class SceneRenderer {
 
   updateOrbits(time: number, dt = 0): void {
     for (const [, entity] of this.entities) {
-      if (entity.type === 'star' || entity.type === 'npc_ship' || entity.type === 'fleet_ship') continue;
+      if (entity.type === 'star' && entity.orbitRadius === 0) continue;
+      if (entity.type === 'npc_ship' || entity.type === 'fleet_ship') continue;
 
       const angle = entity.orbitPhase + time * entity.orbitSpeed;
 
@@ -515,6 +686,12 @@ export class SceneRenderer {
         const entity = this.entities.get(npcState.id);
         if (!entity) continue;
 
+        // Keep waypoints tracking orbiting planets
+        const pa = this.entities.get(npcState.planetIdA);
+        const pb = this.entities.get(npcState.planetIdB);
+        if (pa) npcState.waypointA.copy(pa.worldPos);
+        if (pb) npcState.waypointB.copy(pb.worldPos);
+
         const dist = npcState.waypointA.distanceTo(npcState.waypointB);
         if (dist < 1) continue;
 
@@ -532,6 +709,19 @@ export class SceneRenderer {
           if (dist < minDist && dist > 0.001) {
             const normal = diff.normalize();
             entity.group.position.copy(body.worldPos).addScaledVector(normal, minDist);
+          }
+        }
+
+        // Separate NPC ships from each other
+        const NPC_SEPARATION = 30;
+        for (const [otherId, otherState] of this.npcShips) {
+          if (otherId === npcState.id) continue;
+          const otherEntity = this.entities.get(otherState.id);
+          if (!otherEntity) continue;
+          const diff = entity.group.position.clone().sub(otherEntity.worldPos);
+          const d = diff.length();
+          if (d < NPC_SEPARATION && d > 0.001) {
+            entity.group.position.addScaledVector(diff.normalize(), (NPC_SEPARATION - d) * 0.5);
           }
         }
 

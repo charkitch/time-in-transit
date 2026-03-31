@@ -1,10 +1,7 @@
 import * as THREE from 'three';
 import { PRNG } from '../generation/prng';
 import { CLUSTER_SEED, ERA_LENGTH } from '../constants';
-import { getSystemFactionState } from './FactionSystem';
-import { getCivState } from './CivilizationSystem';
-import type { SolarSystemData, PlanetData } from '../generation/SystemGenerator';
-import type { StarSystemData } from '../generation/ClusterGenerator';
+import type { SolarSystemData, PlanetData, SystemFactionState } from '../engine';
 
 export const BATTLE_WEAPONS_RANGE = 600;
 export const BATTLE_DANGER_RANGE = 350;
@@ -224,11 +221,8 @@ export function generateFleetBattle(
   systemData: SolarSystemData,
   systemId: number,
   galaxyYear: number,
-  starData: StarSystemData,
+  factionState: SystemFactionState,
 ): FleetBattle | null {
-  const civState = getCivState(systemId, galaxyYear, starData.economy);
-  const factionState = getSystemFactionState(systemId, galaxyYear, civState.politics);
-
   if (!factionState.isContested || !factionState.contestingFactionId) {
     return null;
   }

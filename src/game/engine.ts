@@ -16,105 +16,139 @@ import initWasm, {
 
 import type { GoodName, EconomyType, PoliticalType } from './constants';
 
-// ─── Types matching Rust serde output ───────────────────────────────────────
+// ─── Types matching Rust camelCase serde output ─────────────────────────────
+
+export type StarType = 'G' | 'K' | 'M' | 'F' | 'A' | 'WD' | 'HE' | 'NS' | 'PU' | 'XB' | 'MG' | 'BH' | 'SBH' | 'XBB' | 'SGR';
+
+export type SurfaceType =
+  | 'continental'
+  | 'ocean'
+  | 'marsh'
+  | 'venus'
+  | 'barren'
+  | 'desert'
+  | 'ice'
+  | 'volcanic'
+  | 'forest_moon';
+
+export type GasGiantType = 'jovian' | 'saturnian' | 'neptunian' | 'inferno' | 'chromatic';
 
 export interface StarSystemData {
   id: number;
   name: string;
   x: number;
   y: number;
-  star_type: 'G' | 'K' | 'M' | 'F' | 'A';
+  starType: StarType;
   economy: EconomyType;
-  tech_level: number;
+  techLevel: number;
   population: number;
 }
 
 export interface MoonData {
   id: string;
-  surface_type: string;
+  surfaceType: SurfaceType;
   radius: number;
-  orbit_radius: number;
-  orbit_speed: number;
-  orbit_phase: number;
+  orbitRadius: number;
+  orbitSpeed: number;
+  orbitPhase: number;
   color: number;
+  hasClouds: boolean;
+  cloudDensity: number;
 }
 
 export interface PlanetData {
   id: string;
   name: string;
   type: 'rocky' | 'gas_giant';
-  surface_type: string;
-  gas_type: string;
+  surfaceType: SurfaceType;
+  gasType: GasGiantType;
   radius: number;
-  orbit_radius: number;
-  orbit_speed: number;
-  orbit_phase: number;
+  orbitRadius: number;
+  orbitSpeed: number;
+  orbitPhase: number;
   color: number;
-  has_rings: boolean;
-  ring_count: number;
-  ring_inclination: number;
+  hasRings: boolean;
+  ringCount: number;
+  ringInclination: number;
+  hasClouds: boolean;
+  cloudDensity: number;
+  greatSpot: boolean;
+  greatSpotLat: number;
+  greatSpotSize: number;
   moons: MoonData[];
-  has_station: boolean;
+  hasStation: boolean;
 }
 
 export interface AsteroidBeltData {
-  inner_radius: number;
-  outer_radius: number;
+  innerRadius: number;
+  outerRadius: number;
   count: number;
 }
+
+export type SecretBaseType = 'asteroid' | 'oort_cloud' | 'maximum_space';
 
 export interface SecretBaseData {
   id: string;
   name: string;
-  type: 'asteroid' | 'oort_cloud' | 'maximum_space';
-  orbit_radius: number;
-  orbit_phase: number;
-  orbit_speed: number;
+  type: SecretBaseType;
+  orbitRadius: number;
+  orbitPhase: number;
+  orbitSpeed: number;
+}
+
+export interface BinaryCompanionData {
+  starType: StarType;
+  radius: number;
+  color: number;
+  orbitRadius: number;
+  orbitSpeed: number;
+  orbitPhase: number;
 }
 
 export interface SolarSystemData {
-  star_type: string;
-  star_radius: number;
+  starType: StarType;
+  starRadius: number;
+  companion: BinaryCompanionData | null;
   planets: PlanetData[];
-  asteroid_belt: AsteroidBeltData | null;
-  main_station_planet_id: string;
-  secret_bases: SecretBaseData[];
+  asteroidBelt: AsteroidBeltData | null;
+  mainStationPlanetId: string;
+  secretBases: SecretBaseData[];
 }
 
 export interface CivilizationState {
-  system_id: number;
-  galaxy_year: number;
+  systemId: number;
+  galaxyYear: number;
   era: number;
   politics: PoliticalType;
   economy: EconomyType;
-  banned_goods: GoodName[];
-  price_modifier: number;
-  luxury_mod: number;
-  anarchy_variance: boolean;
-  tech_bonus: GoodName[];
+  bannedGoods: GoodName[];
+  priceModifier: number;
+  luxuryMod: number;
+  anarchyVariance: boolean;
+  techBonus: GoodName[];
 }
 
 export interface SystemFactionState {
-  controlling_faction_id: string;
-  contesting_faction_id: string | null;
-  is_contested: boolean;
+  controllingFactionId: string;
+  contestingFactionId: string | null;
+  isContested: boolean;
 }
 
 export interface MarketEntry {
   good: GoodName;
-  buy_price: number;
-  sell_price: number;
+  buyPrice: number;
+  sellPrice: number;
   stock: number;
   banned: boolean;
 }
 
 export interface ChoiceEffect {
-  trading_reputation: number;
-  banned_goods: GoodName[];
-  price_modifier: number;
-  faction_tag: string | null;
-  credits_reward: number;
-  fuel_reward: number;
+  tradingReputation: number;
+  bannedGoods: GoodName[];
+  priceModifier: number;
+  factionTag: string | null;
+  creditsReward: number;
+  fuelReward: number;
 }
 
 export interface EventChoice {
@@ -122,18 +156,18 @@ export interface EventChoice {
   label: string;
   description: string;
   effect: ChoiceEffect;
-  requires_min_tech: number | null;
-  requires_credits: number | null;
+  requiresMinTech: number | null;
+  requiresCredits: number | null;
 }
 
 export interface LandingEvent {
   id: string;
   title: string;
-  narrative_lines: [string, string, string];
+  narrativeLines: [string, string, string];
   choices: EventChoice[];
-  applicable_politics: PoliticalType[] | null;
-  min_galaxy_year: number | null;
-  required_faction_tag: string | null;
+  applicablePolitics: PoliticalType[] | null;
+  minGalaxyYear: number | null;
+  requiredFactionTag: string | null;
 }
 
 export interface ClusterSystemSummary {
@@ -141,36 +175,48 @@ export interface ClusterSystemSummary {
   name: string;
   x: number;
   y: number;
-  star_type: string;
+  starType: StarType;
   politics: PoliticalType;
   economy: EconomyType;
-  controlling_faction_id: string;
-  contesting_faction_id: string | null;
-  is_contested: boolean;
-  tech_level: number;
+  controllingFactionId: string;
+  contestingFactionId: string | null;
+  isContested: boolean;
+  techLevel: number;
   population: number;
 }
 
 export interface SystemPayload {
   system: SolarSystemData;
-  civ_state: CivilizationState;
-  faction_state: SystemFactionState;
+  civState: CivilizationState;
+  factionState: SystemFactionState;
   market: MarketEntry[];
-  landing_event: LandingEvent | null;
-  system_entry_lines: string[];
+  landingEvent: LandingEvent | null;
+  systemEntryLines: string[];
 }
 
 export interface JumpResult {
-  system_payload: SystemPayload;
-  cluster_summary: ClusterSystemSummary[];
-  years_elapsed: number;
-  new_galaxy_year: number;
+  systemPayload: SystemPayload;
+  clusterSummary: ClusterSystemSummary[];
+  yearsElapsed: number;
+  newGalaxyYear: number;
+  galaxySimState: SystemSimState[];
 }
 
 export interface InitResult {
-  system_payload: SystemPayload;
-  cluster_summary: ClusterSystemSummary[];
+  systemPayload: SystemPayload;
+  clusterSummary: ClusterSystemSummary[];
   cluster: StarSystemData[];
+  galaxySimState: SystemSimState[];
+}
+
+// ─── Galaxy Simulation State ────────────────────────────────────────────────
+
+export interface SystemSimState {
+  systemId: number;
+  stability: number;
+  prosperity: number;
+  factionStrength: Record<string, number>;
+  recentEvents: string[];
 }
 
 // ─── Player state for WASM boundary ────────────────────────────────────────
@@ -178,25 +224,25 @@ export interface InitResult {
 export interface WasmPlayerState {
   credits: number;
   cargo: Record<string, number>;
-  cargo_cost_basis: Record<string, number>;
+  cargoCostBasis: Record<string, number>;
   fuel: number;
   shields: number;
-  current_system_id: number;
-  visited_systems: number[];
-  galaxy_year: number;
-  player_choices: Record<number, {
-    trading_reputation: number;
-    banned_goods: GoodName[];
-    price_modifier: number;
-    faction_tag: string | null;
-    completed_event_ids: string[];
+  currentSystemId: number;
+  visitedSystems: number[];
+  galaxyYear: number;
+  playerChoices: Record<number, {
+    tradingReputation: number;
+    bannedGoods: GoodName[];
+    priceModifier: number;
+    factionTag: string | null;
+    completedEventIds: string[];
   }>;
-  last_visit_year: Record<number, number>;
-  known_factions: string[];
-  faction_memory: Record<number, {
-    faction_id: string;
-    contesting_faction_id: string | null;
-    galaxy_year: number;
+  lastVisitYear: Record<number, number>;
+  knownFactions: string[];
+  factionMemory: Record<number, {
+    factionId: string;
+    contestingFactionId: string | null;
+    galaxyYear: number;
   }>;
 }
 

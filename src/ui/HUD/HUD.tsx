@@ -3,9 +3,9 @@ import { StatusBars } from './StatusBars';
 import { Scanner } from './Scanner';
 import { TargetIndicator } from './TargetIndicator';
 import type { SceneEntity } from '../../game/rendering/SceneRenderer';
-import { getCivState } from '../../game/mechanics/CivilizationSystem';
-import { getSystemFactionState, getFaction } from '../../game/mechanics/FactionSystem';
-import type { SecretBaseData } from '../../game/generation/SystemGenerator';
+import { getFaction } from '../../game/data/factions';
+import type { SecretBaseData } from '../../game/engine';
+import { STAR_TYPE_DISPLAY } from '../../game/constants';
 import styles from './HUD.module.css';
 import * as THREE from 'three';
 
@@ -23,11 +23,16 @@ export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
   const hyperspaceTarget = useGameState(s => s.ui.hyperspaceTarget);
   const galaxyYear = useGameState(s => s.galaxyYear);
   const knownFactions = useGameState(s => s.knownFactions);
+  const currentSystemPayload = useGameState(s => s.currentSystemPayload);
 
   const currentStar = cluster[currentSystemId];
   const targetStar = hyperspaceTarget !== null ? cluster[hyperspaceTarget] : null;
 
   const currentSystem = useGameState(s => s.currentSystem);
+  const currentFaction = currentSystemPayload
+    ? getFaction(currentSystemPayload.factionState.controllingFactionId)
+    : undefined;
+  const currentFactionKnown = currentFaction && knownFactions.has(currentFaction.id);
 
   // Target info
   const targetEntity = player.targetId ? getEntities().get(player.targetId) : null;
@@ -61,16 +66,19 @@ export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
           YEAR {galaxyYear.toLocaleString()}
         </div>
         <div className={styles.systemInfo}>
-          {currentStar?.name} · {currentStar?.starType}-TYPE · {currentStar?.economy}
-          {currentStar && (() => {
-            const civState = getCivState(currentSystemId, galaxyYear, currentStar.economy);
-            const fs = getSystemFactionState(currentSystemId, galaxyYear, civState.politics);
-            const faction = getFaction(fs.controllingFactionId);
-            const known = faction && knownFactions.has(faction.id);
-            const name = known ? faction.name.toUpperCase() : 'UNKNOWN';
-            const color = known && faction ? `#${faction.color.toString(16).padStart(6, '0')}` : 'var(--color-hud-dim)';
-            return <span style={{ color, marginLeft: '6px' }}>· {name}</span>;
-          })()}
+          {currentStar?.name} · {STAR_TYPE_DISPLAY[currentStar?.starType] ?? `${currentStar?.starType}-TYPE`} · {currentSystemPayload?.civState.economy ?? currentStar?.economy}
+          {currentSystemPayload && (
+            <span
+              style={{
+                color: currentFactionKnown && currentFaction
+                  ? `#${currentFaction.color.toString(16).padStart(6, '0')}`
+                  : 'var(--color-hud-dim)',
+                marginLeft: '6px',
+              }}
+            >
+              · {currentFactionKnown && currentFaction ? currentFaction.name.toUpperCase() : 'UNKNOWN'}
+            </span>
+          )}
         </div>
         {targetStar && (
           <div style={{ color: 'var(--color-hyperspace-bright)', fontSize: '11px', marginTop: '4px' }}>

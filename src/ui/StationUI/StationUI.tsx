@@ -1,13 +1,9 @@
 import { useState } from 'react';
 import { useGameState } from '../../game/GameState';
-import { TradingSystem } from '../../game/mechanics/TradingSystem';
-import { getCivState } from '../../game/mechanics/CivilizationSystem';
 import { HYPERSPACE, MAX_CARGO, type GoodName } from '../../game/constants';
 import styles from './StationUI.module.css';
 
 const SHIELD_REPAIR_RATE = 5; // CR per shield point
-
-const trading = new TradingSystem();
 
 interface StationUIProps {
   onUndock: () => void;
@@ -19,9 +15,8 @@ export function StationUI({ onUndock }: StationUIProps) {
   const [tab, setTab] = useState<TabId>('trade');
   const cluster = useGameState(s => s.cluster);
   const currentSystemId = useGameState(s => s.currentSystemId);
+  const currentSystemPayload = useGameState(s => s.currentSystemPayload);
   const player = useGameState(s => s.player);
-  const galaxyYear = useGameState(s => s.galaxyYear);
-  const playerChoices = useGameState(s => s.playerChoices);
   const addCredits = useGameState(s => s.addCredits);
   const addCargo = useGameState(s => s.addCargo);
   const removeCargo = useGameState(s => s.removeCargo);
@@ -29,16 +24,14 @@ export function StationUI({ onUndock }: StationUIProps) {
   const setShields = useGameState(s => s.setShields);
 
   const starData = cluster[currentSystemId];
-  if (!starData) return null;
-  const civState = getCivState(currentSystemId, galaxyYear, starData.economy);
-  const systemChoices = playerChoices[currentSystemId];
-  const lastVisitYear = useGameState(s => s.lastVisitYear);
-  const market = trading.getMarket(currentSystemId, civState.economy, civState, systemChoices, galaxyYear, lastVisitYear[currentSystemId]);
-  const cargoTotal = trading.cargoTotal(player.cargo);
+  const civState = currentSystemPayload?.civState;
+  const market = currentSystemPayload?.market;
+  if (!starData || !civState || !market) return null;
+  const cargoTotal = Object.values(player.cargo).reduce((sum, qty) => sum + (qty ?? 0), 0);
   const cargoSpace = MAX_CARGO - cargoTotal;
 
-  const handleBuy = (good: GoodName, price: number, stock: number, banned: boolean, buyable: boolean) => {
-    if (!buyable || banned || stock === 0 || cargoSpace === 0 || player.credits < price) return;
+  const handleBuy = (good: GoodName, price: number, stock: number, banned: boolean) => {
+    if (banned || stock === 0 || cargoSpace === 0 || player.credits < price) return;
     addCredits(-price);
     addCargo(good, 1, price);
   };
@@ -132,34 +125,24 @@ export function StationUI({ onUndock }: StationUIProps) {
               </tr>
             </thead>
             <tbody>
-              {market.map(({ good, buyPrice, sellPrice, stock, banned, boom, buyable }) => {
+              {market.map(({ good, buyPrice, sellPrice, stock, banned }) => {
                 const held = player.cargo[good] ?? 0;
                 const avgPaid = player.cargoCostBasis[good];
-                const canBuy = buyable && !banned && stock > 0 && cargoSpace > 0 && player.credits >= buyPrice;
+                const canBuy = !banned && stock > 0 && cargoSpace > 0 && player.credits >= buyPrice;
                 const canSell = held > 0;
                 const profit = avgPaid !== undefined ? sellPrice - avgPaid : null;
                 return (
                   <tr key={good} style={banned ? { opacity: 0.45 } : undefined}>
                     <td>
                       {good}
-                      {!buyable && (
-                        <span style={{ color: 'var(--color-station)', fontSize: '9px', marginLeft: 6, letterSpacing: 1 }}>
-                          SELL-ONLY
-                        </span>
-                      )}
                       {banned && (
                         <span style={{ color: 'var(--color-danger)', fontSize: '9px', marginLeft: 6, letterSpacing: 1 }}>
                           PROHIBITED
                         </span>
                       )}
-                      {boom && !banned && (
-                        <span style={{ color: '#FFD700', fontSize: '9px', marginLeft: 6, letterSpacing: 1 }}>
-                          BOOM
-                        </span>
-                      )}
                     </td>
-                    <td style={{ color: banned || !buyable ? 'inherit' : 'var(--color-hud)' }}>
-                      {buyable && !banned ? buyPrice : '—'}
+                    <td style={{ color: banned ? 'inherit' : 'var(--color-hud)' }}>
+                      {!banned ? buyPrice : '—'}
                     </td>
                     <td>
                       <span style={{ color: profit === null ? 'var(--color-warning)' : profit >= 0 ? '#44FF88' : '#FF4422' }}>
@@ -174,13 +157,13 @@ export function StationUI({ onUndock }: StationUIProps) {
                     <td style={{ opacity: held > 0 ? 1 : 0.35, color: 'var(--color-hud-dim)' }}>
                       {avgPaid !== undefined ? Math.round(avgPaid) : '—'}
                     </td>
-                    <td style={{ opacity: 0.7 }}>{buyable && !banned ? stock : '—'}</td>
+                    <td style={{ opacity: 0.7 }}>{!banned ? stock : '—'}</td>
                     <td style={{ color: held > 0 ? 'var(--color-station)' : 'inherit' }}>{held}</td>
                     <td style={{ display: 'flex', gap: '4px' }}>
                       <button
                         className={styles.buyBtn}
                         disabled={!canBuy}
-                        onClick={() => handleBuy(good, buyPrice, stock, banned, buyable)}
+                        onClick={() => handleBuy(good, buyPrice, stock, banned)}
                       >BUY</button>
                       <button
                         className={`${styles.buyBtn} ${styles.sellBtn}`}

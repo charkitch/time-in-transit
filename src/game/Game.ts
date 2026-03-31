@@ -4,27 +4,67 @@ import { FlightModel } from './flight/FlightModel';
 import { InputSystem } from './input/InputSystem';
 import { DockingSystem } from './mechanics/DockingSystem';
 import { HyperspaceSystem } from './mechanics/HyperspaceSystem';
-import { jumpYearsElapsed } from './mechanics/RelativisticTime';
-import { getCivState } from './mechanics/CivilizationSystem';
-import { getSystemFactionState, getFaction } from './mechanics/FactionSystem';
 import { BATTLE_DANGER_RANGE } from './mechanics/FleetBattleSystem';
-import { selectEvent, selectSecretBaseEvent } from './data/events';
-import { generateSolarSystem } from './generation/SystemGenerator';
 import { useGameState } from './GameState';
 import type { SystemChoices } from './GameState';
 import {
   HYPERSPACE,
   FUEL_HARVEST,
   GAS_GIANT_SCOOP,
-  ERA_LENGTH,
   COMBAT_INTELLIGENCE_GOOD,
 } from './constants';
 import type { GoodName } from './constants';
-import type { ChoiceEffect } from './data/events';
 import { MAX_CARGO } from './constants';
-import type { SecretBaseType } from './generation/SystemGenerator';
+import {
+  initEngine, engineInitGame, engineJumpToSystem, engineGetLandingEvent, engineGetMarket,
+  type WasmPlayerState, type ChoiceEffect, type SecretBaseType, type SystemPayload,
+} from './engine';
 
 const COMBAT_INTEL_INTERVAL = 8;
+
+function buildWasmPlayerState(state: ReturnType<typeof useGameState.getState>): WasmPlayerState {
+  // Convert Zustand state → WasmPlayerState for Rust JSON boundary
+  const cargo: Record<string, number> = {};
+  for (const [k, v] of Object.entries(state.player.cargo)) {
+    if (v) cargo[k] = v;
+  }
+  const cargoCostBasis: Record<string, number> = {};
+  for (const [k, v] of Object.entries(state.player.cargoCostBasis)) {
+    if (v !== undefined) cargoCostBasis[k] = v;
+  }
+  const playerChoices: WasmPlayerState['playerChoices'] = {};
+  for (const [k, v] of Object.entries(state.playerChoices)) {
+    playerChoices[Number(k)] = {
+      tradingReputation: v.tradingReputation,
+      bannedGoods: v.bannedGoods,
+      priceModifier: v.priceModifier,
+      factionTag: v.factionTag,
+      completedEventIds: v.completedEventIds,
+    };
+  }
+  const factionMemory: WasmPlayerState['factionMemory'] = {};
+  for (const [k, v] of Object.entries(state.factionMemory)) {
+    factionMemory[Number(k)] = {
+      factionId: v.factionId,
+      contestingFactionId: v.contestingFactionId,
+      galaxyYear: v.galaxyYear,
+    };
+  }
+  return {
+    credits: state.player.credits,
+    cargo,
+    cargoCostBasis,
+    fuel: state.player.fuel,
+    shields: state.player.shields,
+    currentSystemId: state.currentSystemId,
+    visitedSystems: Array.from(state.visitedSystems),
+    galaxyYear: state.galaxyYear,
+    playerChoices,
+    lastVisitYear: { ...state.lastVisitYear },
+    knownFactions: Array.from(state.knownFactions),
+    factionMemory,
+  };
+}
 
 export class Game {
   private sceneRenderer: SceneRenderer;
@@ -41,7 +81,9 @@ export class Game {
   private harvestingFuel = false;
   private combatIntelTimer = 0;
   private isDead = false;
-  private preJumpEra = 0;
+  private hasUndocked = false;
+  private pendingSystemPayload: SystemPayload | null = null;
+  private engineReady = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.sceneRenderer = new SceneRenderer(canvas);
@@ -59,21 +101,40 @@ export class Game {
     this.input.onHailRequest(() => this.tryHail());
     this.input.onEscapeEvent(() => this.handleEscape());
 
-    // Load save & initialize first system
+    // Load save, then initialize engine and first system
     const state = useGameState.getState();
     state.loadSave();
-    this.loadCurrentSystem();
+    this.initFromEngine(state);
   }
 
-  private loadCurrentSystem(): void {
-    const state = useGameState.getState();
-    this.combatIntelTimer = 0;
-    const starData = state.cluster[state.currentSystemId];
-    const systemData = generateSolarSystem(starData);
-    state.setCurrentSystem(state.currentSystemId, systemData);
-    state.markVisited(state.currentSystemId);
+  private async initFromEngine(state: ReturnType<typeof useGameState.getState>): Promise<void> {
+    await initEngine();
+    const wasmState = buildWasmPlayerState(state);
+    const result = engineInitGame(wasmState.galaxyYear === 3200 && wasmState.visitedSystems.length <= 1 ? undefined : wasmState);
+    state.setCluster(result.cluster);
+    state.setClusterSummary(result.clusterSummary);
+    state.setGalaxySimState(result.galaxySimState);
+    this.engineReady = true;
 
-    this.sceneRenderer.loadSystem(systemData, state.currentSystemId, state.galaxyYear, starData.name, starData);
+    // Use system payload from Rust for first system
+    const systemData = result.systemPayload.system;
+    state.setCurrentSystemPayload(state.currentSystemId, result.systemPayload);
+    state.markVisited(state.currentSystemId);
+    state.setSystemEntryLines(result.systemPayload.systemEntryLines);
+
+    // Discover factions from init payload
+    const factionState = result.systemPayload.factionState;
+    if (factionState.controllingFactionId) state.addKnownFaction(factionState.controllingFactionId);
+    if (factionState.contestingFactionId) state.addKnownFaction(factionState.contestingFactionId);
+
+    const starData = result.cluster[state.currentSystemId];
+    this.sceneRenderer.loadSystem(
+      systemData,
+      state.currentSystemId,
+      state.galaxyYear,
+      starData.name,
+      result.systemPayload.factionState,
+    );
 
     // Place ship near the main station
     const mainPlanetId = systemData.mainStationPlanetId;
@@ -85,8 +146,6 @@ export class Game {
       const radialX = Math.cos(angle);
       const radialZ = Math.sin(angle);
       const spawnDist = mainPlanet.radius * 3 + 80;
-      // Bias the opening shot slightly left so the first view reads closer to
-      // a planetary eclipse against the star.
       const lateralOffset = -10;
       this.sceneRenderer.shipGroup.position.set(
         planetX + radialX * spawnDist + radialZ * lateralOffset,
@@ -95,7 +154,6 @@ export class Game {
       );
       this.sceneRenderer.shipGroup.rotation.set(0.1, Math.atan2(radialX, radialZ), 0);
 
-      // Align station between ship and planet for the opening shot
       const stationEntity = this.sceneRenderer.getAllEntities().get(`station-${mainPlanetId}`);
       if (stationEntity) {
         stationEntity.orbitPhase = angle + Math.PI;
@@ -104,6 +162,8 @@ export class Game {
 
     this.flightModel.reset(this.sceneRenderer.shipGroup.position);
   }
+
+  // loadCurrentSystem removed — initialization now handled by initFromEngine
 
   start(): void {
     this.lastTime = performance.now();
@@ -357,6 +417,7 @@ export class Game {
   private tryDock(): void {
     const state = useGameState.getState();
     if (state.ui.mode !== 'flight') return;
+    
 
     const pos = this.sceneRenderer.shipGroup.position;
     const entities = this.sceneRenderer.getAllEntities();
@@ -385,19 +446,22 @@ export class Game {
 
   private prepareLanding(systemId: number, stationId?: string): void {
     const state = useGameState.getState();
-    const starData = state.cluster[systemId];
-    const civState = getCivState(systemId, state.galaxyYear, starData.economy);
-    const systemChoices = state.playerChoices[systemId];
     const lastYear = state.lastVisitYear[systemId] ?? null;
     const yearsSinceLastVisit = lastYear !== null ? state.galaxyYear - lastYear : null;
 
-    const eventSeed = (state.galaxyYear * 31337 + systemId * 1009) >>> 0;
-
-    // Check if docking at a secret base
+    // Get landing event from Rust engine
+    const wasmState = buildWasmPlayerState(state);
     const secretBase = state.currentSystem?.secretBases.find(b => b.id === stationId);
-    const event = secretBase
-      ? selectSecretBaseEvent(secretBase.type, systemChoices, eventSeed)
-      : selectEvent(civState, systemChoices, eventSeed);
+    const event = engineGetLandingEvent(
+      systemId,
+      wasmState,
+      secretBase ? stationId : undefined,
+    );
+
+    // Get civ state from the pending payload or request from engine
+    // For simplicity, build a minimal civState from what we have
+    const civState = state.currentSystemPayload?.civState;
+    if (!civState) return;
 
     state.setPendingLandingEvent({ systemId, civState, event, yearsSinceLastVisit });
     state.setUIMode('landing');
@@ -432,6 +496,10 @@ export class Game {
 
     // Record this visit year
     state.recordVisitYear(systemId, state.galaxyYear);
+    const refreshedState = useGameState.getState();
+    refreshedState.setCurrentSystemMarket(
+      engineGetMarket(systemId, buildWasmPlayerState(refreshedState)),
+    );
     state.setPendingLandingEvent(null);
     state.saveGame();
     state.setUIMode('docked');
@@ -502,20 +570,24 @@ export class Game {
     const targetSys = state.cluster[targetId];
     const cost = this.hyperspace.jumpCost(currentSys, targetSys);
 
-    // Calculate years elapsed
-    const dx = targetSys.x - currentSys.x;
-    const dy = targetSys.y - currentSys.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const yearsElapsed = jumpYearsElapsed(dist);
-
     state.setFuel(state.player.fuel - cost);
-    this.preJumpEra = Math.floor(state.galaxyYear / ERA_LENGTH);
-    state.advanceGalaxyYear(yearsElapsed);
+
+    // Call Rust engine for the jump — computes years, simulates galaxy, generates system
+    const wasmState = buildWasmPlayerState(state);
+    const jumpResult = engineJumpToSystem(targetId, wasmState);
+
+    // Store the system payload for use in arriveInSystem
+    this.pendingSystemPayload = jumpResult.systemPayload;
+
+    // Advance state from Rust results
+    state.setClusterSummary(jumpResult.clusterSummary);
+    state.setGalaxySimState(jumpResult.galaxySimState);
+    state.advanceGalaxyYear(jumpResult.yearsElapsed);
     state.addJumpLogEntry({
       fromSystemId: state.currentSystemId,
       toSystemId: targetId,
-      yearsElapsed,
-      galaxyYearAfter: state.galaxyYear + yearsElapsed, // state not yet updated, so add
+      yearsElapsed: jumpResult.yearsElapsed,
+      galaxyYearAfter: jumpResult.newGalaxyYear,
     });
 
     state.setUIMode('hyperspace');
@@ -537,12 +609,25 @@ export class Game {
     this.hyperspaceActive = false;
     this.sceneRenderer.stopHyperspace();
 
+    // Use system data from Rust jump result
+    const payload = this.pendingSystemPayload;
+    this.pendingSystemPayload = null;
+
+    if (!payload) return;
+
+    const systemData = payload.system;
     const starData = state.cluster[targetId];
-    const systemData = generateSolarSystem(starData);
-    state.setCurrentSystem(targetId, systemData);
+
+    state.setCurrentSystemPayload(targetId, payload);
     state.markVisited(targetId);
 
-    this.sceneRenderer.loadSystem(systemData, targetId, state.galaxyYear, starData.name, starData);
+    this.sceneRenderer.loadSystem(
+      systemData,
+      targetId,
+      state.galaxyYear,
+      starData.name,
+      payload.factionState,
+    );
 
     // Appear at system edge, facing inward toward star
     this.sceneRenderer.shipGroup.position.set(0, 0, 8000);
@@ -550,95 +635,33 @@ export class Game {
     this.flightModel.reset(this.sceneRenderer.shipGroup.position);
     this.flightModel.velocity.set(0, 0, -150);
 
-    // ── Faction discovery & system entry text ──────────────────────────────
-    this.buildSystemEntryText(targetId, starData, systemData, state);
+    // Use entry lines from Rust (includes era transitions, faction info, secret base hints)
+    const lines = [...payload.systemEntryLines];
 
-    // Arrive in free flight
-    state.setUIMode('flight');
-  }
-
-  private buildSystemEntryText(
-    systemId: number,
-    starData: { name: string; economy: import('./constants').EconomyType },
-    systemData: import('./generation/SystemGenerator').SolarSystemData,
-    state: ReturnType<typeof useGameState.getState>,
-  ): void {
-    const civState = getCivState(systemId, state.galaxyYear, starData.economy);
-    const factionState = getSystemFactionState(systemId, state.galaxyYear, civState.politics);
-
-    const controlFaction = getFaction(factionState.controllingFactionId);
-    const contestFaction = factionState.contestingFactionId
-      ? getFaction(factionState.contestingFactionId)
-      : null;
-
-    // Discover factions
-    if (controlFaction) state.addKnownFaction(controlFaction.id);
-    if (contestFaction) state.addKnownFaction(contestFaction.id);
-
-    const lines: string[] = [];
-
-    // Era transition narration
-    const currentEra = Math.floor(state.galaxyYear / ERA_LENGTH);
-    if (currentEra !== this.preJumpEra) {
-      const erasCrossed = currentEra - this.preJumpEra;
-      lines.push(`— GALAXY YEAR ${state.galaxyYear.toLocaleString()} —`);
-      if (erasCrossed === 1) {
-        lines.push('Centuries have passed. Empires have risen and fallen in your absence.');
-      } else {
-        const yearsElapsed = erasCrossed * ERA_LENGTH;
-        lines.push(`${yearsElapsed.toLocaleString()} years have passed. The galaxy you knew is ancient history.`);
-      }
-      lines.push('');
-    }
-
-    lines.push(`ENTERING ${starData.name.toUpperCase()}`);
-
-    if (factionState.isContested && contestFaction && controlFaction) {
-      lines.push(`CONTESTED — ${controlFaction.name.toUpperCase()} vs ${contestFaction.name.toUpperCase()}`);
-    } else if (controlFaction) {
-      lines.push(`CONTROLLED BY ${controlFaction.name.toUpperCase()}`);
-    }
-
-    // Battle detection
+    // Battle detection — added TS-side since fleet battles are a TS real-time system
     const battle = this.sceneRenderer.getFleetBattle();
     if (battle) {
       const battlePlanet = systemData.planets.find(p => p.id === battle.planetId);
-      const planetName = battlePlanet ? battlePlanet.id.replace(`${systemId}-`, '') : 'UNKNOWN';
+      const planetName = battlePlanet ? battlePlanet.id.replace(`${targetId}-`, '') : 'UNKNOWN';
       lines.push(`FLEET ENGAGEMENT DETECTED NEAR ${planetName.toUpperCase()}`);
-    }
-
-    // Secret base hints
-    for (const base of systemData.secretBases) {
-      switch (base.type) {
-        case 'asteroid':
-          lines.push('FAINT SIGNAL DETECTED IN ASTEROID BELT');
-          break;
-        case 'oort_cloud':
-          lines.push('ANOMALOUS BEACON — EXTREME OUTER SYSTEM');
-          break;
-        case 'maximum_space':
-          lines.push('UNKNOWN TRANSMISSION FROM BEYOND SYSTEM EDGE');
-          break;
-      }
-    }
-
-    // Check faction memory for changes
-    const memory = state.factionMemory[systemId];
-    if (memory) {
-      const oldFaction = getFaction(memory.factionId);
-      if (oldFaction && memory.factionId !== factionState.controllingFactionId) {
-        lines.push(`LAST VISIT: YEAR ${memory.galaxyYear.toLocaleString()}. ${oldFaction.name.toUpperCase()} NO LONGER HOLDS THIS SYSTEM.`);
-      }
     }
 
     state.setSystemEntryLines(lines);
 
+    // Discover factions from payload
+    const factionState = payload.factionState;
+    if (factionState.controllingFactionId) state.addKnownFaction(factionState.controllingFactionId);
+    if (factionState.contestingFactionId) state.addKnownFaction(factionState.contestingFactionId);
+
     // Update faction memory
-    state.setFactionMemory(systemId, {
+    state.setFactionMemory(targetId, {
       factionId: factionState.controllingFactionId,
       contestingFactionId: factionState.contestingFactionId,
       galaxyYear: state.galaxyYear,
     });
+
+    // Arrive in free flight
+    state.setUIMode('flight');
   }
 
   private triggerDeath(deathMessage: string[] | null = null): void {
@@ -660,7 +683,8 @@ export class Game {
     this.hyperspaceActive = false;
     this.hyperspaceTimer = 0;
     this.sceneRenderer.stopHyperspace();
-    this.loadCurrentSystem();
+    // Re-initialize from Rust engine
+    this.initFromEngine(useGameState.getState());
   }
 
   respawn(): void {
@@ -673,6 +697,23 @@ export class Game {
     state.setDeathMessage(null);
     this.isDead = false;
     this.combatIntelTimer = 0;
+    this.hasUndocked = false;
+
+    // Teleport to safety near the main station before going docked
+    const mainPlanetId = state.currentSystem?.mainStationPlanetId;
+    if (mainPlanetId) {
+      const stationEntity = this.sceneRenderer.getAllEntities().get(`station-${mainPlanetId}`);
+      if (stationEntity) {
+        const safeOffset = 200;
+        this.sceneRenderer.shipGroup.position.set(
+          stationEntity.worldPos.x + safeOffset,
+          0,
+          stationEntity.worldPos.z,
+        );
+        this.flightModel.reset(this.sceneRenderer.shipGroup.position);
+      }
+    }
+
     state.setUIMode('docked');
   }
 
@@ -756,6 +797,14 @@ export class Game {
 
   private handleEscape(): void {
     const state = useGameState.getState();
+    if (state.ui.mode === 'menu') {
+      state.setUIMode('flight');
+      return;
+    }
+    if (state.ui.mode === 'flight') {
+      state.setUIMode('menu');
+      return;
+    }
     if (state.ui.mode === 'docked') {
       this.undock();
       return;
@@ -772,8 +821,7 @@ export class Game {
   undock(): void {
     const state = useGameState.getState();
     state.setUIMode('flight');
-    // Move ship away from station
-    this.sceneRenderer.shipGroup.position.z += 200;
+    this.hasUndocked = true;
   }
 
   dispose(): void {

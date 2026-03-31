@@ -6,6 +6,42 @@ const ROCKY_COLORS: &[u32] = &[0x8B6914, 0xA0522D, 0x7a6248, 0xB87333, 0x996633,
 const GAS_COLORS: &[u32] = &[0x6688AA, 0x7A9B8C, 0x9B7A6A, 0x5577AA, 0x886699, 0x4466AA];
 const MOON_COLORS: &[u32] = &[0x777788, 0x888877, 0xAA9988, 0x667788];
 
+fn star_color(st: StarType) -> u32 {
+    match st {
+        StarType::G   => 0xFFEE88,
+        StarType::K   => 0xFFAA44,
+        StarType::M   => 0xFF6633,
+        StarType::F   => 0xFFFFFF,
+        StarType::A   => 0xAABBFF,
+        StarType::WD  => 0xF0F0FF,
+        StarType::HE  => 0x88CCAA,
+        StarType::NS  => 0xCCDDFF,
+        StarType::PU  => 0x44AAFF,
+        StarType::XB  => 0xFF6688,
+        StarType::MG  => 0xDD44FF,
+        StarType::BH  => 0x220022,
+        StarType::SBH => 0x110011,
+        StarType::XBB => 0xFF4466,
+        StarType::SGR => 0xFFAA22,
+    }
+}
+
+fn star_radius_range(st: StarType) -> (f64, f64) {
+    match st {
+        StarType::WD  => (30.0, 50.0),
+        StarType::HE  => (200.0, 280.0),
+        StarType::NS  => (60.0, 100.0),
+        StarType::PU  => (60.0, 100.0),
+        StarType::XB  => (60.0, 100.0),
+        StarType::MG  => (8.0, 12.0),
+        StarType::BH  => (150.0, 250.0),
+        StarType::SBH => (500.0, 800.0),
+        StarType::XBB => (280.0, 400.0),
+        StarType::SGR => (8.0, 12.0),
+        _ => (400.0, 600.0),
+    }
+}
+
 const ROCKY_SURFACE_WEIGHTS: &[(SurfaceType, f64)] = &[
     (SurfaceType::Barren, 0.24),
     (SurfaceType::Desert, 0.22),
@@ -151,7 +187,24 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
     let inner_count = rng.int(1, 3);
     let outer_count = rng.int(1, 3);
     let has_asteroids = rng.next() < 0.5;
-    let star_radius = 400.0 + rng.float(0.0, 200.0);
+    let (radius_min, radius_max) = star_radius_range(star.star_type);
+    let star_radius = rng.float(radius_min, radius_max);
+
+    // Binary companion for XB star type
+    let companion = if star.star_type == StarType::XB {
+        let companion_types = [StarType::G, StarType::K, StarType::F, StarType::A];
+        let companion_type = *rng.pick(&companion_types);
+        Some(BinaryCompanionData {
+            star_type: companion_type,
+            radius: rng.float(350.0, 550.0),
+            color: star_color(companion_type),
+            orbit_radius: rng.float(400.0, 600.0),
+            orbit_speed: rng.float(0.0003, 0.0006),
+            orbit_phase: rng.float(0.0, PI * 2.0),
+        })
+    } else {
+        None
+    };
 
     let mut planets: Vec<PlanetData> = Vec::new();
 
@@ -332,6 +385,7 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
     SolarSystemData {
         star_type: star.star_type,
         star_radius,
+        companion,
         planets,
         asteroid_belt,
         main_station_planet_id,

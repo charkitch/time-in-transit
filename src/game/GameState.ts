@@ -1,13 +1,18 @@
 import { create } from 'zustand';
-import type { StarSystemData } from './generation/ClusterGenerator';
-import type { SolarSystemData } from './generation/SystemGenerator';
-import { generateCluster } from './generation/ClusterGenerator';
+import type {
+  StarSystemData,
+  SolarSystemData,
+  CivilizationState,
+  LandingEvent,
+  SystemSimState,
+  ClusterSystemSummary,
+  SystemPayload,
+  MarketEntry,
+} from './engine';
 import { STARTING_CREDITS, STARTING_FUEL, HYPERSPACE, GALAXY_YEAR_START, type GoodName } from './constants';
-import type { CivilizationState } from './mechanics/CivilizationSystem';
-import type { LandingEvent } from './data/events';
 import type { NPCCargoEntry } from './mechanics/NPCSystem';
 
-export type UIMode = 'flight' | 'cluster_map' | 'system_map' | 'docked' | 'hyperspace' | 'landing' | 'comms' | 'dead';
+export type UIMode = 'flight' | 'cluster_map' | 'system_map' | 'docked' | 'hyperspace' | 'landing' | 'comms' | 'dead' | 'menu';
 
 export interface PendingCommContext {
   npcId: string;
@@ -64,7 +69,9 @@ export interface GameStateData {
   player: PlayerState;
   currentSystemId: number;
   currentSystem: SolarSystemData | null;
+  currentSystemPayload: SystemPayload | null;
   cluster: StarSystemData[];
+  clusterSummary: ClusterSystemSummary[];
   visitedSystems: Set<number>;
   ui: {
     mode: UIMode;
@@ -87,6 +94,9 @@ export interface GameStateData {
   knownFactions: Set<string>;
   factionMemory: Record<number, FactionMemoryEntry>;
   systemEntryLines: string[] | null;
+
+  // ── Galaxy simulation state (from Rust) ─────────────────────────────────
+  galaxySimState: SystemSimState[] | null;
 }
 
 export interface GameActions {
@@ -97,7 +107,8 @@ export interface GameActions {
   setFuel: (v: number) => void;
   setHeat: (v: number) => void;
   setUIMode: (mode: UIMode) => void;
-  setCurrentSystem: (id: number, data: SolarSystemData) => void;
+  setCurrentSystemPayload: (id: number, payload: SystemPayload) => void;
+  setCurrentSystemMarket: (market: MarketEntry[]) => void;
   setTarget: (id: string | null) => void;
   setAlert: (msg: string | null) => void;
   setHyperspaceTarget: (id: number | null) => void;
@@ -124,9 +135,15 @@ export interface GameActions {
   addKnownFaction: (id: string) => void;
   setFactionMemory: (systemId: number, data: FactionMemoryEntry) => void;
   setSystemEntryLines: (lines: string[] | null) => void;
+
+  // ── Engine integration actions ────────────────────────────────────────
+  setCluster: (cluster: StarSystemData[]) => void;
+  setClusterSummary: (summary: ClusterSystemSummary[]) => void;
+  setGalaxySimState: (simState: SystemSimState[] | null) => void;
 }
 
-const CLUSTER = generateCluster();
+// Cluster is set from Rust engine init — starts empty, populated by Game.constructor
+let CLUSTER: StarSystemData[] = [];
 
 const DEFAULT_PLAYER: PlayerState = {
   position: { x: 0, y: 0, z: 2000 },
@@ -177,7 +194,9 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   player: { ...DEFAULT_PLAYER },
   currentSystemId: 0,
   currentSystem: null,
+  currentSystemPayload: null,
   cluster: CLUSTER,
+  clusterSummary: [],
   visitedSystems: new Set(),
   ui: {
     mode: 'flight',
@@ -201,6 +220,9 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   factionMemory: {},
   systemEntryLines: null,
 
+  // Galaxy simulation state
+  galaxySimState: null,
+
   setPlayerPosition: (pos) => set(s => ({ player: { ...s.player, position: pos } })),
   setPlayerVelocity: (vel) => set(s => ({ player: { ...s.player, velocity: vel } })),
   setPlayerSpeed: (speed) => set(s => ({ player: { ...s.player, speed } })),
@@ -208,7 +230,16 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   setFuel: (v) => set(s => ({ player: { ...s.player, fuel: Math.max(0, Math.min(HYPERSPACE.tankSize, v)) } })),
   setHeat: (v) => set(s => ({ player: { ...s.player, heat: Math.max(0, Math.min(100, v)) } })),
   setUIMode: (mode) => set(s => ({ ui: { ...s.ui, mode } })),
-  setCurrentSystem: (id, data) => set({ currentSystemId: id, currentSystem: data }),
+  setCurrentSystemPayload: (id, payload) => set({
+    currentSystemId: id,
+    currentSystem: payload.system,
+    currentSystemPayload: payload,
+  }),
+  setCurrentSystemMarket: (market) => set(s => (
+    s.currentSystemPayload
+      ? { currentSystemPayload: { ...s.currentSystemPayload, market } }
+      : {}
+  )),
   setTarget: (id) => set(s => ({ player: { ...s.player, targetId: id } })),
   setAlert: (msg) => set(s => ({ ui: { ...s.ui, alertMessage: msg } })),
   setHyperspaceTarget: (id) => set(s => ({ ui: { ...s.ui, hyperspaceTarget: id } })),
@@ -281,6 +312,12 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
     factionMemory: { ...s.factionMemory, [systemId]: data },
   })),
   setSystemEntryLines: (lines) => set({ systemEntryLines: lines }),
+  setCluster: (cluster) => {
+    CLUSTER = cluster;
+    set({ cluster });
+  },
+  setClusterSummary: (clusterSummary) => set({ clusterSummary }),
+  setGalaxySimState: (simState) => set({ galaxySimState: simState }),
 
   resetGame: () => {
     localStorage.removeItem('space-game-save');
@@ -288,7 +325,9 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       player: { ...DEFAULT_PLAYER },
       currentSystemId: 0,
       currentSystem: null,
+      currentSystemPayload: null,
       visitedSystems: new Set(),
+      clusterSummary: [],
       time: 0,
       galaxyYear: GALAXY_YEAR_START,
       jumpLog: [],
@@ -299,6 +338,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       knownFactions: new Set(),
       factionMemory: {},
       systemEntryLines: null,
+      galaxySimState: null,
       ui: { mode: 'flight', alertMessage: null, hyperspaceTarget: null, hyperspaceCountdown: 0, deathMessage: null },
     });
   },

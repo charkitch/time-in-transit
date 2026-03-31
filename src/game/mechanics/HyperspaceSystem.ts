@@ -1,5 +1,5 @@
 import { HYPERSPACE } from '../constants';
-import type { StarSystemData } from '../generation/ClusterGenerator';
+import type { StarSystemData } from '../engine';
 
 export class HyperspaceSystem {
   canJump(

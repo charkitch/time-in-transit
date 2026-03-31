@@ -92,14 +92,43 @@ pub enum StarType {
     M,
     F,
     A,
+    #[serde(rename = "WD")]
+    WD,
+    #[serde(rename = "HE")]
+    HE,
+    #[serde(rename = "NS")]
+    NS,
+    #[serde(rename = "PU")]
+    PU,
+    #[serde(rename = "XB")]
+    XB,
+    #[serde(rename = "MG")]
+    MG,
+    #[serde(rename = "BH")]
+    BH,
+    #[serde(rename = "SBH")]
+    SBH,
+    #[serde(rename = "XBB")]
+    XBB,
+    #[serde(rename = "SGR")]
+    SGR,
 }
 
 impl StarType {
-    pub const ALL: &'static [StarType] = &[StarType::G, StarType::K, StarType::M, StarType::F, StarType::A];
-    pub const WEIGHTS: &'static [f64] = &[0.35, 0.25, 0.20, 0.12, 0.08];
+    pub const ALL: &'static [StarType] = &[
+        StarType::G, StarType::K, StarType::M, StarType::F, StarType::A,
+        StarType::WD, StarType::HE, StarType::NS, StarType::PU, StarType::XB,
+        StarType::MG, StarType::BH, StarType::SBH, StarType::XBB, StarType::SGR,
+    ];
+    pub const WEIGHTS: &'static [f64] = &[
+        0.12, 0.10, 0.08, 0.06, 0.04,
+        0.08, 0.07, 0.06, 0.05, 0.06,
+        0.05, 0.06, 0.04, 0.07, 0.06,
+    ];
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum SurfaceType {
     Continental,
     Ocean,
@@ -113,6 +142,7 @@ pub enum SurfaceType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum GasGiantType {
     Jovian,
     Saturnian,
@@ -132,6 +162,7 @@ impl GasGiantType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum SecretBaseType {
     Asteroid,
     OortCloud,
@@ -141,6 +172,7 @@ pub enum SecretBaseType {
 // ─── Data Structures ────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StarSystemData {
     pub id: u32,
     pub name: String,
@@ -153,6 +185,7 @@ pub struct StarSystemData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MoonData {
     pub id: String,
     pub surface_type: SurfaceType,
@@ -166,6 +199,7 @@ pub struct MoonData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PlanetData {
     pub id: String,
     pub name: String,
@@ -199,6 +233,7 @@ pub enum PlanetType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AsteroidBeltData {
     pub inner_radius: f64,
     pub outer_radius: f64,
@@ -206,6 +241,7 @@ pub struct AsteroidBeltData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SecretBaseData {
     pub id: String,
     pub name: String,
@@ -217,9 +253,22 @@ pub struct SecretBaseData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BinaryCompanionData {
+    pub star_type: StarType,
+    pub radius: f64,
+    pub color: u32,
+    pub orbit_radius: f64,
+    pub orbit_speed: f64,
+    pub orbit_phase: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SolarSystemData {
     pub star_type: StarType,
     pub star_radius: f64,
+    pub companion: Option<BinaryCompanionData>,
     pub planets: Vec<PlanetData>,
     pub asteroid_belt: Option<AsteroidBeltData>,
     pub main_station_planet_id: String,
@@ -229,6 +278,7 @@ pub struct SolarSystemData {
 // ─── Civilization State ─────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CivilizationState {
     pub system_id: u32,
     pub galaxy_year: u32,
@@ -245,6 +295,7 @@ pub struct CivilizationState {
 // ─── Faction ────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Faction {
     pub id: String,
     pub name: String,
@@ -253,6 +304,7 @@ pub struct Faction {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SystemFactionState {
     pub controlling_faction_id: String,
     pub contesting_faction_id: Option<String>,
@@ -262,6 +314,7 @@ pub struct SystemFactionState {
 // ─── Trading ────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MarketEntry {
     pub good: GoodName,
     pub buy_price: i32,
@@ -273,6 +326,7 @@ pub struct MarketEntry {
 // ─── Player / Choices ───────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SystemChoices {
     pub trading_reputation: i32,
     pub banned_goods: Vec<GoodName>,
@@ -294,6 +348,7 @@ impl Default for SystemChoices {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PlayerState {
     pub credits: i32,
     pub cargo: HashMap<GoodName, u32>,
@@ -310,6 +365,7 @@ pub struct PlayerState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FactionMemoryEntry {
     pub faction_id: String,
     pub contesting_faction_id: Option<String>,
@@ -319,6 +375,7 @@ pub struct FactionMemoryEntry {
 // ─── Events ─────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChoiceEffect {
     #[serde(default)]
     pub trading_reputation: i32,
@@ -337,6 +394,7 @@ pub struct ChoiceEffect {
 fn default_price_mod() -> f64 { 1.0 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EventChoice {
     pub id: String,
     pub label: String,
@@ -347,6 +405,7 @@ pub struct EventChoice {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LandingEvent {
     pub id: String,
     pub title: String,
@@ -360,6 +419,7 @@ pub struct LandingEvent {
 // ─── WASM Boundary Types ────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ClusterSystemSummary {
     pub id: u32,
     pub name: String,
@@ -376,6 +436,7 @@ pub struct ClusterSystemSummary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SystemPayload {
     pub system: SolarSystemData,
     pub civ_state: CivilizationState,
@@ -386,29 +447,35 @@ pub struct SystemPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct JumpResult {
     pub system_payload: SystemPayload,
     pub cluster_summary: Vec<ClusterSystemSummary>,
     pub years_elapsed: u32,
     pub new_galaxy_year: u32,
+    pub galaxy_sim_state: Vec<SystemSimState>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct InitResult {
     pub system_payload: SystemPayload,
     pub cluster_summary: Vec<ClusterSystemSummary>,
     pub cluster: Vec<StarSystemData>,
+    pub galaxy_sim_state: Vec<SystemSimState>,
 }
 
 // ─── Galaxy Simulation State ────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GalaxyState {
     pub galaxy_year: u32,
     pub systems: Vec<SystemSimState>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SystemSimState {
     pub system_id: u32,
     pub stability: f64,        // 0.0 = chaos, 1.0 = stable

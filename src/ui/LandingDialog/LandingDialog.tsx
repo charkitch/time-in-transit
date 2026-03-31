@@ -10,12 +10,15 @@ export function LandingDialog({ onChoice }: LandingDialogProps) {
   const pendingLandingEvent = useGameState(s => s.pendingLandingEvent);
   const galaxyYear = useGameState(s => s.galaxyYear);
   const player = useGameState(s => s.player);
+  const cluster = useGameState(s => s.cluster);
+  const currentSystemId = useGameState(s => s.currentSystemId);
 
   const [confirmed, setConfirmed] = useState(false);
 
   if (!pendingLandingEvent) return null;
 
   const { civState, event, yearsSinceLastVisit } = pendingLandingEvent;
+  const currentSystemTechLevel = cluster[currentSystemId]?.techLevel ?? 0;
 
   const handleChoice = (choiceId: string) => {
     if (confirmed) return;
@@ -71,10 +74,16 @@ export function LandingDialog({ onChoice }: LandingDialogProps) {
             <div className={styles.choices}>
               {event.choices.map(choice => {
                 const lockedCredits =
-                  choice.requiresCredits !== undefined &&
+                  choice.requiresCredits != null &&
                   player.credits < choice.requiresCredits;
                 const lockedTech =
-                  choice.requiresMinTech !== undefined;
+                  choice.requiresMinTech != null &&
+                  currentSystemTechLevel < choice.requiresMinTech;
+                const disabledReason = lockedCredits
+                  ? `Requires CR ${choice.requiresCredits}`
+                  : lockedTech
+                    ? `Requires tech level ${choice.requiresMinTech}`
+                    : undefined;
 
                 return (
                   <button
@@ -82,11 +91,7 @@ export function LandingDialog({ onChoice }: LandingDialogProps) {
                     className={styles.choiceBtn}
                     disabled={confirmed || lockedCredits || lockedTech}
                     onClick={() => handleChoice(choice.id)}
-                    title={
-                      lockedCredits
-                        ? `Requires CR ${choice.requiresCredits}`
-                        : undefined
-                    }
+                    title={disabledReason}
                   >
                     <span className={styles.choiceLabel}>{choice.label}</span>
                     <span className={styles.choiceDesc}>{choice.description}</span>

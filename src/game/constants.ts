@@ -1,5 +1,4 @@
 export const CLUSTER_SEED = 0xDEADBEEF;
-export const CLUSTER_SIZE = 30;
 
 export const PALETTE = {
   bg:               0x020408,
@@ -15,6 +14,16 @@ export const PALETTE = {
   starM:            0xFF6633,
   starF:            0xFFFFFF,
   starA:            0xAABBFF,
+  starWD:           0xF0F0FF,
+  starHE:           0x88CCAA,
+  starNS:           0xCCDDFF,
+  starPU:           0x44AAFF,
+  starXB:           0xFF6688,
+  starMG:           0xDD44FF,
+  starBH:           0x220022,
+  starSBH:          0x110011,
+  starXBB:          0xFF4466,
+  starSGR:          0xFFAA22,
   ambient:          0x112244,
   wireframe:        0x33FF88,
   stationWire:      0x44CCFF,
@@ -72,6 +81,34 @@ export const STAR_COLORS: Record<string, number> = {
   M: PALETTE.starM,
   F: PALETTE.starF,
   A: PALETTE.starA,
+  WD: PALETTE.starWD,
+  HE: PALETTE.starHE,
+  NS: PALETTE.starNS,
+  PU: PALETTE.starPU,
+  XB: PALETTE.starXB,
+  MG: PALETTE.starMG,
+  BH: PALETTE.starBH,
+  SBH: PALETTE.starSBH,
+  XBB: PALETTE.starXBB,
+  SGR: PALETTE.starSGR,
+};
+
+export const STAR_TYPE_DISPLAY: Record<string, string> = {
+  G: 'G-TYPE',
+  K: 'K-TYPE',
+  M: 'M-TYPE',
+  F: 'F-TYPE',
+  A: 'A-TYPE',
+  WD: 'WHITE DWARF',
+  HE: 'HELIUM PLANET',
+  NS: 'NEUTRON STAR',
+  PU: 'PULSAR',
+  XB: 'X-RAY BINARY',
+  MG: 'MAGNETAR',
+  BH: 'BLACK HOLE',
+  SBH: 'SUPERMASSIVE BLACK HOLE',
+  XBB: 'X-RAY BURSTER',
+  SGR: 'SGR',
 };
 
 const BUYABLE_GOODS = [
@@ -94,7 +131,6 @@ export const GOODS = [
 export type GoodName = typeof GOODS[number];
 
 export const MARKET_GOODS: readonly GoodName[] = BUYABLE_GOODS;
-export const SELL_ONLY_GOODS: readonly GoodName[] = [COMBAT_INTELLIGENCE_GOOD];
 
 export const ECONOMY_TYPES = ['Agricultural', 'Industrial', 'High Tech', 'Rich Industrial', 'Poor Agricultural', 'Refinery'] as const;
 export type EconomyType = typeof ECONOMY_TYPES[number];
@@ -118,15 +154,6 @@ export const POLITICAL_TYPES = [
   'Feudal',
 ] as const;
 export type PoliticalType = typeof POLITICAL_TYPES[number];
-
-export const FACTION_COLORS: number[] = [
-  0xFF4444, // red
-  0xFF8833, // orange
-  0x4488FF, // blue
-  0xAA44FF, // purple
-  0x44DDAA, // teal
-  0xFFCC22, // gold
-];
 
 /** Mutable — settings UI can toggle at runtime */
 export const RENDER_CONFIG = {

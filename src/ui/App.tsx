@@ -3,6 +3,7 @@ import { useGameState } from '../game/GameState';
 import type { UIMode } from '../game/GameState';
 import { Game } from '../game/Game';
 import { HUD } from './HUD/HUD';
+import { MainMenu } from './MainMenu/MainMenu';
 import { SystemEntryText } from './HUD/SystemEntryText';
 import { ClusterMap } from './ClusterMap/ClusterMap';
 import { SystemMap } from './SystemMap/SystemMap';
@@ -89,6 +90,10 @@ export function App() {
     gameRef.current?.newGame();
   };
 
+  const handleResume = () => {
+    setUIMode('flight');
+  };
+
   return (
     <>
       <canvas
@@ -153,24 +158,9 @@ export function App() {
       {uiMode === 'landing' && <LandingDialog onChoice={handleLandingChoice} />}
       {uiMode === 'docked' && <StationUI onUndock={handleUndock} />}
 
-      {uiMode === 'dead' && <DeathScreen onRespawn={handleRespawn} onNewGame={handleNewGame} />}
+      {uiMode === 'menu' && <MainMenu onNewGame={handleNewGame} onResume={handleResume} />}
 
-      {(uiMode === 'flight' || uiMode === 'docked') && (
-        <button
-          onClick={handleNewGame}
-          style={{
-            position: 'absolute', bottom: 16, right: 16,
-            padding: '6px 14px', fontSize: 11, letterSpacing: 2,
-            border: '1px solid rgba(255,255,255,0.15)',
-            background: 'rgba(0,0,0,0.5)', color: 'rgba(255,255,255,0.35)',
-            fontFamily: 'Courier New, monospace', cursor: 'pointer',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
-        >
-          NEW GAME
-        </button>
-      )}
+      {uiMode === 'dead' && <DeathScreen onRespawn={handleRespawn} onNewGame={handleNewGame} />}
     </>
   );
 }

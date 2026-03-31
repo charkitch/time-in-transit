@@ -57,6 +57,7 @@ fn build_system_payload(
     galaxy_year: u32,
     player_state: &PlayerState,
     secret_base_id: Option<&str>,
+    pre_jump_era: Option<u32>,
 ) -> SystemPayload {
     let system = generate_solar_system(star);
     let civ_state = get_civ_state(star.id, galaxy_year, star.economy);
@@ -68,7 +69,6 @@ fn build_system_payload(
     // Select landing event
     let event_seed = galaxy_year.wrapping_mul(31337).wrapping_add(star.id.wrapping_mul(1009));
     let landing_event = if let Some(base_id) = secret_base_id {
-        // Find the secret base type
         let base_type = system.secret_bases.iter()
             .find(|b| b.id == base_id)
             .map(|b| b.base_type);
@@ -79,6 +79,23 @@ fn build_system_payload(
 
     // Build system entry lines
     let mut lines = Vec::new();
+
+    // Era transition narration
+    let current_era = galaxy_year / ERA_LENGTH;
+    if let Some(prev_era) = pre_jump_era {
+        if current_era != prev_era {
+            let eras_crossed = current_era - prev_era;
+            lines.push(format!("— GALAXY YEAR {} —", galaxy_year));
+            if eras_crossed == 1 {
+                lines.push("Centuries have passed. Empires have risen and fallen in your absence.".to_string());
+            } else {
+                let years_elapsed = eras_crossed * ERA_LENGTH;
+                lines.push(format!("{} years have passed. The galaxy you knew is ancient history.", years_elapsed));
+            }
+            lines.push(String::new());
+        }
+    }
+
     lines.push(format!("ENTERING {}", star.name.to_uppercase()));
 
     let control_faction = get_faction(&faction_state.controlling_faction_id);
@@ -124,9 +141,7 @@ fn build_system_payload(
 }
 
 fn jump_years_elapsed(distance: f64) -> u32 {
-    // Base: 20 years per unit distance, with some scaling
-    let years = (distance * 20.0).round() as u32;
-    years.max(10) // minimum 10 years per jump
+    (10.0 * distance.powf(1.4)).round() as u32
 }
 
 // ─── WASM API ───────────────────────────────────────────────────────────────
@@ -168,9 +183,12 @@ pub fn init_game(player_state_json: &str) -> Result<String, JsValue> {
         player_state.galaxy_year,
         &player_state,
         None,
+        None, // no era transition at init
     );
 
     let cluster_summary = build_cluster_summary(&cluster, player_state.galaxy_year);
+
+    let sim_state_snapshot = galaxy_state.systems.clone();
 
     // Store engine state
     let mut state = ENGINE_STATE.lock().map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -183,6 +201,7 @@ pub fn init_game(player_state_json: &str) -> Result<String, JsValue> {
         system_payload,
         cluster_summary,
         cluster,
+        galaxy_sim_state: sim_state_snapshot,
     };
 
     serde_json::to_string(&result)
@@ -214,6 +233,7 @@ pub fn jump_to_system(target_system_id: u32, player_state_json: &str) -> Result<
     let dy = target.y - current.y;
     let distance = (dx * dx + dy * dy).sqrt();
     let years_elapsed = jump_years_elapsed(distance);
+    let pre_jump_era = player_state.galaxy_year / ERA_LENGTH;
     let new_galaxy_year = player_state.galaxy_year + years_elapsed;
 
     // Simulate the galaxy forward
@@ -225,6 +245,7 @@ pub fn jump_to_system(target_system_id: u32, player_state_json: &str) -> Result<
         new_galaxy_year,
         &player_state,
         None,
+        Some(pre_jump_era),
     );
 
     let cluster_summary = build_cluster_summary(cluster, new_galaxy_year);
@@ -234,6 +255,7 @@ pub fn jump_to_system(target_system_id: u32, player_state_json: &str) -> Result<
         cluster_summary,
         years_elapsed,
         new_galaxy_year,
+        galaxy_sim_state: engine.galaxy_state.systems.clone(),
     };
 
     serde_json::to_string(&result)

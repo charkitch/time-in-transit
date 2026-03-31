@@ -1,17 +1,13 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useGameState } from '../../game/GameState';
 import { HyperspaceSystem } from '../../game/mechanics/HyperspaceSystem';
-import { TradingSystem } from '../../game/mechanics/TradingSystem';
 import { jumpYearsElapsed } from '../../game/mechanics/RelativisticTime';
-import type { StarSystemData } from '../../game/generation/ClusterGenerator';
+import type { StarSystemData, ClusterSystemSummary } from '../../game/engine';
 import { HYPERSPACE } from '../../game/constants';
-import { getCivState } from '../../game/mechanics/CivilizationSystem';
-import { getSystemFactionState, getFaction } from '../../game/mechanics/FactionSystem';
-import type { FactionMemoryEntry } from '../../game/GameState';
+import { getFaction } from '../../game/data/factions';
 import styles from './ClusterMap.module.css';
 
 const hyperspace = new HyperspaceSystem();
-const trading = new TradingSystem();
 const MAP_W = 520;
 const MAP_H = 420;
 
@@ -21,6 +17,8 @@ function toCanvas(x: number, y: number): [number, number] {
 
 const STAR_TYPE_COLOR: Record<string, string> = {
   G: '#FFEE88', K: '#FFAA44', M: '#FF6633', F: '#FFFFFF', A: '#AABBFF',
+  WD: '#F0F0FF', HE: '#88CCAA', NS: '#CCDDFF', PU: '#44AAFF', XB: '#FF6688',
+  MG: '#DD44FF', BH: '#220022', SBH: '#110011', XBB: '#FF4466', SGR: '#FFAA22',
 };
 
 function applyAlpha(hex: string, alpha: number): string {
@@ -43,13 +41,17 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
   const setHyperspaceTarget = useGameState(s => s.setHyperspaceTarget);
   const galaxyYear = useGameState(s => s.galaxyYear);
   const jumpLog = useGameState(s => s.jumpLog);
-  const factionMemory = useGameState(s => s.factionMemory);
   const knownFactions = useGameState(s => s.knownFactions);
   const lastVisitYear = useGameState(s => s.lastVisitYear);
+  const galaxySimState = useGameState(s => s.galaxySimState);
+  const clusterSummary = useGameState(s => s.clusterSummary);
 
   const currentSys = cluster[currentSystemId];
   const reachable = hyperspace.getReachableSystems(currentSys, cluster);
   const reachableIds = new Set(reachable.map(s => s.id));
+  const clusterSummaryById = new Map<number, ClusterSystemSummary>(
+    clusterSummary.map(summary => [summary.id, summary]),
+  );
 
   const [hovered, setHovered] = useState<StarSystemData | null>(null);
 
@@ -101,6 +103,7 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
       const isCurrent = sys.id === currentSystemId;
       const isTarget = sys.id === hyperspaceTarget;
       const isVisited = visitedSystems.has(sys.id);
+      const summary = clusterSummaryById.get(sys.id);
 
       // Line to reachable
       if (isReachable) {
@@ -160,45 +163,88 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
         ctx.stroke();
       }
 
-      // Boom indicator for visited systems (based on last-known data — may be stale)
-      if (isVisited) {
-        const knownYear = lastVisitYear[sys.id] ?? galaxyYear;
-        const boomGood = trading.getMarketBoom(sys.id, knownYear);
-        if (boomGood) {
-          ctx.fillStyle = '#FFD700';
+      // Accretion ring indicator for black holes
+      if (sys.starType === 'BH' || sys.starType === 'SBH') {
+        ctx.strokeStyle = 'rgba(255,102,34,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r + 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Faction color pips from Rust cluster summary
+      if (summary) {
+        const faction = getFaction(summary.controllingFactionId);
+        if (faction && knownFactions.has(faction.id)) {
+          const fc = `#${faction.color.toString(16).padStart(6, '0')}`;
           ctx.beginPath();
-          const dx = r + 4, dy = -(r + 2);
-          ctx.moveTo(sx + dx, sy + dy - 3);
-          ctx.lineTo(sx + dx + 2, sy + dy);
-          ctx.lineTo(sx + dx, sy + dy + 3);
-          ctx.lineTo(sx + dx - 2, sy + dy);
-          ctx.closePath();
+          ctx.arc(sx + r + 4, sy - r + 2, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = fc;
           ctx.fill();
+
+          if (summary.contestingFactionId) {
+            const cf = getFaction(summary.contestingFactionId);
+            if (cf && knownFactions.has(cf.id)) {
+              const cc = `#${cf.color.toString(16).padStart(6, '0')}`;
+              ctx.beginPath();
+              ctx.arc(sx + r + 4, sy - r + 8, 2.5, 0, Math.PI * 2);
+              ctx.fillStyle = cc;
+              ctx.fill();
+            }
+          }
         }
       }
 
-      // Faction color pips for visited systems
-      if (isVisited) {
-        const mem: FactionMemoryEntry | undefined = factionMemory[sys.id];
-        if (mem) {
-          const faction = getFaction(mem.factionId);
-          if (faction && knownFactions.has(faction.id)) {
-            const fc = `#${faction.color.toString(16).padStart(6, '0')}`;
-            ctx.beginPath();
-            ctx.arc(sx + r + 4, sy - r + 2, 2.5, 0, Math.PI * 2);
-            ctx.fillStyle = fc;
-            ctx.fill();
+      // Simulation indicators (stability/prosperity)
+      if (galaxySimState) {
+        const simState = galaxySimState.find(s => s.systemId === sys.id);
+        if (simState) {
+          const ix = sx - r - 5;
+          const iy = sy + r + 2;
 
-            // Second pip for contested
-            if (mem.contestingFactionId) {
-              const cf = getFaction(mem.contestingFactionId);
-              if (cf && knownFactions.has(cf.id)) {
-                const cc = `#${cf.color.toString(16).padStart(6, '0')}`;
-                ctx.beginPath();
-                ctx.arc(sx + r + 4, sy - r + 8, 2.5, 0, Math.PI * 2);
-                ctx.fillStyle = cc;
-                ctx.fill();
-              }
+          // Prosperity indicator: green up-arrow or red down-arrow
+          if (simState.prosperity > 0.7) {
+            ctx.fillStyle = '#44FF88';
+            ctx.beginPath();
+            ctx.moveTo(ix, iy + 4);
+            ctx.lineTo(ix + 2, iy);
+            ctx.lineTo(ix + 4, iy + 4);
+            ctx.closePath();
+            ctx.fill();
+          } else if (simState.prosperity < 0.3) {
+            ctx.fillStyle = '#FF4444';
+            ctx.beginPath();
+            ctx.moveTo(ix, iy);
+            ctx.lineTo(ix + 2, iy + 4);
+            ctx.lineTo(ix + 4, iy);
+            ctx.closePath();
+            ctx.fill();
+          }
+
+          // Stability indicator: small dot (green = stable, orange = shaky, red = chaos)
+          if (simState.stability < 0.3) {
+            ctx.fillStyle = '#FF4444';
+            ctx.beginPath();
+            ctx.arc(ix + 7, iy + 2, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (simState.stability < 0.5) {
+            ctx.fillStyle = '#FFAA44';
+            ctx.beginPath();
+            ctx.arc(ix + 7, iy + 2, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Crisis/golden age marker from recent events
+          const lastEvent = simState.recentEvents[simState.recentEvents.length - 1];
+          if (lastEvent) {
+            if (lastEvent.includes('Crisis')) {
+              ctx.fillStyle = 'rgba(255,68,68,0.6)';
+              ctx.font = '7px Courier New';
+              ctx.fillText('!', sx + r + 2, sy + r + 5);
+            } else if (lastEvent.includes('Golden')) {
+              ctx.fillStyle = 'rgba(255,215,0,0.6)';
+              ctx.font = '7px Courier New';
+              ctx.fillText('★', sx + r + 2, sy + r + 5);
             }
           }
         }
@@ -211,7 +257,7 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
         ctx.fillText(sys.name.toUpperCase(), sx + 8, sy + 4);
       }
     }
-  }, [cluster, currentSystemId, visitedSystems, hyperspaceTarget, reachableIds, hovered, currentSys, factionMemory, knownFactions, lastVisitYear, galaxyYear]);
+  }, [cluster, currentSystemId, visitedSystems, hyperspaceTarget, reachableIds, hovered, currentSys, knownFactions, lastVisitYear, galaxyYear, galaxySimState, clusterSummaryById]);
 
   useEffect(() => { draw(); }, [draw]);
 
@@ -247,6 +293,7 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
   };
 
   const selectedSys = hyperspaceTarget !== null ? cluster[hyperspaceTarget] : null;
+  const selectedSummary = selectedSys ? clusterSummaryById.get(selectedSys.id) : undefined;
   const jumpCost = selectedSys ? hyperspace.jumpCost(currentSys, selectedSys) : 0;
   const canJump = selectedSys
     ? hyperspace.canJump(currentSys, selectedSys, player.fuel).ok
@@ -293,36 +340,43 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
                   return <span style={{ color: 'var(--color-warning)' }}>+{yrs.toLocaleString()} YRS</span>;
                 })()}
                 <br />
-                TECH LV: {selectedSys.techLevel} · {selectedSys.economy}
+                TECH LV: {selectedSummary?.techLevel ?? selectedSys.techLevel} · {selectedSummary?.economy ?? selectedSys.economy}
+                {galaxySimState && (() => {
+                  const sim = galaxySimState.find(s => s.systemId === selectedSys.id);
+                  if (!sim) return null;
+                  const stabilityLabel = sim.stability > 0.7 ? 'STABLE' : sim.stability > 0.4 ? 'UNSETTLED' : 'CHAOS';
+                  const prosperityLabel = sim.prosperity > 0.7 ? 'BOOMING' : sim.prosperity > 0.4 ? 'MODERATE' : 'DEPRESSED';
+                  const sColor = sim.stability > 0.7 ? '#44FF88' : sim.stability > 0.4 ? '#FFAA44' : '#FF4444';
+                  const pColor = sim.prosperity > 0.7 ? '#44FF88' : sim.prosperity > 0.4 ? '#FFAA44' : '#FF4444';
+                  return <>
+                    <br />
+                    <span style={{ color: sColor }}>{stabilityLabel}</span>
+                    {' · '}
+                    <span style={{ color: pColor }}>{prosperityLabel}</span>
+                  </>;
+                })()}
                 {visitedSystems.has(selectedSys.id) && lastVisitYear[selectedSys.id] != null && (() => {
                   const seen = lastVisitYear[selectedSys.id];
                   const ago = galaxyYear - seen;
-                  const boomGood = trading.getMarketBoom(selectedSys.id, seen);
                   return <>
                     <br />
                     <span style={{ color: 'var(--color-hud-dim)' }}>
                       LAST SEEN: YEAR {seen.toLocaleString()}{ago > 0 ? ` (${ago.toLocaleString()} YRS AGO)` : ''}
                     </span>
-                    {boomGood && <>
-                      <br />
-                      <span style={{ color: '#FFD700' }}>
-                        {ago > 0 ? 'HAD' : 'HAS'} BOOM: {boomGood.toUpperCase()}
-                        {ago > 0 && <span style={{ color: 'var(--color-hud-dim)', fontSize: '9px' }}> (STALE)</span>}
-                      </span>
-                    </>}
                   </>;
                 })()}
                 {(() => {
-                  const mem = factionMemory[selectedSys.id];
-                  if (!mem) return null;
-                  const f = getFaction(mem.factionId);
+                  if (!selectedSummary) return null;
+                  const f = getFaction(selectedSummary.controllingFactionId);
                   if (!f || !knownFactions.has(f.id)) return null;
                   const fc = `#${f.color.toString(16).padStart(6, '0')}`;
                   return <>
                     <br />
+                    <span style={{ color: 'var(--color-hud-dim)' }}>{selectedSummary.politics.toUpperCase()}</span>
+                    <br />
                     <span style={{ color: fc }}>{f.name.toUpperCase()}</span>
-                    {mem.contestingFactionId && (() => {
-                      const cf = getFaction(mem.contestingFactionId!);
+                    {selectedSummary.contestingFactionId && (() => {
+                      const cf = getFaction(selectedSummary.contestingFactionId);
                       if (!cf || !knownFactions.has(cf.id)) return null;
                       const cc = `#${cf.color.toString(16).padStart(6, '0')}`;
                       return <span style={{ color: cc }}> vs {cf.name.toUpperCase()}</span>;
@@ -341,9 +395,9 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
                     : null;
                 })()}
                 {(() => {
-                  const mem = factionMemory[hovered.id];
-                  if (!mem) return null;
-                  const f = getFaction(mem.factionId);
+                  const hoveredSummary = clusterSummaryById.get(hovered.id);
+                  if (!hoveredSummary) return null;
+                  const f = getFaction(hoveredSummary.controllingFactionId);
                   if (!f || !knownFactions.has(f.id)) return null;
                   const fc = `#${f.color.toString(16).padStart(6, '0')}`;
                   return <span style={{ color: fc, marginLeft: 6 }}>{f.name.toUpperCase()}</span>;

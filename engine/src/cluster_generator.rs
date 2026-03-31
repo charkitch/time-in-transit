@@ -74,6 +74,11 @@ pub fn generate_cluster() -> Vec<StarSystemData> {
         });
     }
 
+    // Keep the home system visually distinctive
+    if !systems.is_empty() {
+        systems[0].star_type = StarType::A;
+    }
+
     systems
 }
 

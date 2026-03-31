@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { SolarSystemData } from '../generation/SystemGenerator';
+import type { SolarSystemData } from '../engine';
 import type { GoodName } from '../constants';
 import { PRNG } from '../generation/prng';
 import { CLUSTER_SEED, MARKET_GOODS } from '../constants';
@@ -17,6 +17,8 @@ export interface NPCShipState {
   originSystemName: string;
   waypointA: THREE.Vector3;
   waypointB: THREE.Vector3;
+  planetIdA: string;
+  planetIdB: string;
   t: number;
   direction: 1 | -1;
   speed: number; // wu/s
@@ -75,8 +77,17 @@ export function generateNPCShips(
   galaxyYear: number,
   systemName: string,
   planetPositions: THREE.Vector3[],
+  planetIds: string[],
+  mainPlanetId: string,
 ): NPCShipSpawnData[] {
   if (planetPositions.length < 2) return [];
+
+  // Filter out the main station planet so NPCs don't spawn near the player
+  const filtered = planetPositions
+    .map((pos, i) => ({ pos, id: planetIds[i] ?? `planet-${i}` }))
+    .filter(p => p.id !== mainPlanetId);
+
+  if (filtered.length < 2) return [];
 
   const era = Math.floor((galaxyYear - 3200) / 250);
   const rng = PRNG.fromIndex(CLUSTER_SEED, systemId * 79 + 3 + era * 500);
@@ -85,12 +96,12 @@ export function generateNPCShips(
   const ships: NPCShipSpawnData[] = [];
 
   for (let i = 0; i < count; i++) {
-    const idxA = rng.int(0, planetPositions.length - 1);
-    let idxB = rng.int(0, planetPositions.length - 2);
+    const idxA = rng.int(0, filtered.length - 1);
+    let idxB = rng.int(0, filtered.length - 2);
     if (idxB >= idxA) idxB++;
 
-    const wpA = planetPositions[idxA].clone();
-    const wpB = planetPositions[idxB].clone();
+    const wpA = filtered[idxA].pos.clone();
+    const wpB = filtered[idxB].pos.clone();
 
     // Seed cargo deterministically per (system, npc index, era)
     const cargoRng = PRNG.fromIndex(CLUSTER_SEED, systemId * 1009 + i * 31 + era * 137);
@@ -106,10 +117,12 @@ export function generateNPCShips(
         attempts++;
       } while (usedGoods.has(good) && attempts < 20);
       usedGoods.add(good);
+      const buyPrice = Math.round(cargoRng.float(80, 200));
+      const sellPrice = Math.round(cargoRng.float(50, buyPrice - 10));
       cargo.push({
         good,
-        buyPrice: Math.round(cargoRng.float(50, 200)),
-        sellPrice: Math.round(cargoRng.float(30, 180)),
+        buyPrice,
+        sellPrice,
         qty: cargoRng.int(1, 10),
       });
     }
@@ -120,6 +133,8 @@ export function generateNPCShips(
       originSystemName: systemName,
       waypointA: wpA,
       waypointB: wpB,
+      planetIdA: filtered[idxA].id,
+      planetIdB: filtered[idxB].id,
       t: rng.next(),
       direction: rng.next() > 0.5 ? 1 : -1,
       speed: rng.float(20, 60),
