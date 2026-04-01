@@ -20,7 +20,7 @@ export class DockingSystem {
 
     for (const [, entity] of entities) {
       const dist = shipPos.distanceTo(entity.worldPos);
-      if (entity.type === 'moon' || entity.type === 'planet') {
+      if (entity.type === 'moon' || entity.type === 'planet' || entity.type === 'dyson_shell') {
         if (dist < nearestBodyDist) nearestBodyDist = dist;
       }
       if (entity.type !== 'station') continue;

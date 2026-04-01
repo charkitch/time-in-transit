@@ -79,11 +79,21 @@ export function Scanner({ getEntities }: ScannerProps) {
           ctx.fillStyle = '#FFEE88';
         } else if (entity.type === 'station') {
           ctx.fillStyle = '#44CCFF';
+        } else if (entity.type === 'dyson_shell') {
+          ctx.fillStyle = '#B9C2CF';
         } else {
           ctx.fillStyle = '#33FF88';
         }
 
-        const dotSize = entity.type === 'star' ? 4 : isSecretBase ? 2 : entity.type === 'station' ? 3 : 2;
+        const dotSize = entity.type === 'star'
+          ? 4
+          : isSecretBase
+            ? 2
+            : entity.type === 'station'
+              ? 3
+              : entity.type === 'dyson_shell'
+                ? 2.5
+                : 2;
         ctx.beginPath();
         ctx.arc(sx, sy, dotSize, 0, Math.PI * 2);
         ctx.fill();

@@ -47,6 +47,10 @@ export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
     player.targetId && currentSystem
       ? currentSystem.secretBases.find(b => b.id === player.targetId)
       : undefined;
+  const targetDyson =
+    player.targetId && currentSystem
+      ? currentSystem.dysonShells.find(s => s.id === player.targetId)
+      : undefined;
 
   return (
     <div className={styles.hud}>
@@ -124,12 +128,12 @@ export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
             ) : (
               <>
                 <div className={styles.targetLabel}>TARGET</div>
-                <div>{targetEntity.id.replace(`${currentSystemId}-`, '')}</div>
+                <div>{targetDyson ? targetDyson.name.toUpperCase() : targetEntity.id.replace(`${currentSystemId}-`, '')}</div>
                 <div style={{ color: 'var(--color-hud-dim)', fontSize: '11px' }}>
                   DIST: {targetDist} wu
                 </div>
                 <div style={{ fontSize: '10px', opacity: 0.6 }}>
-                  TYPE: {targetEntity.type.toUpperCase()}
+                  TYPE: {targetEntity.type === 'dyson_shell' ? 'DYSON SHELL' : targetEntity.type.toUpperCase()}
                 </div>
               </>
             )}

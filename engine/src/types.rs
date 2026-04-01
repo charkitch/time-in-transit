@@ -253,6 +253,42 @@ pub struct SecretBaseData {
     pub orbit_speed: f64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DysonInteractionMode {
+    TargetableOnly,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DysonWeatherBandData {
+    pub start_angle: f64,
+    pub end_angle: f64,
+    pub has_clouds: bool,
+    pub cloud_density: f64,
+    pub has_lightning: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DysonShellSegmentData {
+    pub id: String,
+    pub name: String,
+    pub band_index: u32,
+    pub segment_index: u32,
+    pub orbit_radius: f64,
+    pub orbit_speed: f64,
+    pub orbit_phase: f64,
+    pub orbit_inclination: f64,
+    pub orbit_node: f64,
+    pub curve_radius: f64,
+    pub arc_width: f64,
+    pub arc_height: f64,
+    pub color: u32,
+    pub interaction_mode: DysonInteractionMode,
+    pub weather_bands: Vec<DysonWeatherBandData>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BinaryCompanionData {
@@ -271,6 +307,7 @@ pub struct SolarSystemData {
     pub star_radius: f64,
     pub companion: Option<BinaryCompanionData>,
     pub planets: Vec<PlanetData>,
+    pub dyson_shells: Vec<DysonShellSegmentData>,
     pub asteroid_belt: Option<AsteroidBeltData>,
     pub main_station_planet_id: String,
     pub secret_bases: Vec<SecretBaseData>,

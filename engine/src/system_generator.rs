@@ -291,6 +291,84 @@ fn generate_great_spot(rng: &mut PRNG, gas_type: GasGiantType) -> (bool, f64, f6
     (has, lat, size)
 }
 
+fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData> {
+    if star.star_type != StarType::Iron {
+        return vec![];
+    }
+
+    const TAU: f64 = PI * 2.0;
+    const DYSON_COLORS: &[u32] = &[0x6D7077, 0x8B8F97, 0x9A8F84, 0x7E858E];
+
+    // Separate RNG stream so adding Dyson shells does not perturb existing system generation.
+    let mut rng = PRNG::from_index(0xD150_0001, star.id.wrapping_mul(31337).wrapping_add(911));
+    let mut shells: Vec<DysonShellSegmentData> = Vec::new();
+
+    let band_count = rng.int(2, 3);
+    let mut orbit_radius = rng.float(1900.0, 2500.0);
+
+    for band in 0..band_count {
+        let segment_count = rng.int(6, 10);
+        let orbit_speed = rng.float(0.000003, 0.000011) * (1.0 + band as f64 * 0.18);
+
+        for segment in 0..segment_count {
+            let phase_jitter = rng.float(-0.08, 0.08);
+            let orbit_phase = ((segment as f64 / segment_count as f64) * TAU + phase_jitter + TAU) % TAU;
+
+            // Sector-mixed weather on a single shell segment.
+            let cut_a = rng.float(0.22, 0.40) * TAU;
+            let cut_b = rng.float(0.58, 0.78) * TAU;
+            let weather_bands = vec![
+                DysonWeatherBandData {
+                    start_angle: 0.0,
+                    end_angle: cut_a,
+                    has_clouds: false,
+                    cloud_density: 0.0,
+                    has_lightning: false,
+                },
+                DysonWeatherBandData {
+                    start_angle: cut_a,
+                    end_angle: cut_b,
+                    has_clouds: true,
+                    cloud_density: rng.float(0.30, 0.58),
+                    has_lightning: false,
+                },
+                DysonWeatherBandData {
+                    start_angle: cut_b,
+                    end_angle: TAU,
+                    has_clouds: true,
+                    cloud_density: rng.float(0.52, 0.82),
+                    has_lightning: true,
+                },
+            ];
+
+            let orbit_inclination = rng.float(-1.2, 1.2);
+            let orbit_node = rng.float(0.0, TAU);
+
+            shells.push(DysonShellSegmentData {
+                id: format!("{}-dyson-b{}-s{}", star.id, band, segment),
+                name: format!("{} SHELL B{}-{}", star.name, band + 1, segment + 1),
+                band_index: band as u32,
+                segment_index: segment as u32,
+                orbit_radius,
+                orbit_speed,
+                orbit_phase,
+                orbit_inclination,
+                orbit_node,
+                curve_radius: rng.float(900.0, 1600.0),
+                arc_width: rng.float(950.0, 1900.0),
+                arc_height: rng.float(420.0, 980.0),
+                color: *rng.pick(DYSON_COLORS),
+                interaction_mode: DysonInteractionMode::TargetableOnly,
+                weather_bands,
+            });
+        }
+
+        orbit_radius += rng.float(1000.0, 1500.0);
+    }
+
+    shells
+}
+
 pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
     let mut rng = PRNG::from_index(CLUSTER_SEED, star.id.wrapping_mul(97).wrapping_add(13));
     let profile = system_profile_for(star.star_type);
@@ -504,11 +582,14 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
         .map(|p| p.id.clone())
         .unwrap_or_default();
 
+    let dyson_shells = generate_dyson_shells(star);
+
     SolarSystemData {
         star_type: star.star_type,
         star_radius,
         companion,
         planets,
+        dyson_shells,
         asteroid_belt,
         main_station_planet_id,
         secret_bases,
@@ -565,5 +646,34 @@ mod tests {
 
         assert!(companion.orbit_radius >= 850.0);
         assert!(innermost_planet >= binary_outer_edge + 200.0);
+    }
+
+    #[test]
+    fn iron_systems_generate_dyson_shells() {
+        let cluster = generate_cluster();
+        let iron_star = cluster.iter()
+            .find(|star| star.star_type == StarType::Iron)
+            .expect("Expected iron star in cluster");
+
+        let system = generate_solar_system(iron_star);
+        assert!(!system.dyson_shells.is_empty());
+
+        let mut band_ids: Vec<u32> = system.dyson_shells.iter().map(|segment| segment.band_index).collect();
+        band_ids.sort_unstable();
+        band_ids.dedup();
+        assert!((2..=3).contains(&band_ids.len()));
+        assert!(system.dyson_shells.iter().all(|segment| segment.weather_bands.len() == 3));
+        assert!(system.dyson_shells.iter().all(|segment| segment.interaction_mode == DysonInteractionMode::TargetableOnly));
+    }
+
+    #[test]
+    fn non_iron_systems_do_not_generate_dyson_shells() {
+        let cluster = generate_cluster();
+        let non_iron = cluster.iter()
+            .find(|star| star.star_type != StarType::Iron)
+            .expect("Expected at least one non-iron star");
+
+        let system = generate_solar_system(non_iron);
+        assert!(system.dyson_shells.is_empty());
     }
 }

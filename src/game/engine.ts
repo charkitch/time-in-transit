@@ -96,6 +96,34 @@ export interface SecretBaseData {
   orbitSpeed: number;
 }
 
+export type DysonInteractionMode = 'targetable_only';
+
+export interface DysonWeatherBandData {
+  startAngle: number;
+  endAngle: number;
+  hasClouds: boolean;
+  cloudDensity: number;
+  hasLightning: boolean;
+}
+
+export interface DysonShellSegmentData {
+  id: string;
+  name: string;
+  bandIndex: number;
+  segmentIndex: number;
+  orbitRadius: number;
+  orbitSpeed: number;
+  orbitPhase: number;
+  orbitInclination: number;
+  orbitNode: number;
+  curveRadius: number;
+  arcWidth: number;
+  arcHeight: number;
+  color: number;
+  interactionMode: DysonInteractionMode;
+  weatherBands: DysonWeatherBandData[];
+}
+
 export interface BinaryCompanionData {
   starType: StarType;
   radius: number;
@@ -110,6 +138,7 @@ export interface SolarSystemData {
   starRadius: number;
   companion: BinaryCompanionData | null;
   planets: PlanetData[];
+  dysonShells: DysonShellSegmentData[];
   asteroidBelt: AsteroidBeltData | null;
   mainStationPlanetId: string;
   secretBases: SecretBaseData[];

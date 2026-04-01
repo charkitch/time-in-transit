@@ -14,6 +14,7 @@ import {
   makeTexturedPlanet, makeTexturedGasGiant, makeTexturedRing,
   makeRingSystem,
   addCityLights, addSunAtmosphere, addLightning, addCloudLayer,
+  makeDysonShellSegment, addDysonWeatherLayer,
 } from './meshFactory';
 import { selectSkin } from './planetSkins';
 import { disposeAll as disposeTextureCache } from './textureCache';
@@ -377,8 +378,11 @@ export interface SceneEntity {
   orbitRadius: number;
   orbitSpeed: number;
   orbitPhase: number;
+  orbitInclination?: number;
+  orbitNode?: number;
+  shellCurveRadius?: number;
   parentId?: string;
-  type: 'planet' | 'station' | 'star' | 'moon' | 'npc_ship' | 'fleet_ship';
+  type: 'planet' | 'station' | 'star' | 'moon' | 'npc_ship' | 'fleet_ship' | 'dyson_shell';
   worldPos: THREE.Vector3; // updated each frame
   collisionRadius: number;
 }
@@ -745,6 +749,59 @@ export class SceneRenderer {
       }
     }
 
+    for (const shell of data.dysonShells) {
+      const shellSeed = rng.next() * 100;
+      const shellGroup = makeDysonShellSegment(
+        shell.curveRadius,
+        shell.arcWidth,
+        shell.arcHeight,
+        shell.color,
+        shellSeed,
+      );
+      const shellWeather = addDysonWeatherLayer(
+        shellGroup,
+        shell.curveRadius,
+        shell.arcWidth,
+        shell.arcHeight,
+        shellSeed,
+        shell.weatherBands,
+      );
+      this.lightningMaterials.push(shellWeather);
+      shellGroup.userData.interactionMode = shell.interactionMode;
+      {
+        const a = shell.orbitPhase;
+        const r = shell.orbitRadius;
+        const incl = shell.orbitInclination;
+        const node = shell.orbitNode;
+        const cosN = Math.cos(node), sinN = Math.sin(node);
+        const cosA = Math.cos(a), sinA = Math.sin(a);
+        const cosI = Math.cos(incl), sinI = Math.sin(incl);
+        shellGroup.position.set(
+          r * (cosN * cosA - sinN * sinA * cosI),
+          r * sinA * sinI,
+          r * (sinN * cosA + cosN * sinA * cosI),
+        );
+      }
+      shellGroup.lookAt(0, 0, 0);
+      shellGroup.rotateY(Math.PI);
+      this.scene.add(shellGroup);
+      this.systemObjects.push(shellGroup);
+
+      this.entities.set(shell.id, {
+        id: shell.id,
+        group: shellGroup,
+        orbitRadius: shell.orbitRadius,
+        orbitSpeed: shell.orbitSpeed,
+        orbitPhase: shell.orbitPhase,
+        orbitInclination: shell.orbitInclination,
+        orbitNode: shell.orbitNode,
+        shellCurveRadius: shell.curveRadius,
+        type: 'dyson_shell',
+        worldPos: new THREE.Vector3(),
+        collisionRadius: Math.max(120, shell.curveRadius * 0.35),
+      });
+    }
+
     // Asteroid belt
     if (data.asteroidBelt) {
       const ab = data.asteroidBelt;
@@ -999,6 +1056,11 @@ export class SceneRenderer {
             parent.worldPos.z + Math.sin(angle) * entity.orbitRadius,
           );
         }
+      } else if (entity.type === 'dyson_shell' && entity.orbitInclination != null && entity.orbitNode != null) {
+        const [x, y, z] = this.computeDysonShellPosition(
+          angle, entity.orbitRadius, entity.orbitInclination, entity.orbitNode,
+        );
+        entity.group.position.set(x, y, z);
       } else {
         entity.group.position.set(
           Math.cos(angle) * entity.orbitRadius,
@@ -1007,7 +1069,17 @@ export class SceneRenderer {
         );
       }
 
-      entity.worldPos.copy(entity.group.position);
+      if (entity.type === 'dyson_shell') {
+        entity.group.lookAt(0, 0, 0);
+        entity.group.rotateY(Math.PI);
+        // worldPos must be the shell surface center, not the orbital position.
+        // The panel geometry is centered at local (0,0,-curveRadius); after
+        // lookAt+rotateY that point lands on the star-facing side of the group.
+        entity.worldPos.set(0, 0, -(entity.shellCurveRadius ?? 0));
+        entity.group.localToWorld(entity.worldPos);
+      } else {
+        entity.worldPos.copy(entity.group.position);
+      }
     }
 
     this.updateXRayTransferStreams(time);
@@ -1089,6 +1161,19 @@ export class SceneRenderer {
     if (this.battleExplosions && dt > 0) {
       updateBattleExplosions(this.battleExplosions, dt);
     }
+  }
+
+  private computeDysonShellPosition(
+    angle: number, r: number, incl: number, node: number,
+  ): [number, number, number] {
+    const cosN = Math.cos(node), sinN = Math.sin(node);
+    const cosA = Math.cos(angle), sinA = Math.sin(angle);
+    const cosI = Math.cos(incl), sinI = Math.sin(incl);
+    return [
+      r * (cosN * cosA - sinN * sinA * cosI),
+      r * sinA * sinI,
+      r * (sinN * cosA + cosN * sinA * cosI),
+    ];
   }
 
   private updateXRayTransferStreams(time: number): void {

@@ -36,7 +36,13 @@ export function SystemMap({ onClose }: SystemMapProps) {
     const secretMaxOrbit = currentSystem.secretBases.length > 0
       ? Math.max(...currentSystem.secretBases.map(b => b.orbitRadius))
       : 0;
-    const maxOrbit = Math.max(...currentSystem.planets.map(p => p.orbitRadius), secretMaxOrbit);
+    const planetMaxOrbit = currentSystem.planets.length > 0
+      ? Math.max(...currentSystem.planets.map(p => p.orbitRadius))
+      : 0;
+    const dysonMaxOrbit = currentSystem.dysonShells.length > 0
+      ? Math.max(...currentSystem.dysonShells.map(s => s.orbitRadius))
+      : 0;
+    const maxOrbit = Math.max(planetMaxOrbit, dysonMaxOrbit, secretMaxOrbit, currentSystem.starRadius * 4);
     const scale = (Math.min(W, H) * 0.45) / maxOrbit;
 
     // Star
@@ -148,6 +154,31 @@ export function SystemMap({ onClose }: SystemMapProps) {
       ctx.fillText(planet.name, px + pR + 3, py + 3);
     }
 
+    // Dyson shell segments — render as bright curved arcs.
+    for (const shell of currentSystem.dysonShells) {
+      const orbitPx = shell.orbitRadius * scale;
+      const angle = shell.orbitPhase + time * shell.orbitSpeed;
+      const arcAngle = Math.max(0.16, Math.min(0.55, shell.arcWidth / shell.curveRadius));
+      const start = angle - arcAngle * 0.5;
+      const end = angle + arcAngle * 0.5;
+
+      const shellColor = '#' + new THREE.Color(shell.color).getHexString();
+
+      ctx.strokeStyle = shellColor + '55';
+      ctx.lineWidth = 0.8;
+      ctx.setLineDash([6, 8]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, orbitPx, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.strokeStyle = shellColor;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, orbitPx, start, end);
+      ctx.stroke();
+    }
+
     // Asteroid belt
     if (currentSystem.asteroidBelt) {
       const { innerRadius, outerRadius } = currentSystem.asteroidBelt;
@@ -222,6 +253,9 @@ export function SystemMap({ onClose }: SystemMapProps) {
           <span><span className={styles.dot} style={{ background: '#33FF88' }} />Planet</span>
           <span><span className={styles.dot} style={{ background: '#44CCFF', outline: '1px solid #44CCFF' }} />Station</span>
           <span><span className={styles.dot} style={{ background: '#888877' }} />Asteroids</span>
+          {currentSystem && currentSystem.dysonShells.length > 0 && (
+            <span><span className={styles.dot} style={{ background: '#B9C2CF' }} />Dyson Shell</span>
+          )}
           {currentSystem && currentSystem.secretBases.length > 0 && (
             <span><span className={styles.dot} style={{ background: '#8844FF' }} />Secret Base</span>
           )}
