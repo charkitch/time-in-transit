@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { SurfaceType } from '../../../engine';
-import { GLSL_NOISE } from './shared';
+import { GLSL_NOISE, GLSL_PLANET_VERTEX, GLSL_PLANET_VARYINGS } from '../glsl';
 
 export function addCloudLayer(
   group: THREE.Group, radius: number, seed: number, density: number,
@@ -18,26 +18,13 @@ export function addCloudLayer(
       density: { value: density },
       isIce: { value: isIce ? 1 : 0 },
     },
-    vertexShader: `
-      varying vec3 vWorldNormal;
-      varying vec3 vWorldPosition;
-      varying vec3 vLocalPos;
-      void main() {
-        vLocalPos = position;
-        vec4 worldPos = modelMatrix * vec4(position, 1.0);
-        vWorldPosition = worldPos.xyz;
-        vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
-        gl_Position = projectionMatrix * viewMatrix * worldPos;
-      }
-    `,
+    vertexShader: GLSL_PLANET_VERTEX,
     fragmentShader: `
       ${GLSL_NOISE}
       uniform float seed;
       uniform float density;
       uniform int isIce;
-      varying vec3 vWorldNormal;
-      varying vec3 vWorldPosition;
-      varying vec3 vLocalPos;
+      ${GLSL_PLANET_VARYINGS}
 
       void main() {
         vec3 toStar = normalize(-vWorldPosition);

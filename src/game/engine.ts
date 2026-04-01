@@ -120,6 +120,7 @@ export interface DysonShellSegmentData {
   arcWidth: number;
   arcHeight: number;
   color: number;
+  starPhase: number;
   interactionMode: DysonInteractionMode;
   weatherBands: DysonWeatherBandData[];
 }

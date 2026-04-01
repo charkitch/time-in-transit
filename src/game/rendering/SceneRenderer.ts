@@ -14,7 +14,7 @@ import {
   makeTexturedPlanet, makeTexturedGasGiant,
   makeRingSystem,
   addCityLights, addSunAtmosphere, addLightning, addCloudLayer,
-  makeDysonShellSegment, addDysonWeatherLayer,
+  makeDysonShellSegment, addDysonWeatherLayer, makeDysonMiniStar,
 } from './meshFactory';
 import { selectSkin } from './planetSkins';
 import { disposeAll as disposeTextureCache } from './textureCache';
@@ -61,16 +61,15 @@ export class SceneRenderer {
   private collidables: SceneEntity[] = [];
   private xRayTransferStreams: XRayTransferStream[] = [];
   private xbDiskGroup: THREE.Group | null = null;
+  private dysonShellMaterials: {
+    shellMat: THREE.ShaderMaterial;
+    weatherMat: THREE.ShaderMaterial;
+    miniStar: THREE.Object3D;
+  }[] = [];
 
   constructor(canvas: HTMLCanvasElement) {
-    // Prefer WebGL2, with WebGL1 fallback for older environments.
-    const gl2 = canvas.getContext('webgl2', { antialias: true });
-    const gl1 = gl2 ? null : (canvas.getContext('webgl', { antialias: true }) ?? canvas.getContext('experimental-webgl'));
-    this.renderer = gl2
-      ? new THREE.WebGLRenderer({ canvas, context: gl2, antialias: true })
-      : gl1
-        ? new THREE.WebGLRenderer({ canvas, context: gl1 as WebGLRenderingContext, antialias: true })
-        : new THREE.WebGLRenderer({ canvas, antialias: true });
+    if (!canvas.getContext('webgl2')) throw new Error('WebGL 2 required');
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setClearColor(PALETTE.bg);
 
@@ -115,6 +114,7 @@ export class SceneRenderer {
     this.systemObjects.forEach(o => this.scene.remove(o));
     this.systemObjects = [];
     this.lightningMaterials = [];
+    this.dysonShellMaterials = [];
     this.entities.clear();
     this.npcShips.clear();
     this.battleProjectiles = null;
@@ -411,22 +411,26 @@ export class SceneRenderer {
 
     for (const shell of data.dysonShells) {
       const shellSeed = rng.next() * 100;
-      const shellGroup = makeDysonShellSegment(
+      const { group: shellGroup, material: shellMat } = makeDysonShellSegment(
         shell.curveRadius,
         shell.arcWidth,
         shell.arcHeight,
         shell.color,
+        shell.starPhase,
         shellSeed,
       );
+      const miniStar = makeDysonMiniStar(shell.starPhase, shell.curveRadius * 0.035);
+      shellGroup.add(miniStar);
       const shellWeather = addDysonWeatherLayer(
         shellGroup,
         shell.curveRadius,
         shell.arcWidth,
         shell.arcHeight,
         shellSeed,
+        shell.starPhase,
         shell.weatherBands,
       );
-      this.lightningMaterials.push(shellWeather);
+      this.dysonShellMaterials.push({ shellMat, weatherMat: shellWeather, miniStar });
       shellGroup.userData.interactionMode = shell.interactionMode;
       {
         const a = shell.orbitPhase;
@@ -722,6 +726,14 @@ export class SceneRenderer {
     // Tick lightning shaders
     for (const mat of this.lightningMaterials) {
       mat.uniforms.uTime.value = time;
+    }
+
+    const worldPos = new THREE.Vector3();
+    for (const entry of this.dysonShellMaterials) {
+      entry.miniStar.getWorldPosition(worldPos);
+      entry.shellMat.uniforms.uLightPos.value.copy(worldPos);
+      entry.weatherMat.uniforms.uLightPos.value.copy(worldPos);
+      entry.weatherMat.uniforms.uTime.value = time;
     }
 
     // Battle projectile + explosion animation

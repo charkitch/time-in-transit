@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLSL_PLANET_VERTEX, GLSL_PLANET_VARYINGS, GLSL_HASH } from '../glsl';
 
 export function addSunAtmosphere(group: THREE.Group, radius: number): void {
   const geo = new THREE.SphereGeometry(radius * 1.06, 32, 24);
@@ -66,28 +67,12 @@ export function addLightning(
       uTime: { value: 0.0 },
       seed:  { value: seed },
     },
-    vertexShader: `
-      varying vec3 vWorldNormal;
-      varying vec3 vWorldPosition;
-      varying vec3 vLocalPos;
-      void main() {
-        vLocalPos = position;
-        vec4 worldPos = modelMatrix * vec4(position, 1.0);
-        vWorldPosition = worldPos.xyz;
-        vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
-        gl_Position = projectionMatrix * viewMatrix * worldPos;
-      }
-    `,
+    vertexShader: GLSL_PLANET_VERTEX,
     fragmentShader: `
-      varying vec3 vWorldNormal;
-      varying vec3 vWorldPosition;
-      varying vec3 vLocalPos;
+      ${GLSL_HASH}
+      ${GLSL_PLANET_VARYINGS}
       uniform float uTime;
       uniform float seed;
-
-      float hashv(vec2 p, float s) {
-        return fract(sin(dot(p, vec2(127.1, 311.7)) + s) * 43758.5453);
-      }
 
       float distToSeg(vec2 p, vec2 a, vec2 b) {
         vec2 ab = b - a, ap = p - a;
@@ -113,7 +98,7 @@ export function addLightning(
         vec2 local     = fract(uvGrid) - 0.5; // -0.5..0.5
 
         // ~20% of cells can produce storms
-        float cHash = hashv(cellCoord, seed);
+        float cHash = hash(cellCoord, seed);
         if (cHash < 0.80) discard;
 
         // Flash timing: 0.3-0.8 Hz, visible for ~12% of period
@@ -125,11 +110,11 @@ export function addLightning(
         if (flash <= 0.001) discard;
 
         // Jagged bolt: 3 connected segments
-        float h1 = hashv(cellCoord, seed + 1.0);
-        float h2 = hashv(cellCoord, seed + 2.0);
-        float h3 = hashv(cellCoord, seed + 3.0);
-        float h4 = hashv(cellCoord, seed + 4.0);
-        float h5 = hashv(cellCoord, seed + 5.0);
+        float h1 = hash(cellCoord, seed + 1.0);
+        float h2 = hash(cellCoord, seed + 2.0);
+        float h3 = hash(cellCoord, seed + 3.0);
+        float h4 = hash(cellCoord, seed + 4.0);
+        float h5 = hash(cellCoord, seed + 5.0);
 
         vec2 p0 = vec2((h1 - 0.5) * 0.22, -0.43);
         vec2 p1 = vec2((h2 - 0.5) * 0.38, -0.12 + (h3 - 0.5) * 0.08);
@@ -143,8 +128,8 @@ export function addLightning(
         float bolt = smoothstep(w, w * 0.1, d);
 
         // One sub-branch off the mid-segment
-        float h6 = hashv(cellCoord, seed + 6.0);
-        float h7 = hashv(cellCoord, seed + 7.0);
+        float h6 = hash(cellCoord, seed + 6.0);
+        float h7 = hash(cellCoord, seed + 7.0);
         vec2 bStart = mix(p1, p2, 0.45);
         vec2 bEnd   = bStart + vec2((h6 - 0.5) * 0.17, h7 * 0.12 + 0.08);
         float branch = smoothstep(w * 0.75, w * 0.1,

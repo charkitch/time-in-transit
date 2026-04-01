@@ -3,7 +3,8 @@ import { PALETTE } from '../../../constants';
 import { loadTexture } from '../../textureCache';
 import type { PlanetSkin } from '../../planetSkins';
 import type { SurfaceType } from '../../../engine';
-import { GLSL_NOISE, SURFACE_TYPE_INDEX } from './shared';
+import { SURFACE_TYPE_INDEX } from './shared';
+import { GLSL_NOISE, GLSL_PLANET_VERTEX, GLSL_PLANET_VARYINGS } from '../glsl';
 
 export function makePlanet(
   radius: number, color: number, detail: number = 1,
@@ -20,26 +21,13 @@ export function makePlanet(
       baseColor: { value: baseColor },
       surfType: { value: SURFACE_TYPE_INDEX[surfaceType] },
     },
-    vertexShader: `
-      varying vec3 vWorldNormal;
-      varying vec3 vWorldPosition;
-      varying vec3 vLocalPos;
-      void main() {
-        vLocalPos = position;
-        vec4 worldPos = modelMatrix * vec4(position, 1.0);
-        vWorldPosition = worldPos.xyz;
-        vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
-        gl_Position = projectionMatrix * viewMatrix * worldPos;
-      }
-    `,
+    vertexShader: GLSL_PLANET_VERTEX,
     fragmentShader: `
       ${GLSL_NOISE}
       uniform float seed;
       uniform vec3 baseColor;
       uniform int surfType;
-      varying vec3 vWorldNormal;
-      varying vec3 vWorldPosition;
-      varying vec3 vLocalPos;
+      ${GLSL_PLANET_VARYINGS}
 
       void main() {
         vec3 toStar = normalize(-vWorldPosition);

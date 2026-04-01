@@ -285,6 +285,7 @@ pub struct DysonShellSegmentData {
     pub arc_width: f64,
     pub arc_height: f64,
     pub color: u32,
+    pub star_phase: f64,
     pub interaction_mode: DysonInteractionMode,
     pub weather_bands: Vec<DysonWeatherBandData>,
 }

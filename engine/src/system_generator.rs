@@ -298,16 +298,17 @@ fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData> {
 
     const TAU: f64 = PI * 2.0;
     const DYSON_COLORS: &[u32] = &[0x6D7077, 0x8B8F97, 0x9A8F84, 0x7E858E];
+    const MINI_STAR_PHASES: &[f64] = &[0.0, 0.25, 0.5, 0.75, 1.0];
 
     // Separate RNG stream so adding Dyson shells does not perturb existing system generation.
     let mut rng = PRNG::from_index(0xD150_0001, star.id.wrapping_mul(31337).wrapping_add(911));
     let mut shells: Vec<DysonShellSegmentData> = Vec::new();
 
-    let band_count = rng.int(2, 3);
+    let band_count = 2;
     let mut orbit_radius = rng.float(1900.0, 2500.0);
 
     for band in 0..band_count {
-        let segment_count = rng.int(6, 10);
+        let segment_count = rng.int(3, 5);
         let orbit_speed = rng.float(0.000003, 0.000011) * (1.0 + band as f64 * 0.18);
 
         for segment in 0..segment_count {
@@ -358,6 +359,7 @@ fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData> {
                 arc_width: rng.float(950.0, 1900.0),
                 arc_height: rng.float(420.0, 980.0),
                 color: *rng.pick(DYSON_COLORS),
+                star_phase: *rng.pick(MINI_STAR_PHASES),
                 interaction_mode: DysonInteractionMode::TargetableOnly,
                 weather_bands,
             });
@@ -661,9 +663,13 @@ mod tests {
         let mut band_ids: Vec<u32> = system.dyson_shells.iter().map(|segment| segment.band_index).collect();
         band_ids.sort_unstable();
         band_ids.dedup();
-        assert!((2..=3).contains(&band_ids.len()));
+        assert_eq!(band_ids.len(), 2);
+        assert!((6..=10).contains(&system.dyson_shells.len()));
         assert!(system.dyson_shells.iter().all(|segment| segment.weather_bands.len() == 3));
         assert!(system.dyson_shells.iter().all(|segment| segment.interaction_mode == DysonInteractionMode::TargetableOnly));
+        assert!(system.dyson_shells.iter().all(|segment| {
+            matches!(segment.star_phase, 0.0 | 0.25 | 0.5 | 0.75 | 1.0)
+        }));
     }
 
     #[test]
