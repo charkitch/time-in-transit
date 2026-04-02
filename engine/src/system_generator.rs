@@ -305,7 +305,11 @@ fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData> {
     let mut shells: Vec<DysonShellSegmentData> = Vec::new();
 
     let band_count = 2;
-    let mut orbit_radius = rng.float(1900.0, 2500.0);
+    let mut orbit_radius = rng.float(3500.0, 4500.0);
+
+    // Shared orbital plane: small inclination spread so shells form a coherent ring.
+    let base_inclination = rng.float(-0.15, 0.15);
+    let base_node = rng.float(0.0, TAU);
 
     for band in 0..band_count {
         let segment_count = rng.int(3, 5);
@@ -342,8 +346,8 @@ fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData> {
                 },
             ];
 
-            let orbit_inclination = rng.float(-1.2, 1.2);
-            let orbit_node = rng.float(0.0, TAU);
+            let orbit_inclination = base_inclination + rng.float(-0.12, 0.12);
+            let orbit_node = base_node + rng.float(-0.12, 0.12);
 
             shells.push(DysonShellSegmentData {
                 id: format!("{}-dyson-b{}-s{}", star.id, band, segment),
@@ -365,7 +369,7 @@ fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData> {
             });
         }
 
-        orbit_radius += rng.float(1000.0, 1500.0);
+        orbit_radius += rng.float(2500.0, 3500.0);
     }
 
     shells
