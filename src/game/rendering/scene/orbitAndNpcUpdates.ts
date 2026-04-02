@@ -4,6 +4,11 @@ import type { SceneEntity } from './types';
 
 const _npcCollisionVec = new THREE.Vector3();
 const _npcSeparationVec = new THREE.Vector3();
+const _shellZAxis = new THREE.Vector3();
+const _shellXAxis = new THREE.Vector3();
+const _shellYAxis = new THREE.Vector3();
+const _shellUp = new THREE.Vector3();
+const _shellBasis = new THREE.Matrix4();
 
 export function updateOrbitalEntities(entities: Map<string, SceneEntity>, time: number): void {
   for (const [, entity] of entities) {
@@ -36,19 +41,46 @@ export function updateOrbitalEntities(entities: Map<string, SceneEntity>, time: 
 
     entity.worldPos.copy(entity.group.position);
     if (entity.type === 'dyson_shell') {
-      if (entity.orbitInclination != null && entity.orbitNode != null) {
-        const sinN = Math.sin(entity.orbitNode);
-        const cosN = Math.cos(entity.orbitNode);
-        const sinI = Math.sin(entity.orbitInclination);
-        const cosI = Math.cos(entity.orbitInclination);
-        entity.group.up.set(sinN * sinI, cosI, -cosN * sinI);
-      }
-      entity.group.lookAt(0, 0, 0);
-      entity.group.rotateY(Math.PI);
-      entity.worldPos.set(0, 0, -(entity.shellCurveRadius ?? 0));
-      entity.group.localToWorld(entity.worldPos);
+      orientDysonShell(entity);
     }
   }
+}
+
+/**
+ * Orient a Dyson shell so its concave interior faces the star at origin.
+ *
+ * The shell geometry patch is centered at phi=PI, which in THREE.js
+ * SphereGeometry sits along the local +X axis. We set +X to point away from
+ * the star so the concave interior (facing -X from the sphere center) cups
+ * toward the star.
+ */
+function orientDysonShell(entity: SceneEntity): void {
+  const pos = entity.group.position;
+
+  // +X axis: away from star (patch outward normal direction)
+  _shellXAxis.copy(pos).normalize();
+
+  // Orbital normal (perpendicular to orbital plane)
+  if (entity.orbitInclination != null && entity.orbitNode != null) {
+    const sinN = Math.sin(entity.orbitNode);
+    const cosN = Math.cos(entity.orbitNode);
+    const sinI = Math.sin(entity.orbitInclination);
+    const cosI = Math.cos(entity.orbitInclination);
+    _shellUp.set(sinN * sinI, cosI, -cosN * sinI);
+  } else {
+    _shellUp.set(0, 1, 0);
+  }
+
+  // Z = X × up, then Y = Z × X to get orthonormal right-handed basis
+  _shellZAxis.crossVectors(_shellXAxis, _shellUp).normalize();
+  _shellYAxis.crossVectors(_shellZAxis, _shellXAxis);
+
+  _shellBasis.makeBasis(_shellXAxis, _shellYAxis, _shellZAxis);
+  entity.group.quaternion.setFromRotationMatrix(_shellBasis);
+
+  // worldPos = the patch surface center in world space (local +X * curveRadius)
+  entity.worldPos.set(entity.shellCurveRadius ?? 0, 0, 0);
+  entity.group.localToWorld(entity.worldPos);
 }
 
 export function updateFleetShipWorldPositions(entities: Map<string, SceneEntity>): void {

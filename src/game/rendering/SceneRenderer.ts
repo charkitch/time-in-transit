@@ -432,23 +432,26 @@ export class SceneRenderer {
       );
       this.dysonShellMaterials.push({ shellMat, weatherMat: shellWeather, miniStar });
       shellGroup.userData.interactionMode = shell.interactionMode;
-      {
-        const a = shell.orbitPhase;
-        const r = shell.orbitRadius;
-        const incl = shell.orbitInclination;
-        const node = shell.orbitNode;
-        const cosN = Math.cos(node), sinN = Math.sin(node);
-        const cosA = Math.cos(a), sinA = Math.sin(a);
-        const cosI = Math.cos(incl), sinI = Math.sin(incl);
-        shellGroup.position.set(
-          r * (cosN * cosA - sinN * sinA * cosI),
-          r * sinA * sinI,
-          r * (sinN * cosA + cosN * sinA * cosI),
-        );
-        shellGroup.up.set(sinN * sinI, cosI, -cosN * sinI);
-      }
-      shellGroup.lookAt(0, 0, 0);
-      shellGroup.rotateY(Math.PI);
+      const a = shell.orbitPhase;
+      const r = shell.orbitRadius;
+      const incl = shell.orbitInclination;
+      const node = shell.orbitNode;
+      const cosN = Math.cos(node), sinN = Math.sin(node);
+      const cosA = Math.cos(a), sinA = Math.sin(a);
+      const cosI = Math.cos(incl), sinI = Math.sin(incl);
+      shellGroup.position.set(
+        r * (cosN * cosA - sinN * sinA * cosI),
+        r * sinA * sinI,
+        r * (sinN * cosA + cosN * sinA * cosI),
+      );
+      // Orient: patch is at +X in SphereGeometry(phi=PI). Set +X away from star
+      // so the concave interior (at -X from sphere center) faces the star.
+      const xAxis = shellGroup.position.clone().normalize(); // away from star
+      const orbNormal = new THREE.Vector3(sinN * sinI, cosI, -cosN * sinI);
+      const zAxis = new THREE.Vector3().crossVectors(xAxis, orbNormal).normalize();
+      const yAxis = new THREE.Vector3().crossVectors(zAxis, xAxis);
+      const basis = new THREE.Matrix4().makeBasis(xAxis, yAxis, zAxis);
+      shellGroup.quaternion.setFromRotationMatrix(basis);
       this.scene.add(shellGroup);
       this.systemObjects.push(shellGroup);
 

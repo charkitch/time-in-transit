@@ -49,11 +49,16 @@ export class InputSystem {
   };
 
   read(): InputState {
+    const down = isDown('KeyS') || isDown('ArrowDown');
+    const up = isDown('KeyW') || isDown('ArrowUp');
+    const left = isDown('KeyA') || isDown('ArrowLeft');
+    const right = isDown('KeyD') || isDown('ArrowRight');
+
     return {
-      pitch:       (isDown('KeyS') ? 1 : 0) - (isDown('KeyW') ? 1 : 0),
+      pitch:       (down ? 1 : 0) - (up ? 1 : 0),
       yaw:         (isDown('KeyE') ? 1 : 0) - (isDown('KeyQ') ? 1 : 0),
-      roll:        (isDown('KeyD') ? 1 : 0) - (isDown('KeyA') ? 1 : 0),
-      thrust:      isDown('ArrowUp') || isDown('Space') ? 1 : 0,
+      roll:        (right ? 1 : 0) - (left ? 1 : 0),
+      thrust:      isDown('Space') ? 1 : 0,
       boost:       isDown('ShiftLeft') || isDown('ShiftRight'),
       dockRequest: false,
       clusterMap:  false,

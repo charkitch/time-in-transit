@@ -80,6 +80,13 @@ export function makeDysonShellSegment(
 
   group.add(new THREE.Mesh(geo, mat));
 
+  // Dark exterior (convex/outside face)
+  const exteriorMat = new THREE.MeshBasicMaterial({
+    color: 0x2A2D32,
+    side: THREE.FrontSide,
+  });
+  group.add(new THREE.Mesh(geo, exteriorMat));
+
   const edgesGeo = new THREE.EdgesGeometry(geo, 14);
   const wireMat = new THREE.LineBasicMaterial({
     color: 0x9BA3B2,
@@ -109,7 +116,7 @@ export function addDysonWeatherLayer(
   const phiStart = Math.PI - phiLength * 0.5;
   const thetaStart = Math.PI * 0.5 - thetaLength * 0.5;
   const geo = new THREE.SphereGeometry(
-    curveRadius * 1.002,
+    curveRadius * 0.998,
     36,
     24,
     phiStart,
@@ -159,6 +166,9 @@ export function addDysonWeatherLayer(
       ${GLSL_PLANET_VARYINGS}
 
       float inBand(float angle, float startA, float endA) {
+        if (startA > endA) {
+          return step(startA, angle) + step(angle, endA);
+        }
         return step(startA, angle) * step(angle, endA);
       }
 
@@ -166,8 +176,13 @@ export function addDysonWeatherLayer(
         vec3 toLight = normalize(uLightPos - vWorldPosition);
         float lightDot = dot(vWorldNormal, toLight);
         vec3 n = normalize(vLocalPos);
-        float az = atan(n.z, n.x);
+        
+        // Use atan(x, z) to get azimuthal angle aligned with SphereGeometry phi
+        float az = atan(n.x, n.z);
         if (az < 0.0) az += 6.28318530718;
+
+        // Rotate az by PI to align with shell's phiStart/phiLength centering
+        az = mod(az + 3.14159265, 6.28318530718);
 
         // Reuse continental cloud generation and lighting.
         vec3 cloudPos = n * 3.0 + vec3(seed * 5.17, seed * 11.31, seed * 2.93);
