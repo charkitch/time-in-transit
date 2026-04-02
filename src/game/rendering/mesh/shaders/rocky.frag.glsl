@@ -107,7 +107,7 @@ void main() {
     surfaceColor = mix(surfaceColor, lavaCore, lava);
     surfaceColor = mix(surfaceColor, lavaGlow, lava * smoothstep(0.0, 0.6, sunDot + 0.2) * 0.35);
 
-  } else {
+  } else if (surfType == 8) {
     // -- Forest moon: dense green canopy, muted seas, Endor-like and rare --
     float landMask = smoothstep(-0.18, 0.02, n);
     vec3 deepWater = vec3(0.03, 0.09, 0.13);
@@ -119,6 +119,20 @@ void main() {
     vec3 forest = mix(lowForest, highForest, smoothstep(0.0, 0.4, n));
     forest = mix(forest, rock, smoothstep(0.35, 0.65, n) * 0.2);
     surfaceColor = mix(waterC, forest, landMask);
+
+  } else {
+    // -- Mountain world (surfType == 9): ridged peaks, elevation-based coloring --
+    float ridge = 1.0 - abs(snoise(noisePos * 2.2));
+    ridge = pow(ridge, 2.5);
+    float elevation = smoothstep(0.0, 1.0, n * 0.5 + ridge * 0.5);
+    vec3 valley = vec3(0.15, 0.28, 0.10);
+    vec3 rock = mix(vec3(0.42, 0.38, 0.32), baseColor * 0.6, 0.3);
+    vec3 snow = vec3(0.92, 0.95, 1.0);
+    surfaceColor = mix(valley, rock, smoothstep(0.2, 0.55, elevation));
+    surfaceColor = mix(surfaceColor, snow, smoothstep(0.6, 0.82, elevation));
+    // Fake self-shadowing from ridge gradients
+    float shadow = 1.0 - ridge * 0.35;
+    surfaceColor *= shadow;
   }
 
   // Lighting: sun side brighter, dark side very dim

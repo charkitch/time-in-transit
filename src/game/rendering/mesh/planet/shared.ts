@@ -37,4 +37,5 @@ export const SURFACE_TYPE_INDEX: Record<SurfaceType, number> = {
   ice: 6,
   volcanic: 7,
   forest_moon: 8,
+  mountain: 9,
 };

@@ -9,10 +9,15 @@ export interface SceneEntity {
   orbitInclination?: number;
   orbitNode?: number;
   shellCurveRadius?: number;
+  shellArcWidth?: number;
+  shellArcHeight?: number;
   parentId?: string;
   type: 'planet' | 'station' | 'star' | 'moon' | 'npc_ship' | 'fleet_ship' | 'dyson_shell';
   worldPos: THREE.Vector3;
   collisionRadius: number;
+  collisionSampleRadius?: number;
+  collisionSamplesLocal?: THREE.Vector3[];
+  collisionSamplesWorld?: THREE.Vector3[];
 }
 
 export interface XRayTransferStream {

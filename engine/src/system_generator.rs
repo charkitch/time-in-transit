@@ -43,14 +43,15 @@ fn star_radius_range(st: StarType) -> (f64, f64) {
 }
 
 const ROCKY_SURFACE_WEIGHTS: &[(SurfaceType, f64)] = &[
-    (SurfaceType::Barren, 0.24),
-    (SurfaceType::Desert, 0.22),
-    (SurfaceType::Ice, 0.14),
+    (SurfaceType::Barren, 0.22),
+    (SurfaceType::Desert, 0.20),
+    (SurfaceType::Ice, 0.13),
     (SurfaceType::Volcanic, 0.10),
     (SurfaceType::Venus, 0.10),
     (SurfaceType::Continental, 0.10),
-    (SurfaceType::Ocean, 0.05),
-    (SurfaceType::Marsh, 0.04),
+    (SurfaceType::Mountain, 0.08),
+    (SurfaceType::Ocean, 0.04),
+    (SurfaceType::Marsh, 0.02),
     (SurfaceType::ForestMoon, 0.01),
 ];
 
@@ -227,11 +228,12 @@ fn generate_rocky_moon_radius(rng: &mut PRNG) -> f64 {
 
 fn generate_rocky_clouds(rng: &mut PRNG, surface_type: SurfaceType) -> (bool, f64) {
     match surface_type {
-        SurfaceType::Continental | SurfaceType::Ocean | SurfaceType::Marsh | SurfaceType::ForestMoon => {
+        SurfaceType::Continental | SurfaceType::Ocean | SurfaceType::Marsh | SurfaceType::ForestMoon | SurfaceType::Mountain => {
             let chance = match surface_type {
                 SurfaceType::Ocean => 0.90,
                 SurfaceType::Continental | SurfaceType::Marsh => 0.80,
                 SurfaceType::ForestMoon => 0.70,
+                SurfaceType::Mountain => 0.55,
                 _ => 0.75,
             };
             let has = rng.next() < chance;
@@ -240,6 +242,7 @@ fn generate_rocky_clouds(rng: &mut PRNG, surface_type: SurfaceType) -> (bool, f6
                     SurfaceType::Ocean => rng.float(0.35, 0.70),
                     SurfaceType::Continental | SurfaceType::Marsh => rng.float(0.25, 0.60),
                     SurfaceType::ForestMoon => rng.float(0.20, 0.50),
+                    SurfaceType::Mountain => rng.float(0.15, 0.45),
                     _ => rng.float(0.20, 0.55),
                 }
             } else {
@@ -349,6 +352,26 @@ fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData> {
             let orbit_inclination = base_inclination + rng.float(-0.12, 0.12);
             let orbit_node = base_node + rng.float(-0.12, 0.12);
 
+            const BIOME_PROFILES: &[(DysonBiomeProfile, f64)] = &[
+                (DysonBiomeProfile::Continental, 0.45),
+                (DysonBiomeProfile::Mixed,       0.25),
+                (DysonBiomeProfile::Desert,      0.15),
+                (DysonBiomeProfile::Arctic,      0.15),
+            ];
+            let mut biome_roll = rng.next();
+            let biome_profile = {
+                let mut chosen = DysonBiomeProfile::Mixed;
+                for &(profile, weight) in BIOME_PROFILES {
+                    biome_roll -= weight;
+                    if biome_roll <= 0.0 {
+                        chosen = profile;
+                        break;
+                    }
+                }
+                chosen
+            };
+            let biome_seed = rng.float(0.0, 100.0);
+
             shells.push(DysonShellSegmentData {
                 id: format!("{}-dyson-b{}-s{}", star.id, band, segment),
                 name: format!("{} SHELL B{}-{}", star.name, band + 1, segment + 1),
@@ -366,6 +389,8 @@ fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData> {
                 star_phase: *rng.pick(MINI_STAR_PHASES),
                 interaction_mode: DysonInteractionMode::TargetableOnly,
                 weather_bands,
+                biome_profile,
+                biome_seed,
             });
         }
 

@@ -1,8 +1,17 @@
 import * as THREE from 'three';
-import type { DysonWeatherBandData } from '../../engine';
+import type { DysonBiomeProfile, DysonWeatherBandData } from '../../engine';
 import planetVertex from './shaders/includes/planet_vertex.glsl';
 import dysonShellFrag from './shaders/dyson_shell.frag.glsl';
 import dysonWeatherFrag from './shaders/dyson_weather.frag.glsl';
+import dysonCityLightsFrag from './shaders/dyson_city_lights.frag.glsl';
+import dysonShellExteriorFrag from './shaders/dyson_shell_exterior.frag.glsl';
+
+export const BIOME_PROFILE_INDEX: Record<DysonBiomeProfile, number> = {
+  continental: 0,
+  mixed: 1,
+  desert: 2,
+  arctic: 3,
+};
 
 export function makeDysonShellSegment(
   curveRadius: number,
@@ -11,6 +20,8 @@ export function makeDysonShellSegment(
   baseColor: number,
   starPhase: number,
   seed = 0,
+  biomeProfile: DysonBiomeProfile = 'continental',
+  biomeSeed = 0,
 ): { group: THREE.Group; material: THREE.ShaderMaterial } {
   const group = new THREE.Group();
   const phiLength = THREE.MathUtils.clamp(arcWidth / curveRadius, 0.55, 1.6);
@@ -34,6 +45,8 @@ export function makeDysonShellSegment(
       baseColor: { value: new THREE.Color(baseColor) },
       uLightPhase: { value: starPhase },
       uLightPos: { value: new THREE.Vector3() },
+      biomeProfile: { value: BIOME_PROFILE_INDEX[biomeProfile] },
+      biomeSeed: { value: biomeSeed },
     },
     vertexShader: planetVertex,
     fragmentShader: dysonShellFrag,
@@ -41,10 +54,14 @@ export function makeDysonShellSegment(
 
   group.add(new THREE.Mesh(geo, mat));
 
-  // Dark exterior (convex/outside face)
-  const exteriorMat = new THREE.MeshBasicMaterial({
-    color: 0x2A2D32,
+  // Industrial exterior (convex/outside face)
+  const exteriorMat = new THREE.ShaderMaterial({
     side: THREE.FrontSide,
+    uniforms: {
+      seed: { value: seed },
+    },
+    vertexShader: planetVertex,
+    fragmentShader: dysonShellExteriorFrag,
   });
   group.add(new THREE.Mesh(geo, exteriorMat));
 
@@ -114,6 +131,46 @@ export function addDysonWeatherLayer(
     },
     vertexShader: planetVertex,
     fragmentShader: dysonWeatherFrag,
+  });
+
+  group.add(new THREE.Mesh(geo, mat));
+  return mat;
+}
+
+export function addDysonCityLights(
+  group: THREE.Group,
+  curveRadius: number,
+  arcWidth: number,
+  arcHeight: number,
+  seed: number,
+  starPhase: number,
+): THREE.ShaderMaterial {
+  const phiLength = THREE.MathUtils.clamp(arcWidth / curveRadius, 0.55, 1.6);
+  const thetaLength = THREE.MathUtils.clamp(arcHeight / curveRadius, 0.22, 0.72);
+  const phiStart = Math.PI - phiLength * 0.5;
+  const thetaStart = Math.PI * 0.5 - thetaLength * 0.5;
+  const geo = new THREE.SphereGeometry(
+    curveRadius * 0.997,
+    36,
+    24,
+    phiStart,
+    phiLength,
+    thetaStart,
+    thetaLength,
+  );
+
+  const mat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.BackSide,
+    uniforms: {
+      seed: { value: seed },
+      uLightPhase: { value: starPhase },
+      uLightPos: { value: new THREE.Vector3() },
+    },
+    vertexShader: planetVertex,
+    fragmentShader: dysonCityLightsFrag,
   });
 
   group.add(new THREE.Mesh(geo, mat));

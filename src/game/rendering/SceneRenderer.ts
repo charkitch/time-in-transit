@@ -14,7 +14,7 @@ import {
   makeTexturedPlanet, makeTexturedGasGiant,
   makeRingSystem,
   addCityLights, addSunAtmosphere, addLightning, addCloudLayer,
-  makeDysonShellSegment, addDysonWeatherLayer, makeDysonMiniStar,
+  makeDysonShellSegment, addDysonWeatherLayer, makeDysonMiniStar, addDysonCityLights,
 } from './meshFactory';
 import { selectSkin } from './planetSkins';
 import { disposeAll as disposeTextureCache } from './textureCache';
@@ -41,6 +41,42 @@ const GALAXY_SEED = 0x5AFEF00D;
 const STARFIELD_POS_SCALE = (Math.PI / 2) / 100;
 const STARFIELD_YEAR_SCALE = 0.0002;
 
+function computeDysonCollisionSamples(
+  curveRadius: number,
+  arcWidth: number,
+  arcHeight: number,
+): { local: THREE.Vector3[]; sampleRadius: number } {
+  const phiHalf = THREE.MathUtils.clamp(arcWidth / curveRadius, 0.55, 1.6) * 0.5;
+  const thetaHalf = THREE.MathUtils.clamp(arcHeight / curveRadius, 0.22, 0.72) * 0.5;
+  const alpha = phiHalf * 0.9;
+  const beta = thetaHalf * 0.9;
+  const samples: Array<[number, number]> = [
+    [0, 0],
+    [-alpha, 0],
+    [alpha, 0],
+    [0, -beta],
+    [0, beta],
+    [-alpha * 0.68, -beta * 0.68],
+    [alpha * 0.68, -beta * 0.68],
+    [-alpha * 0.68, beta * 0.68],
+    [alpha * 0.68, beta * 0.68],
+  ];
+  const local = samples.map(([a, b]) => {
+    const cosA = Math.cos(a);
+    const sinA = Math.sin(a);
+    const cosB = Math.cos(b);
+    const sinB = Math.sin(b);
+    return new THREE.Vector3(
+      curveRadius * cosA * cosB,
+      curveRadius * sinB,
+      curveRadius * sinA * cosB,
+    );
+  });
+
+  const sampleRadius = Math.max(70, Math.max(arcWidth, arcHeight) * 0.18);
+  return { local, sampleRadius };
+}
+
 export class SceneRenderer {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
@@ -64,6 +100,7 @@ export class SceneRenderer {
   private dysonShellMaterials: {
     shellMat: THREE.ShaderMaterial;
     weatherMat: THREE.ShaderMaterial;
+    cityMat: THREE.ShaderMaterial;
     miniStar: THREE.Object3D;
   }[] = [];
 
@@ -418,6 +455,8 @@ export class SceneRenderer {
         shell.color,
         shell.starPhase,
         shellSeed,
+        shell.biomeProfile,
+        shell.biomeSeed,
       );
       const miniStar = makeDysonMiniStar(shell.starPhase, shell.curveRadius * 0.035);
       shellGroup.add(miniStar);
@@ -430,7 +469,15 @@ export class SceneRenderer {
         shell.starPhase,
         shell.weatherBands,
       );
-      this.dysonShellMaterials.push({ shellMat, weatherMat: shellWeather, miniStar });
+      const shellCityLights = addDysonCityLights(
+        shellGroup,
+        shell.curveRadius,
+        shell.arcWidth,
+        shell.arcHeight,
+        shellSeed,
+        shell.starPhase,
+      );
+      this.dysonShellMaterials.push({ shellMat, weatherMat: shellWeather, cityMat: shellCityLights, miniStar });
       shellGroup.userData.interactionMode = shell.interactionMode;
       const a = shell.orbitPhase;
       const r = shell.orbitRadius;
@@ -454,6 +501,7 @@ export class SceneRenderer {
       shellGroup.quaternion.setFromRotationMatrix(basis);
       this.scene.add(shellGroup);
       this.systemObjects.push(shellGroup);
+      const collision = computeDysonCollisionSamples(shell.curveRadius, shell.arcWidth, shell.arcHeight);
 
       this.entities.set(shell.id, {
         id: shell.id,
@@ -464,9 +512,14 @@ export class SceneRenderer {
         orbitInclination: shell.orbitInclination,
         orbitNode: shell.orbitNode,
         shellCurveRadius: shell.curveRadius,
+        shellArcWidth: shell.arcWidth,
+        shellArcHeight: shell.arcHeight,
         type: 'dyson_shell',
         worldPos: new THREE.Vector3(),
-        collisionRadius: Math.max(120, shell.curveRadius * 0.35),
+        collisionRadius: collision.sampleRadius,
+        collisionSampleRadius: collision.sampleRadius,
+        collisionSamplesLocal: collision.local,
+        collisionSamplesWorld: collision.local.map(() => new THREE.Vector3()),
       });
     }
 
@@ -737,6 +790,7 @@ export class SceneRenderer {
       entry.shellMat.uniforms.uLightPos.value.copy(worldPos);
       entry.weatherMat.uniforms.uLightPos.value.copy(worldPos);
       entry.weatherMat.uniforms.uTime.value = time;
+      entry.cityMat.uniforms.uLightPos.value.copy(worldPos);
     }
 
     // Battle projectile + explosion animation

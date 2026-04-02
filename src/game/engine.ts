@@ -29,7 +29,10 @@ export type SurfaceType =
   | 'desert'
   | 'ice'
   | 'volcanic'
-  | 'forest_moon';
+  | 'forest_moon'
+  | 'mountain';
+
+export type DysonBiomeProfile = 'continental' | 'mixed' | 'desert' | 'arctic';
 
 export type GasGiantType = 'jovian' | 'saturnian' | 'neptunian' | 'inferno' | 'chromatic' | 'helium';
 
@@ -123,6 +126,8 @@ export interface DysonShellSegmentData {
   starPhase: number;
   interactionMode: DysonInteractionMode;
   weatherBands: DysonWeatherBandData[];
+  biomeProfile: DysonBiomeProfile;
+  biomeSeed: number;
 }
 
 export interface BinaryCompanionData {

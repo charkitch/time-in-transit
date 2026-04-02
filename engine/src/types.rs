@@ -138,6 +138,16 @@ pub enum SurfaceType {
     Ice,
     Volcanic,
     ForestMoon,
+    Mountain,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DysonBiomeProfile {
+    Continental,
+    Mixed,
+    Desert,
+    Arctic,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -288,6 +298,8 @@ pub struct DysonShellSegmentData {
     pub star_phase: f64,
     pub interaction_mode: DysonInteractionMode,
     pub weather_bands: Vec<DysonWeatherBandData>,
+    pub biome_profile: DysonBiomeProfile,
+    pub biome_seed: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
