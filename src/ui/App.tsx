@@ -13,6 +13,7 @@ import { SystemEntryDialog } from './SystemEntryDialog/SystemEntryDialog';
 import { CommDialog } from './CommDialog/CommDialog';
 import type { SceneEntity } from '../game/rendering/SceneRenderer';
 import type { GoodName } from '../game/constants';
+import { detectRuntimeProfile, type RuntimeProfile } from '../runtime/runtimeProfile';
 import * as THREE from 'three';
 
 export function App() {
@@ -28,10 +29,42 @@ export function App() {
 
   const prevUiModeRef = useRef<UIMode>('flight');
   const [flashPhase, setFlashPhase] = useState<'none' | 'entry' | 'exit'>('none');
+  const [runtimeProfile, setRuntimeProfile] = useState<RuntimeProfile | null>(null);
+  const [bootError, setBootError] = useState<string | null>(null);
+  const [contextLossNotice, setContextLossNotice] = useState<string | null>(null);
+  const [gameEpoch, setGameEpoch] = useState(0);
 
   useEffect(() => {
-    if (!canvasRef.current || gameRef.current) return;
-    const game = new Game(canvasRef.current);
+    const updateProfile = () => setRuntimeProfile(detectRuntimeProfile());
+    updateProfile();
+    window.addEventListener('resize', updateProfile);
+    window.visualViewport?.addEventListener('resize', updateProfile);
+    return () => {
+      window.removeEventListener('resize', updateProfile);
+      window.visualViewport?.removeEventListener('resize', updateProfile);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!canvasRef.current || !runtimeProfile || gameRef.current) return;
+    const canvas = canvasRef.current;
+    setBootError(null);
+    setContextLossNotice(null);
+
+    if (!canvas.getContext('webgl2')) {
+      setBootError('WebGL 2 is required. This browser or device is not supported.');
+      return;
+    }
+
+    const game = new Game(canvas, {
+      runtimeProfile,
+      onContextLost: () => setContextLossNotice('Graphics context lost. Waiting for restore...'),
+      onContextRestored: () => {
+        useGameState.getState().saveGame();
+        setContextLossNotice('Graphics context restored. Reinitializing...');
+        setGameEpoch((n) => n + 1);
+      },
+    });
     gameRef.current = game;
     game.start();
 
@@ -39,7 +72,7 @@ export function App() {
       game.dispose();
       gameRef.current = null;
     };
-  }, []);
+  }, [runtimeProfile, gameEpoch]);
 
   // Detect uiMode transitions for flash effects
   useEffect(() => {
@@ -106,15 +139,59 @@ export function App() {
     setInvertControls(!invertControls);
   };
 
+  const isLandscapePlayable = !runtimeProfile?.isMobile || runtimeProfile.isLandscape;
+  const showRotateOverlay = Boolean(runtimeProfile?.isMobile && !runtimeProfile.isLandscape);
+
+  useEffect(() => {
+    if (uiMode !== 'flight' || !isLandscapePlayable) {
+      gameRef.current?.clearTouchFlightInput();
+    }
+  }, [uiMode, isLandscapePlayable]);
+
+  const handleTouchFlightInput = useCallback((input: { pitch: number; yaw: number; thrust: number; boost: boolean }) => {
+    if (uiMode !== 'flight' || !isLandscapePlayable) {
+      gameRef.current?.clearTouchFlightInput();
+      return;
+    }
+    gameRef.current?.setTouchFlightInput(input);
+  }, [uiMode, isLandscapePlayable]);
+
+  const handleTouchDock = () => gameRef.current?.requestDock();
+  const handleTouchHail = () => gameRef.current?.requestHail();
+  const handleTouchTargetCycle = () => gameRef.current?.requestCycleTarget();
+  const handleTouchClusterMap = () => gameRef.current?.requestClusterMapToggle();
+  const handleTouchSystemMap = () => gameRef.current?.requestSystemMapToggle();
+  const handleTouchJump = () => gameRef.current?.requestJump();
+
   return (
     <>
       <canvas
         ref={canvasRef}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          touchAction: 'none',
+          WebkitUserSelect: 'none',
+        }}
       />
 
       {(uiMode === 'flight' || uiMode === 'comms') && (
-        <HUD getEntities={getEntities} getShipPos={getShipPos} getCamera={getCamera} />
+        <HUD
+          getEntities={getEntities}
+          getShipPos={getShipPos}
+          getCamera={getCamera}
+          runtimeProfile={runtimeProfile}
+          isLandscapePlayable={isLandscapePlayable}
+          onTouchFlightInput={handleTouchFlightInput}
+          onDock={handleTouchDock}
+          onHail={handleTouchHail}
+          onTargetCycle={handleTouchTargetCycle}
+          onClusterMap={handleTouchClusterMap}
+          onSystemMap={handleTouchSystemMap}
+          onJump={handleTouchJump}
+        />
       )}
 
       {uiMode === 'flight' && !pendingSystemEntryDialog && <SystemEntryText />}
@@ -183,6 +260,66 @@ export function App() {
       )}
 
       {uiMode === 'dead' && <DeathScreen onRespawn={handleRespawn} onNewGame={handleNewGame} />}
+
+      {runtimeProfile && showRotateOverlay && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 200,
+          pointerEvents: 'all',
+          background: 'rgba(2, 4, 8, 0.96)',
+          color: 'var(--color-hud)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+          padding: 'calc(24px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left))',
+        }}>
+          <div style={{ maxWidth: 420, lineHeight: 1.6 }}>
+            <div style={{ fontSize: 20, letterSpacing: 3, marginBottom: 8 }}>ROTATE DEVICE</div>
+            <div style={{ opacity: 0.8, fontSize: 13 }}>
+              Mobile support in this build is landscape-first. Rotate to continue.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(runtimeProfile === null || bootError || contextLossNotice) && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 250,
+          pointerEvents: 'all',
+          background: 'rgba(0, 0, 0, 0.9)',
+          color: 'var(--color-hud)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+          padding: 24,
+        }}>
+          <div style={{ maxWidth: 520, lineHeight: 1.6 }}>
+            {runtimeProfile === null && (
+              <>
+                <div style={{ fontSize: 20, letterSpacing: 3, marginBottom: 6 }}>CHECKING DEVICE</div>
+                <div style={{ opacity: 0.75, fontSize: 13 }}>Preparing runtime profile...</div>
+              </>
+            )}
+            {bootError && (
+              <>
+                <div style={{ fontSize: 20, letterSpacing: 3, marginBottom: 6, color: 'var(--color-danger)' }}>UNSUPPORTED</div>
+                <div style={{ opacity: 0.85, fontSize: 13 }}>{bootError}</div>
+              </>
+            )}
+            {!bootError && contextLossNotice && (
+              <>
+                <div style={{ fontSize: 20, letterSpacing: 3, marginBottom: 6 }}>RENDERER STATUS</div>
+                <div style={{ opacity: 0.8, fontSize: 13 }}>{contextLossNotice}</div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

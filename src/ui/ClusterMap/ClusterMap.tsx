@@ -261,10 +261,16 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
 
   useEffect(() => { draw(); }, [draw]);
 
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const getMapPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current!.getBoundingClientRect();
-    const mx = ((e.clientX - rect.left) / rect.width) * 100;
-    const my = ((e.clientY - rect.top) / rect.height) * 100;
+    return {
+      mx: ((e.clientX - rect.left) / rect.width) * 100,
+      my: ((e.clientY - rect.top) / rect.height) * 100,
+    };
+  };
+
+  const handleCanvasClick = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const { mx, my } = getMapPointer(e);
 
     let nearest: StarSystemData | null = null;
     let nearestDist = Infinity;
@@ -278,10 +284,8 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
     }
   };
 
-  const handleCanvasMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const mx = ((e.clientX - rect.left) / rect.width) * 100;
-    const my = ((e.clientY - rect.top) / rect.height) * 100;
+  const handleCanvasMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const { mx, my } = getMapPointer(e);
 
     let nearest: StarSystemData | null = null;
     let nearestDist = Infinity;
@@ -321,8 +325,9 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
           width={MAP_W}
           height={MAP_H}
           className={styles.canvas}
-          onClick={handleCanvasClick}
-          onMouseMove={handleCanvasMove}
+          onPointerDown={handleCanvasClick}
+          onPointerMove={handleCanvasMove}
+          onPointerLeave={() => setHovered(null)}
         />
         <div className={styles.info}>
           <div>
@@ -424,9 +429,9 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
               </div>
             )}
             <div className={styles.hint} style={{ marginTop: recentJumps.length > 0 ? '8px' : 0 }}>
-              Click to select target<br />
-              G or ESC to close<br />
-              J to initiate jump
+              Tap to select target<br />
+              Use close button to return<br />
+              Tap JUMP to initiate
             </div>
           </div>
         </div>

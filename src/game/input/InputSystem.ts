@@ -19,6 +19,10 @@ function isDown(key: string): boolean {
 }
 
 export class InputSystem {
+  private touchPitch = 0;
+  private touchYaw = 0;
+  private touchThrust = 0;
+  private touchBoost = false;
   private onDock?: () => void;
   private onClusterMap?: () => void;
   private onSystemMap?: () => void;
@@ -30,6 +34,7 @@ export class InputSystem {
   constructor() {
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
+    window.addEventListener('blur', this.handleBlur);
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
@@ -48,19 +53,28 @@ export class InputSystem {
     KEYS.delete(e.code);
   };
 
+  private handleBlur = () => {
+    KEYS.clear();
+    this.resetTouchFlightInput();
+  };
+
   read(invertControls = false): InputState {
     const down = isDown('KeyS') || isDown('ArrowDown');
     const up = isDown('KeyW') || isDown('ArrowUp');
     const left = isDown('KeyA') || isDown('ArrowLeft');
     const right = isDown('KeyD') || isDown('ArrowRight');
-    const pitch = (down ? 1 : 0) - (up ? 1 : 0);
+    const keyboardPitch = (down ? 1 : 0) - (up ? 1 : 0);
+    const pitchCombined = keyboardPitch + this.touchPitch;
+    const yawCombined = ((isDown('KeyE') ? 1 : 0) - (isDown('KeyQ') ? 1 : 0)) + this.touchYaw;
+    const pitch = Math.max(-1, Math.min(1, pitchCombined));
+    const yaw = Math.max(-1, Math.min(1, yawCombined));
 
     return {
       pitch:       invertControls ? -pitch : pitch,
-      yaw:         (isDown('KeyE') ? 1 : 0) - (isDown('KeyQ') ? 1 : 0),
+      yaw,
       roll:        (right ? 1 : 0) - (left ? 1 : 0),
-      thrust:      isDown('Space') ? 1 : 0,
-      boost:       isDown('ShiftLeft') || isDown('ShiftRight'),
+      thrust:      Math.max(isDown('Space') ? 1 : 0, this.touchThrust),
+      boost:       isDown('ShiftLeft') || isDown('ShiftRight') || this.touchBoost,
       dockRequest: false,
       clusterMap:  false,
       systemMap:   false,
@@ -69,6 +83,28 @@ export class InputSystem {
       confirmJump: isDown('KeyJ'),
     };
   }
+
+  setTouchFlightInput(input: { pitch: number; yaw: number; thrust: number; boost: boolean }) {
+    this.touchPitch = Math.max(-1, Math.min(1, input.pitch));
+    this.touchYaw = Math.max(-1, Math.min(1, input.yaw));
+    this.touchThrust = Math.max(0, Math.min(1, input.thrust));
+    this.touchBoost = input.boost;
+  }
+
+  resetTouchFlightInput() {
+    this.touchPitch = 0;
+    this.touchYaw = 0;
+    this.touchThrust = 0;
+    this.touchBoost = false;
+  }
+
+  triggerDockRequest() { this.onDock?.(); }
+  triggerClusterMapToggle() { this.onClusterMap?.(); }
+  triggerSystemMapToggle() { this.onSystemMap?.(); }
+  triggerCycleTargetEvent() { this.onCycleTarget?.(); }
+  triggerJumpRequestEvent() { this.onJumpRequest?.(); }
+  triggerHailRequest() { this.onHail?.(); }
+  triggerEscapeEvent() { this.onEscape?.(); }
 
   onDockRequest(fn: () => void) { this.onDock = fn; }
   onClusterMapToggle(fn: () => void) { this.onClusterMap = fn; }
@@ -81,5 +117,6 @@ export class InputSystem {
   dispose() {
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('keyup', this.handleKeyUp);
+    window.removeEventListener('blur', this.handleBlur);
   }
 }

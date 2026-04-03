@@ -7,6 +7,8 @@ import type { SceneEntity } from '../../game/rendering/SceneRenderer';
 import { getFaction } from '../../game/data/factions';
 import type { SecretBaseData } from '../../game/engine';
 import { STAR_TYPE_DISPLAY, STAR_DESCRIPTIONS } from '../../game/constants';
+import type { RuntimeProfile } from '../../runtime/runtimeProfile';
+import { TouchFlightControls } from './TouchFlightControls';
 import styles from './HUD.module.css';
 import * as THREE from 'three';
 
@@ -14,9 +16,31 @@ interface HUDProps {
   getEntities: () => Map<string, SceneEntity>;
   getShipPos: () => THREE.Vector3;
   getCamera: () => THREE.PerspectiveCamera | null;
+  runtimeProfile: RuntimeProfile | null;
+  isLandscapePlayable: boolean;
+  onTouchFlightInput: (input: { pitch: number; yaw: number; thrust: number; boost: boolean }) => void;
+  onDock: () => void;
+  onHail: () => void;
+  onTargetCycle: () => void;
+  onClusterMap: () => void;
+  onSystemMap: () => void;
+  onJump: () => void;
 }
 
-export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
+export function HUD({
+  getEntities,
+  getShipPos,
+  getCamera,
+  runtimeProfile,
+  isLandscapePlayable,
+  onTouchFlightInput,
+  onDock,
+  onHail,
+  onTargetCycle,
+  onClusterMap,
+  onSystemMap,
+  onJump,
+}: HUDProps) {
   const [isStarTooltipOpen, setIsStarTooltipOpen] = useState(false);
   const tooltipRef = useRef<HTMLSpanElement>(null);
 
@@ -25,6 +49,7 @@ export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
   const currentSystemId = useGameState(s => s.currentSystemId);
   const alert = useGameState(s => s.ui.alertMessage);
   const hyperspaceTarget = useGameState(s => s.ui.hyperspaceTarget);
+  const uiMode = useGameState(s => s.ui.mode);
   const galaxyYear = useGameState(s => s.galaxyYear);
   const knownFactions = useGameState(s => s.knownFactions);
   const currentSystemPayload = useGameState(s => s.currentSystemPayload);
@@ -78,9 +103,11 @@ export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
     player.targetId && currentSystem
       ? currentSystem.dysonShells.find(s => s.id === player.targetId)
       : undefined;
+  const isMobileHUD = Boolean(runtimeProfile?.isMobile);
+  const touchFlightEnabled = isMobileHUD && isLandscapePlayable && uiMode === 'flight';
 
   return (
-    <div className={styles.hud}>
+    <div className={`${styles.hud} ${isMobileHUD ? styles.mobile : ''}`}>
       <TargetIndicator getEntities={getEntities} getCamera={getCamera} />
       {/* Crosshair */}
       <div className={styles.center}>
@@ -147,11 +174,13 @@ export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
             JUMP TARGET: {targetStar.name}
           </div>
         )}
-        <div className={styles.controls}>
-          W/S Pitch · A/D Roll · Q/E Yaw<br />
-          SPACE Thrust · SHIFT Boost · TAB Target<br />
-          F Dock · G Cluster Map · 1 System Map · J Jump · H Hail
-        </div>
+        {!isMobileHUD && (
+          <div className={styles.controls}>
+            W/S Pitch · A/D Roll · Q/E Yaw<br />
+            SPACE Thrust · SHIFT Boost · TAB Target<br />
+            F Dock · G Cluster Map · 1 System Map · J Jump · H Hail
+          </div>
+        )}
       </div>
 
       {/* Top-right: target info */}
@@ -218,6 +247,19 @@ export function HUD({ getEntities, getShipPos, getCamera }: HUDProps) {
       <div className={styles.bottomRight}>
         <Scanner getEntities={getEntities} />
       </div>
+
+      {isMobileHUD && (
+        <TouchFlightControls
+          enabled={touchFlightEnabled}
+          onInputChange={onTouchFlightInput}
+          onDock={onDock}
+          onHail={onHail}
+          onTargetCycle={onTargetCycle}
+          onClusterMap={onClusterMap}
+          onSystemMap={onSystemMap}
+          onJump={onJump}
+        />
+      )}
     </div>
   );
 }

@@ -35,6 +35,7 @@ import {
   updateNPCShips,
   updateOrbitalEntities,
 } from './scene/orbitAndNpcUpdates';
+import type { RuntimeProfile } from '../../runtime/runtimeProfile';
 export type { SceneEntity } from './scene/types';
 
 const GALAXY_SEED = 0x5AFEF00D;
@@ -103,11 +104,29 @@ export class SceneRenderer {
     cityMat: THREE.ShaderMaterial;
     miniStar: THREE.Object3D;
   }[] = [];
+  private readonly canvas: HTMLCanvasElement;
+  private runtimeProfile: RuntimeProfile | null;
+  private contextLost = false;
+  private readonly onContextLost?: () => void;
+  private readonly onContextRestored?: () => void;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    options?: {
+      runtimeProfile?: RuntimeProfile | null;
+      onContextLost?: () => void;
+      onContextRestored?: () => void;
+    },
+  ) {
     if (!canvas.getContext('webgl2')) throw new Error('WebGL 2 required');
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.canvas = canvas;
+    this.runtimeProfile = options?.runtimeProfile ?? null;
+    this.onContextLost = options?.onContextLost;
+    this.onContextRestored = options?.onContextRestored;
+
+    const antialias = this.runtimeProfile?.qualityTier !== 'medium';
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias });
+    this.renderer.setPixelRatio(this.getPixelRatio());
     this.renderer.setClearColor(PALETTE.bg);
 
     this.scene = new THREE.Scene();
@@ -128,11 +147,47 @@ export class SceneRenderer {
 
     this.handleResize();
     window.addEventListener('resize', this.handleResize);
+    window.visualViewport?.addEventListener('resize', this.handleResize);
+    this.canvas.addEventListener('webglcontextlost', this.handleContextLost, { passive: false });
+    this.canvas.addEventListener('webglcontextrestored', this.handleContextRestored);
   }
 
+  private getPixelRatio(): number {
+    const cap = this.runtimeProfile?.pixelRatioCap ?? window.devicePixelRatio;
+    return Math.max(1, Math.min(window.devicePixelRatio || 1, cap));
+  }
+
+  private getViewportSize(): { width: number; height: number } {
+    const vv = window.visualViewport;
+    if (vv) {
+      return {
+        width: Math.max(1, Math.floor(vv.width)),
+        height: Math.max(1, Math.floor(vv.height)),
+      };
+    }
+    return {
+      width: Math.max(1, window.innerWidth),
+      height: Math.max(1, window.innerHeight),
+    };
+  }
+
+  private handleContextLost = (event: Event) => {
+    event.preventDefault();
+    this.contextLost = true;
+    this.onContextLost?.();
+  };
+
+  private handleContextRestored = () => {
+    this.contextLost = false;
+    this.renderer.setPixelRatio(this.getPixelRatio());
+    this.renderer.resetState();
+    this.handleResize();
+    this.onContextRestored?.();
+  };
+
   private handleResize = () => {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const { width: w, height: h } = this.getViewportSize();
+    this.renderer.setPixelRatio(this.getPixelRatio());
     this.renderer.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
@@ -844,12 +899,16 @@ export class SceneRenderer {
   }
 
   render(): void {
+    if (this.contextLost) return;
     this.camera.getWorldPosition(this.starfield.position);
     this.renderer.render(this.scene, this.camera);
   }
 
   dispose(): void {
     window.removeEventListener('resize', this.handleResize);
+    window.visualViewport?.removeEventListener('resize', this.handleResize);
+    this.canvas.removeEventListener('webglcontextlost', this.handleContextLost);
+    this.canvas.removeEventListener('webglcontextrestored', this.handleContextRestored);
     disposeTextureCache();
     this.renderer.dispose();
   }

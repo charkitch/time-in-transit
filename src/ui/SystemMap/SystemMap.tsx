@@ -260,7 +260,7 @@ export function SystemMap({ onClose }: SystemMapProps) {
             <span><span className={styles.dot} style={{ background: '#8844FF' }} />Secret Base</span>
           )}
         </div>
-        <button className={styles.closeBtn} onClick={onClose}>CLOSE [1]</button>
+        <button className={styles.closeBtn} onClick={onClose}>CLOSE</button>
       </div>
     </div>
   );

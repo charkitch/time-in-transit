@@ -36,6 +36,7 @@ import {
   applyJumpExecution,
   applySystemArrival,
 } from './systems/jumpFlow';
+import type { RuntimeProfile } from '../runtime/runtimeProfile';
 
 const COMBAT_INTEL_INTERVAL = 8;
 const INFINITE_FUEL_DEV = import.meta.env.DEV;
@@ -59,8 +60,19 @@ export class Game {
   private pendingSystemPayload: SystemPayload | null = null;
   private engineReady = false;
 
-  constructor(canvas: HTMLCanvasElement) {
-    this.sceneRenderer = new SceneRenderer(canvas);
+  constructor(
+    canvas: HTMLCanvasElement,
+    options?: {
+      runtimeProfile?: RuntimeProfile | null;
+      onContextLost?: () => void;
+      onContextRestored?: () => void;
+    },
+  ) {
+    this.sceneRenderer = new SceneRenderer(canvas, {
+      runtimeProfile: options?.runtimeProfile,
+      onContextLost: options?.onContextLost,
+      onContextRestored: options?.onContextRestored,
+    });
     this.flightModel = new FlightModel();
     this.input = new InputSystem();
     this.docking = new DockingSystem();
@@ -124,6 +136,38 @@ export class Game {
   /** Allows UI actions (e.g. map button) to trigger the same jump path as the J key. */
   requestJump(): void {
     this.tryJump();
+  }
+
+  setTouchFlightInput(input: { pitch: number; yaw: number; thrust: number; boost: boolean }): void {
+    this.input.setTouchFlightInput(input);
+  }
+
+  clearTouchFlightInput(): void {
+    this.input.resetTouchFlightInput();
+  }
+
+  requestDock(): void {
+    this.input.triggerDockRequest();
+  }
+
+  requestClusterMapToggle(): void {
+    this.input.triggerClusterMapToggle();
+  }
+
+  requestSystemMapToggle(): void {
+    this.input.triggerSystemMapToggle();
+  }
+
+  requestCycleTarget(): void {
+    this.input.triggerCycleTargetEvent();
+  }
+
+  requestHail(): void {
+    this.input.triggerHailRequest();
+  }
+
+  requestEscape(): void {
+    this.input.triggerEscapeEvent();
   }
 
   private loop = (now: number) => {

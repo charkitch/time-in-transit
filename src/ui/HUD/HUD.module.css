@@ -9,27 +9,27 @@
 
 .topLeft {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: calc(16px + env(safe-area-inset-top));
+  left: calc(16px + env(safe-area-inset-left));
 }
 
 .topRight {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: calc(16px + env(safe-area-inset-top));
+  right: calc(16px + env(safe-area-inset-right));
   text-align: right;
 }
 
 .bottomLeft {
   position: absolute;
-  bottom: 16px;
-  left: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  left: calc(16px + env(safe-area-inset-left));
 }
 
 .bottomRight {
   position: absolute;
-  bottom: 16px;
-  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  right: calc(16px + env(safe-area-inset-right));
 }
 
 .center {
@@ -184,4 +184,30 @@
   opacity: 0.5;
   margin-top: 8px;
   line-height: 1.6;
+}
+
+.mobile .topLeft {
+  max-width: min(62vw, 420px);
+}
+
+.mobile .topRight {
+  max-width: min(42vw, 280px);
+}
+
+.mobile .targetInfo {
+  min-width: 120px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.mobile .crosshair {
+  width: 16px;
+  height: 16px;
+}
+
+.mobile .alertBanner {
+  top: calc(66px + env(safe-area-inset-top));
+  font-size: 12px;
+  max-width: 90vw;
+  text-align: center;
 }
