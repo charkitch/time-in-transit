@@ -6,7 +6,7 @@
     "wasm:build": "cd engine && wasm-pack build --target web --out-dir pkg",
     "wasm:build:dev": "cd engine && wasm-pack build --target web --out-dir pkg --dev",
     "dev": "vite",
-    "build": "curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh && npm run wasm:build && tsc && vite build",
+    "build": "npm run wasm:build && tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
