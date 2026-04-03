@@ -58,6 +58,7 @@ fn build_system_payload(
     player_state: &PlayerState,
     secret_base_id: Option<&str>,
     pre_jump_era: Option<u32>,
+    jump_years_in_transit: Option<u32>,
 ) -> SystemPayload {
     let system = generate_solar_system(star);
     let civ_state = get_civ_state(star.id, galaxy_year, star.economy);
@@ -89,14 +90,16 @@ fn build_system_payload(
             if eras_crossed == 1 {
                 lines.push("Centuries have passed. Empires have risen and fallen in your absence.".to_string());
             } else {
-                let years_elapsed = eras_crossed * ERA_LENGTH;
-                lines.push(format!("{} years have passed. The galaxy you knew is ancient history.", years_elapsed));
+                lines.push("Eras have passed. The galaxy you knew is ancient history.".to_string());
             }
             lines.push(String::new());
         }
     }
 
     lines.push(format!("ENTERING {}", star.name.to_uppercase()));
+    if let Some(years) = jump_years_in_transit {
+        lines.push(format!("+{} YEARS IN TRANSIT", years));
+    }
 
     let control_faction = get_faction(&faction_state.controlling_faction_id);
     let contest_faction = faction_state.contesting_faction_id.as_ref()
@@ -162,7 +165,7 @@ fn build_system_payload(
 }
 
 fn jump_years_elapsed(distance: f64) -> u32 {
-    (10.0 * distance.powf(1.4)).round() as u32
+    (10.0 * distance.powf(1.4)).floor() as u32
 }
 
 // ─── WASM API ───────────────────────────────────────────────────────────────
@@ -206,6 +209,7 @@ pub fn init_game(player_state_json: &str) -> Result<String, JsValue> {
         &player_state,
         None,
         None, // no era transition at init
+        None, // no transit time line at init
     );
 
     let cluster_summary = build_cluster_summary(&cluster, player_state.galaxy_year);
@@ -268,6 +272,7 @@ pub fn jump_to_system(target_system_id: u32, player_state_json: &str) -> Result<
         &player_state,
         None,
         Some(pre_jump_era),
+        Some(years_elapsed),
     );
 
     let cluster_summary = build_cluster_summary(cluster, new_galaxy_year);
@@ -352,4 +357,84 @@ pub fn get_cluster_summary(galaxy_year: u32) -> Result<String, JsValue> {
     let summary = build_cluster_summary(&engine.cluster, galaxy_year);
     serde_json::to_string(&summary)
         .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn test_player_state(galaxy_year: u32) -> PlayerState {
+        PlayerState {
+            credits: STARTING_CREDITS,
+            cargo: HashMap::new(),
+            cargo_cost_basis: HashMap::new(),
+            fuel: STARTING_FUEL,
+            shields: 100.0,
+            current_system_id: 0,
+            visited_systems: vec![0],
+            galaxy_year,
+            player_choices: HashMap::new(),
+            last_visit_year: HashMap::new(),
+            known_factions: vec![],
+            faction_memory: HashMap::new(),
+            seen_system_dialog_ids: vec![],
+        }
+    }
+
+    #[test]
+    fn jump_years_elapsed_uses_flooring() {
+        let dist_round_up = (25.6 / 10.0_f64).powf(1.0 / 1.4);
+        let dist_round_down = (25.4 / 10.0_f64).powf(1.0 / 1.4);
+        assert_eq!(jump_years_elapsed(dist_round_up), 25);
+        assert_eq!(jump_years_elapsed(dist_round_down), 25);
+    }
+
+    #[test]
+    fn jump_payload_includes_exact_transit_years_line() {
+        let cluster = generate_cluster();
+        let star = &cluster[1];
+        let galaxy_year = GALAXY_YEAR_START + ERA_LENGTH + 37;
+        let current_era = galaxy_year / ERA_LENGTH;
+        let player = test_player_state(galaxy_year - 137);
+
+        let payload = build_system_payload(
+            star,
+            galaxy_year,
+            &player,
+            None,
+            Some(current_era - 1),
+            Some(137),
+        );
+
+        assert!(payload
+            .system_entry_lines
+            .iter()
+            .any(|line| line == "+137 YEARS IN TRANSIT"));
+        assert!(!payload
+            .system_entry_lines
+            .iter()
+            .any(|line| line.contains("years have passed")));
+    }
+
+    #[test]
+    fn init_payload_does_not_include_transit_line() {
+        let cluster = generate_cluster();
+        let star = &cluster[0];
+        let player = test_player_state(GALAXY_YEAR_START);
+
+        let payload = build_system_payload(
+            star,
+            GALAXY_YEAR_START,
+            &player,
+            None,
+            None,
+            None,
+        );
+
+        assert!(!payload
+            .system_entry_lines
+            .iter()
+            .any(|line| line.contains("YEARS IN TRANSIT")));
+    }
 }
