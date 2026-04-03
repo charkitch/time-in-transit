@@ -10,6 +10,7 @@ const _streamVecF = new THREE.Vector3();
 const _streamVecG = new THREE.Vector3();
 const _streamVecH = new THREE.Vector3();
 const _streamVecI = new THREE.Vector3();
+const _streamVecJ = new THREE.Vector3();
 
 let xRayStreamRibbonTexture: THREE.CanvasTexture | null = null;
 
@@ -197,9 +198,16 @@ export function updateXRayTransferStreams(params: {
     const accretor = entities.get(stream.accretorId);
     if (!donor || !accretor) continue;
 
-    const donorPos = donor.worldPos;
+    const donorCenter = donor.worldPos;
     const accretorPos = accretor.worldPos;
-    const diskTarget = _streamVecE.copy(donorPos).sub(accretorPos);
+
+    // Start stream at the donor's surface (L1 point toward the accretor)
+    const toAccretor = _streamVecA.copy(accretorPos).sub(donorCenter);
+    if (toAccretor.lengthSq() < 1e-6) continue;
+    toAccretor.normalize();
+    const donorPos = _streamVecJ.copy(donorCenter).addScaledVector(toAccretor, donor.collisionRadius);
+
+    const diskTarget = _streamVecE.copy(donorCenter).sub(accretorPos);
     diskTarget.y = 0;
     if (diskTarget.lengthSq() < 1e-6) {
       diskTarget.set(1, 0, 0);
@@ -253,9 +261,9 @@ export function updateXRayTransferStreams(params: {
       if (tubeN1.lengthSq() < 0.01) tubeN1.set(1, 0, 0);
       tubeN1.normalize();
       const tubeN2 = _streamVecI.crossVectors(tubeTangent, tubeN1).normalize();
-      const endTaper = 0.28 + 0.72 * Math.cos(t * Math.PI / 2);
-      const midBulge = Math.pow(Math.sin(t * Math.PI), 0.7);
-      const tubeRadius = ribbonHalfWidth * (0.38 * endTaper + 0.62 * midBulge) * 0.28;
+      const startFade = Math.min(t / 0.12, 1.0);
+      const diskSwell = 0.55 + 0.45 * Math.pow(t, 0.5);
+      const tubeRadius = ribbonHalfWidth * startFade * diskSwell * 0.28;
       for (let n = 0; n < tubeSides; n++) {
         const angle = (n / tubeSides) * Math.PI * 2;
         const ca = Math.cos(angle);
@@ -304,9 +312,9 @@ export function updateXRayTransferStreams(params: {
         side.normalize();
       }
 
-      const endTaper = 0.28 + 0.72 * Math.cos(t * Math.PI / 2);
-      const midBulge = Math.pow(Math.sin(t * Math.PI), 0.7);
-      const envelope = 0.38 * endTaper + 0.62 * midBulge;
+      const startFade = Math.min(t / 0.12, 1.0);
+      const diskSwell = 0.55 + 0.45 * Math.pow(t, 0.5);
+      const envelope = startFade * diskSwell;
       const pulse = 0.94 + 0.06 * Math.sin(time * stream.flowSpeed * 18 - t * 9 + stream.phase);
       const width = ribbonHalfWidth * envelope * pulse;
 

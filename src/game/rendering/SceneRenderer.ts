@@ -314,7 +314,7 @@ export class SceneRenderer {
     });
 
     if (data.starType === 'XB' && data.companion) {
-      const transferStream = createXRayTransferStream(data.companion.color, data.starRadius * 1.9);
+      const transferStream = createXRayTransferStream(data.companion.color, data.starRadius * 2.2);
       this.scene.add(transferStream.spine);
       this.scene.add(transferStream.ribbon);
       this.systemObjects.push(transferStream.spine, transferStream.ribbon);
