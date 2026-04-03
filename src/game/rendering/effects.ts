@@ -29,14 +29,14 @@ export function createHyperspaceTunnel(scene: THREE.Scene): THREE.Points {
   });
 
   const points = new THREE.Points(geo, mat);
-  (points as any)._velocities = velocities;
+  points.userData.velocities = velocities;
   scene.add(points);
   return points;
 }
 
 export function updateHyperspaceTunnel(points: THREE.Points, dt: number): void {
   const positions = points.geometry.attributes.position as THREE.BufferAttribute;
-  const velocities: Float32Array = (points as any)._velocities;
+  const velocities = points.userData.velocities as Float32Array;
   const arr = positions.array as Float32Array;
 
   for (let i = 0; i < velocities.length; i++) {
