@@ -19,6 +19,7 @@ interface TouchFlightControlsProps {
   onClusterMap: () => void;
   onSystemMap: () => void;
   onJump: () => void;
+  onMenu: () => void;
 }
 
 const STICK_RADIUS = 48;
@@ -36,6 +37,7 @@ export function TouchFlightControls({
   onClusterMap,
   onSystemMap,
   onJump,
+  onMenu,
 }: TouchFlightControlsProps) {
   const leftStickRef = useRef<HTMLDivElement>(null);
   const rightStickRef = useRef<HTMLDivElement>(null);
@@ -54,8 +56,8 @@ export function TouchFlightControls({
 
   const [actionsOpen, setActionsOpen] = useState(false);
 
-  const centerThrustActive = Math.hypot(rightRawX, rightRawY) <= CENTER_THRUST_RADIUS;
-  const boostActive = rightRawY <= BOOST_TOP_Y;
+  const centerThrustActive = rightActive && Math.hypot(rightRawX, rightRawY) <= CENTER_THRUST_RADIUS;
+  const boostActive = rightActive && rightRawY <= BOOST_TOP_Y;
   const thrust = boostActive || centerThrustActive ? 1 : 0;
 
   useEffect(() => {
@@ -238,6 +240,7 @@ export function TouchFlightControls({
             <button type="button" className={styles.actionButton} onClick={() => runAction(onClusterMap)}>CLUSTER</button>
             <button type="button" className={styles.actionButton} onClick={() => runAction(onSystemMap)}>SYSTEM</button>
             <button type="button" className={styles.actionButton} onClick={() => runAction(onJump)}>JUMP</button>
+            <button type="button" className={styles.actionButton} onClick={() => runAction(onMenu)}>MENU</button>
           </div>
         )}
       </div>

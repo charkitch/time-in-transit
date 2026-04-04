@@ -1,6 +1,6 @@
 import { useGameState } from '../../game/GameState';
 import { useState, useRef, useEffect } from 'react';
-import { StatusBars } from './StatusBars';
+import { StatusBars, MobileStatusBars } from './StatusBars';
 import { TargetIndicator } from './TargetIndicator';
 import type { SceneEntity } from '../../game/rendering/SceneRenderer';
 import { getFaction } from '../../game/data/factions';
@@ -24,6 +24,7 @@ interface HUDProps {
   onClusterMap: () => void;
   onSystemMap: () => void;
   onJump: () => void;
+  onMenu: () => void;
 }
 
 export function HUD({
@@ -39,6 +40,7 @@ export function HUD({
   onClusterMap,
   onSystemMap,
   onJump,
+  onMenu,
 }: HUDProps) {
   const [isStarTooltipOpen, setIsStarTooltipOpen] = useState(false);
   const tooltipRef = useRef<HTMLSpanElement>(null);
@@ -240,10 +242,19 @@ export function HUD({
         )}
       </div>
 
-      {/* Bottom-left: status bars */}
-      <div className={styles.bottomLeft}>
-        <StatusBars />
-      </div>
+      {/* Bottom-left: status bars (desktop only) */}
+      {!isMobileHUD && (
+        <div className={styles.bottomLeft}>
+          <StatusBars />
+        </div>
+      )}
+
+      {/* Top-center: thin status bars (mobile only) */}
+      {isMobileHUD && (
+        <div className={styles.topCenter}>
+          <MobileStatusBars />
+        </div>
+      )}
 
       {isMobileHUD && (
         <TouchFlightControls
@@ -256,6 +267,7 @@ export function HUD({
           onClusterMap={onClusterMap}
           onSystemMap={onSystemMap}
           onJump={onJump}
+          onMenu={onMenu}
         />
       )}
     </div>

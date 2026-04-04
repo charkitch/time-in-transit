@@ -16,7 +16,6 @@ import type { GoodName } from '../game/constants';
 import { detectRuntimeProfile, type RuntimeProfile } from '../runtime/runtimeProfile';
 import * as THREE from 'three';
 
-const MOBILE_GAME_ASPECT = 16 / 9;
 const BUILD_TAG_LABEL = `${__APP_BUILD__.sha}-${__APP_BUILD__.number}`;
 
 function runtimeProfileInitKey(profile: RuntimeProfile | null): string {
@@ -61,29 +60,10 @@ export function App() {
   }, []);
 
   const runtimeInitKey = runtimeProfileInitKey(runtimeProfile);
-  const frameStyle = useMemo(() => {
-    if (!runtimeProfile?.isMobile) {
-      return {
-        position: 'absolute' as const,
-        inset: 0,
-      };
-    }
-    const vv = window.visualViewport;
-    const viewportWidth = vv?.width ?? window.innerWidth;
-    const viewportHeight = vv?.height ?? window.innerHeight;
-    const width = Math.min(viewportWidth, viewportHeight * MOBILE_GAME_ASPECT);
-    const height = width / MOBILE_GAME_ASPECT;
-    return {
-      position: 'absolute' as const,
-      left: '50%',
-      top: '50%',
-      transform: 'translate(-50%, -50%)',
-      width: `${width}px`,
-      height: `${height}px`,
-      overflow: 'hidden',
-      background: '#000',
-    };
-  }, [runtimeProfile]);
+  const frameStyle = useMemo(() => ({
+    position: 'absolute' as const,
+    inset: 0,
+  }), []);
 
   useEffect(() => {
     if (!canvasRef.current || !runtimeProfile || gameRef.current) return;
@@ -227,6 +207,7 @@ export function App() {
   const handleTouchClusterMap = () => gameRef.current?.requestClusterMapToggle();
   const handleTouchSystemMap = () => gameRef.current?.requestSystemMapToggle();
   const handleTouchJump = () => gameRef.current?.requestJump();
+  const handleTouchMenu = () => setUIMode('menu');
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
@@ -257,6 +238,7 @@ export function App() {
           onClusterMap={handleTouchClusterMap}
           onSystemMap={handleTouchSystemMap}
           onJump={handleTouchJump}
+          onMenu={handleTouchMenu}
         />
       )}
 
@@ -332,21 +314,22 @@ export function App() {
       {runtimeProfile?.isMobile && !runtimeProfile.isLandscape && (
         <div style={{
           position: 'absolute',
-          top: 'max(10px, env(safe-area-inset-top))',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          inset: 0,
           zIndex: 210,
-          pointerEvents: 'none',
-          background: 'rgba(0, 0, 0, 0.6)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
+          background: 'rgba(0, 0, 0, 0.92)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 12,
           color: 'var(--color-hud)',
-          fontSize: 11,
-          letterSpacing: 1,
-          padding: '6px 10px',
-          borderRadius: 6,
-          whiteSpace: 'nowrap',
+          fontFamily: 'var(--font-hud)',
+          letterSpacing: 2,
+          textAlign: 'center',
+          padding: 24,
         }}>
-          WIDESCREEN MODE ACTIVE
+          <div style={{ fontSize: 28, opacity: 0.7 }}>&#8635;</div>
+          <div style={{ fontSize: 13 }}>ROTATE TO LANDSCAPE</div>
         </div>
       )}
 
