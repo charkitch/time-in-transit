@@ -24,6 +24,7 @@ interface TouchFlightControlsProps {
 
 const STICK_RADIUS = 48;
 const STICK_DEADZONE = 0.14;
+const ROLL_EDGE_THRESHOLD = 0.5;
 const CENTER_THRUST_RADIUS = 0.28;
 const BOOST_TOP_Y = -0.78;
 
@@ -59,6 +60,9 @@ export function TouchFlightControls({
   const centerThrustActive = rightActive && Math.hypot(rightRawX, rightRawY) <= CENTER_THRUST_RADIUS;
   const boostActive = rightActive && rightRawY <= BOOST_TOP_Y;
   const thrust = boostActive || centerThrustActive ? 1 : 0;
+  const roll = Math.abs(rightX) < ROLL_EDGE_THRESHOLD
+    ? 0
+    : Math.sign(rightX) * ((Math.abs(rightX) - ROLL_EDGE_THRESHOLD) / (1 - ROLL_EDGE_THRESHOLD));
 
   useEffect(() => {
     if (!enabled) {
@@ -80,11 +84,11 @@ export function TouchFlightControls({
     onInputChange({
       pitch: leftY,
       yaw: leftX,
-      roll: rightX,
+      roll,
       thrust,
       boost: boostActive,
     });
-  }, [enabled, leftX, leftY, rightX, thrust, boostActive, onInputChange]);
+  }, [enabled, leftX, leftY, roll, thrust, boostActive, onInputChange]);
 
   const updateStickFromPointer = (
     stickRef: React.RefObject<HTMLDivElement>,

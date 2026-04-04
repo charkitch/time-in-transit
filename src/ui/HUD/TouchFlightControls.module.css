@@ -116,9 +116,11 @@
   transform: none;
   width: min(90vw, 330px);
   display: grid;
-  grid-template-columns: repeat(3, minmax(80px, 1fr));
+  grid-template-columns: repeat(4, minmax(68px, 1fr));
   gap: 8px;
   padding: 8px;
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 220px);
+  overflow-y: auto;
   border: 1px solid rgba(100, 255, 180, 0.48);
   background: rgba(4, 12, 9, 0.92);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.48);
