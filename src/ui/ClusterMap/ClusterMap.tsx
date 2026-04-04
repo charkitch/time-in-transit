@@ -11,7 +11,7 @@ const hyperspace = new HyperspaceSystem();
 const MAP_W = 520;
 const MAP_H = 420;
 const MOBILE_BREAKPOINT = 820;
-const MOBILE_CLUSTER_ZOOM = 4;
+const MOBILE_CLUSTER_ZOOM = 2.8;
 
 interface MapViewport {
   minX: number;
@@ -119,7 +119,9 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
   });
 
   useEffect(() => {
-    const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const media = window.matchMedia(
+      `(max-width: ${MOBILE_BREAKPOINT}px), (hover: none) and (pointer: coarse)`,
+    );
     const update = () => setIsMobile(media.matches);
     update();
     media.addEventListener('change', update);
@@ -332,11 +334,15 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
       }
 
       // Name label
-      if (isCurrent || isTarget || hovered?.id === sys.id) {
-        ctx.fillStyle = isCurrent ? '#33FF88' : isTarget ? '#44CCFF' : '#FFFFFF';
-        ctx.font = '10px Courier New';
-        ctx.fillText(sys.name.toUpperCase(), sx + 8, sy + 4);
-      }
+      ctx.fillStyle = isCurrent
+        ? '#33FF88'
+        : isTarget
+          ? '#44CCFF'
+          : hovered?.id === sys.id
+            ? '#FFFFFF'
+            : 'rgba(140, 210, 190, 0.78)';
+      ctx.font = '9px Courier New';
+      ctx.fillText(sys.name.toUpperCase(), sx + 8, sy + 4);
     }
   }, [cluster, currentSystemId, visitedSystems, hyperspaceTarget, reachableIds, hovered, currentSys, knownFactions, lastVisitYear, galaxyYear, galaxySimState, clusterSummaryById, isMobile, mobileCenter.x, mobileCenter.y]);
 
@@ -476,19 +482,21 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
             YEAR {galaxyYear.toLocaleString()}
           </span>
         </div>
-        <canvas
-          ref={canvasRef}
-          width={MAP_W}
-          height={MAP_H}
-          className={styles.canvas}
-          onPointerDown={handleCanvasDown}
-          onPointerMove={handleCanvasMove}
-          onPointerUp={handleCanvasUp}
-          onPointerCancel={handleCanvasCancel}
-          onPointerLeave={() => setHovered(null)}
-        />
+        <div className={styles.canvasViewport}>
+          <canvas
+            ref={canvasRef}
+            width={MAP_W}
+            height={MAP_H}
+            className={styles.canvas}
+            onPointerDown={handleCanvasDown}
+            onPointerMove={handleCanvasMove}
+            onPointerUp={handleCanvasUp}
+            onPointerCancel={handleCanvasCancel}
+            onPointerLeave={() => setHovered(null)}
+          />
+        </div>
         <div className={styles.info}>
-          <div>
+          <div className={styles.infoPrimary}>
             <div>CURRENT: <span className={styles.selected}>{currentSys.name.toUpperCase()}</span></div>
             {selectedSys && (
               <div style={{ marginTop: '4px' }}>
@@ -568,9 +576,9 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
               </div>
             )}
           </div>
-          <div>
+          <div className={styles.infoSecondary}>
             {recentJumps.length > 0 && (
-              <div style={{ fontSize: '10px', opacity: 0.7 }}>
+              <div className={styles.recentJumps}>
                 <div style={{ marginBottom: '3px', letterSpacing: '1px' }}>RECENT JUMPS</div>
                 {recentJumps.map((entry, i) => {
                   const fromName = cluster[entry.fromSystemId]?.name ?? '?';
