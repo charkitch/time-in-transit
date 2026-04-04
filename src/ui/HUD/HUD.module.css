@@ -26,12 +26,6 @@
   left: calc(16px + env(safe-area-inset-left));
 }
 
-.bottomRight {
-  position: absolute;
-  bottom: calc(16px + env(safe-area-inset-bottom));
-  right: calc(16px + env(safe-area-inset-right));
-}
-
 .center {
   position: absolute;
   top: 50%;

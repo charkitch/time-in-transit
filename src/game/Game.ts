@@ -577,6 +577,7 @@ export class Game {
       flightModel: this.flightModel,
       discoverFactions: discoverFactionsFromSystem,
     });
+    state.saveGame();
   }
 
   private triggerDeath(deathMessage: string[] | null = null): void {
@@ -695,11 +696,13 @@ export class Game {
       if (state.player.credits >= entry.buyPrice && totalCargo < MAX_CARGO) {
         state.addCredits(-entry.buyPrice);
         state.addCargo(good, 1, entry.buyPrice);
+        state.saveGame();
       }
     } else {
       if ((state.player.cargo[good] ?? 0) > 0) {
         state.addCredits(entry.sellPrice);
         state.removeCargo(good, 1);
+        state.saveGame();
       }
     }
   }

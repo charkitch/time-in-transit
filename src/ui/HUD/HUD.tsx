@@ -1,7 +1,6 @@
 import { useGameState } from '../../game/GameState';
 import { useState, useRef, useEffect } from 'react';
 import { StatusBars } from './StatusBars';
-import { Scanner } from './Scanner';
 import { TargetIndicator } from './TargetIndicator';
 import type { SceneEntity } from '../../game/rendering/SceneRenderer';
 import { getFaction } from '../../game/data/factions';
@@ -244,11 +243,6 @@ export function HUD({
       {/* Bottom-left: status bars */}
       <div className={styles.bottomLeft}>
         <StatusBars />
-      </div>
-
-      {/* Bottom-right: scanner */}
-      <div className={styles.bottomRight}>
-        <Scanner getEntities={getEntities} />
       </div>
 
       {isMobileHUD && (

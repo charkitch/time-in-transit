@@ -87,10 +87,11 @@
 
 .menuWrap {
   position: absolute;
-  left: 50%;
-  bottom: calc(20px + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
+  right: calc(20px + env(safe-area-inset-right));
+  bottom: calc(150px + env(safe-area-inset-bottom));
   pointer-events: auto;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .menuButton {
@@ -110,9 +111,9 @@
 
 .actionMenu {
   position: absolute;
-  left: 50%;
+  right: 0;
   bottom: calc(100% + 8px);
-  transform: translateX(-50%);
+  transform: none;
   width: min(90vw, 330px);
   display: grid;
   grid-template-columns: repeat(3, minmax(80px, 1fr));

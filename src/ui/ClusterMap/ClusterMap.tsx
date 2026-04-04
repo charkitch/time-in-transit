@@ -11,7 +11,7 @@ const hyperspace = new HyperspaceSystem();
 const MAP_W = 520;
 const MAP_H = 420;
 const MOBILE_BREAKPOINT = 820;
-const MOBILE_CLUSTER_ZOOM = 2.2;
+const MOBILE_CLUSTER_ZOOM = 4;
 
 interface MapViewport {
   minX: number;
@@ -25,23 +25,33 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function getViewport(currentX: number, currentY: number, isMobile: boolean): MapViewport {
-  if (!isMobile) {
-    return { minX: 0, maxX: 100, minY: 0, maxY: 100, zoom: 1 };
-  }
-
+function clampMobileCenter(x: number, y: number): { x: number; y: number } {
   const spanX = 100 / MOBILE_CLUSTER_ZOOM;
   const spanY = 100 / MOBILE_CLUSTER_ZOOM;
   const halfX = spanX / 2;
   const halfY = spanY / 2;
-  const centerX = clamp(currentX, halfX, 100 - halfX);
-  const centerY = clamp(currentY, halfY, 100 - halfY);
+  return {
+    x: clamp(x, halfX, 100 - halfX),
+    y: clamp(y, halfY, 100 - halfY),
+  };
+}
+
+function getViewport(centerX: number, centerY: number, isMobile: boolean): MapViewport {
+  if (!isMobile) {
+    return { minX: 0, maxX: 100, minY: 0, maxY: 100, zoom: 1 };
+  }
+
+  const { x, y } = clampMobileCenter(centerX, centerY);
+  const spanX = 100 / MOBILE_CLUSTER_ZOOM;
+  const spanY = 100 / MOBILE_CLUSTER_ZOOM;
+  const halfX = spanX / 2;
+  const halfY = spanY / 2;
 
   return {
-    minX: centerX - halfX,
-    maxX: centerX + halfX,
-    minY: centerY - halfY,
-    maxY: centerY + halfY,
+    minX: x - halfX,
+    maxX: x + halfX,
+    minY: y - halfY,
+    maxY: y + halfY,
     zoom: MOBILE_CLUSTER_ZOOM,
   };
 }
@@ -77,6 +87,10 @@ interface ClusterMapProps {
 
 export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const panPointerIdRef = useRef<number | null>(null);
+  const panStartPixelRef = useRef<{ x: number; y: number } | null>(null);
+  const panStartCenterRef = useRef<{ x: number; y: number } | null>(null);
+  const didPanRef = useRef(false);
   const [isMobile, setIsMobile] = useState(false);
   const cluster = useGameState(s => s.cluster);
   const currentSystemId = useGameState(s => s.currentSystemId);
@@ -99,6 +113,10 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
   );
 
   const [hovered, setHovered] = useState<StarSystemData | null>(null);
+  const [mobileCenter, setMobileCenter] = useState<{ x: number; y: number }>({
+    x: currentSys.x,
+    y: currentSys.y,
+  });
 
   useEffect(() => {
     const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
@@ -107,6 +125,11 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
   }, []);
+
+  useEffect(() => {
+    setMobileCenter({ x: currentSys.x, y: currentSys.y });
+    setHovered(null);
+  }, [currentSystemId, currentSys.x, currentSys.y]);
 
   // Compute years-elapsed preview for hovered/targeted system
   const previewSys = hovered ?? (hyperspaceTarget !== null ? cluster[hyperspaceTarget] : null);
@@ -124,7 +147,9 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const viewport = getViewport(currentSys.x, currentSys.y, isMobile);
+    const viewport = isMobile
+      ? getViewport(mobileCenter.x, mobileCenter.y, true)
+      : getViewport(currentSys.x, currentSys.y, false);
 
     ctx.clearRect(0, 0, MAP_W, MAP_H);
     ctx.fillStyle = '#010206';
@@ -313,13 +338,15 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
         ctx.fillText(sys.name.toUpperCase(), sx + 8, sy + 4);
       }
     }
-  }, [cluster, currentSystemId, visitedSystems, hyperspaceTarget, reachableIds, hovered, currentSys, knownFactions, lastVisitYear, galaxyYear, galaxySimState, clusterSummaryById, isMobile]);
+  }, [cluster, currentSystemId, visitedSystems, hyperspaceTarget, reachableIds, hovered, currentSys, knownFactions, lastVisitYear, galaxyYear, galaxySimState, clusterSummaryById, isMobile, mobileCenter.x, mobileCenter.y]);
 
   useEffect(() => { draw(); }, [draw]);
 
   const getMapPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current!.getBoundingClientRect();
-    const viewport = getViewport(currentSys.x, currentSys.y, isMobile);
+    const viewport = isMobile
+      ? getViewport(mobileCenter.x, mobileCenter.y, true)
+      : getViewport(currentSys.x, currentSys.y, false);
     const px = (e.clientX - rect.left) / rect.width;
     const py = (e.clientY - rect.top) / rect.height;
     const [mx, my] = toWorld(px, py, viewport);
@@ -332,31 +359,97 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
     };
   };
 
-  const handleCanvasClick = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const { mx, my, pickRadius } = getMapPointer(e);
-
+  const pickNearestSystem = (mx: number, my: number, pickRadius: number): StarSystemData | null => {
     let nearest: StarSystemData | null = null;
     let nearestDist = Infinity;
     for (const sys of cluster) {
       const d = Math.hypot(sys.x - mx, sys.y - my);
-      if (d < nearestDist && d < pickRadius) { nearest = sys; nearestDist = d; }
+      if (d < nearestDist && d < pickRadius) {
+        nearest = sys;
+        nearestDist = d;
+      }
     }
+    return nearest;
+  };
 
+  const selectAtPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const { mx, my, pickRadius } = getMapPointer(e);
+    const nearest = pickNearestSystem(mx, my, pickRadius);
     if (nearest && nearest.id !== currentSystemId && reachableIds.has(nearest.id)) {
       setHyperspaceTarget(nearest.id);
     }
   };
 
+  const handleCanvasDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isMobile) {
+      selectAtPointer(e);
+      return;
+    }
+
+    const rect = canvasRef.current!.getBoundingClientRect();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    panPointerIdRef.current = e.pointerId;
+    panStartPixelRef.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+    panStartCenterRef.current = {
+      x: mobileCenter.x,
+      y: mobileCenter.y,
+    };
+    didPanRef.current = false;
+  };
+
   const handleCanvasMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const { mx, my, pickRadius } = getMapPointer(e);
+    if (isMobile && panPointerIdRef.current === e.pointerId && panStartPixelRef.current && panStartCenterRef.current) {
+      const rect = canvasRef.current!.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const dx = px - panStartPixelRef.current.x;
+      const dy = py - panStartPixelRef.current.y;
+      const viewport = getViewport(panStartCenterRef.current.x, panStartCenterRef.current.y, true);
+      const worldPerPxX = (viewport.maxX - viewport.minX) / rect.width;
+      const worldPerPxY = (viewport.maxY - viewport.minY) / rect.height;
+      const moved = Math.hypot(dx, dy);
+      if (moved > 6) didPanRef.current = true;
+
+      const next = clampMobileCenter(
+        panStartCenterRef.current.x - dx * worldPerPxX,
+        panStartCenterRef.current.y - dy * worldPerPxY,
+      );
+      setMobileCenter(next);
+      return;
+    }
 
     let nearest: StarSystemData | null = null;
-    let nearestDist = Infinity;
-    for (const sys of cluster) {
-      const d = Math.hypot(sys.x - mx, sys.y - my);
-      if (d < nearestDist && d < pickRadius) { nearest = sys; nearestDist = d; }
-    }
+    const { mx, my, pickRadius } = getMapPointer(e);
+    nearest = pickNearestSystem(mx, my, pickRadius);
     setHovered(nearest);
+  };
+
+  const handleCanvasUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isMobile) return;
+    if (panPointerIdRef.current !== e.pointerId) return;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    if (!didPanRef.current) {
+      selectAtPointer(e);
+    }
+    panPointerIdRef.current = null;
+    panStartPixelRef.current = null;
+    panStartCenterRef.current = null;
+    didPanRef.current = false;
+  };
+
+  const handleCanvasCancel = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (isMobile && panPointerIdRef.current === e.pointerId) {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+      panPointerIdRef.current = null;
+      panStartPixelRef.current = null;
+      panStartCenterRef.current = null;
+      didPanRef.current = false;
+    }
   };
 
   const selectedSys = hyperspaceTarget !== null ? cluster[hyperspaceTarget] : null;
@@ -388,8 +481,10 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
           width={MAP_W}
           height={MAP_H}
           className={styles.canvas}
-          onPointerDown={handleCanvasClick}
+          onPointerDown={handleCanvasDown}
           onPointerMove={handleCanvasMove}
+          onPointerUp={handleCanvasUp}
+          onPointerCancel={handleCanvasCancel}
           onPointerLeave={() => setHovered(null)}
         />
         <div className={styles.info}>
@@ -492,7 +587,7 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
               </div>
             )}
             <div className={styles.hint} style={{ marginTop: recentJumps.length > 0 ? '8px' : 0 }}>
-              Tap to select target<br />
+              {isMobile ? 'Drag to pan local stars' : 'Tap to select target'}<br />
               Use close button to return<br />
               Tap JUMP to initiate
             </div>

@@ -16,6 +16,17 @@ import type { GoodName } from '../game/constants';
 import { detectRuntimeProfile, type RuntimeProfile } from '../runtime/runtimeProfile';
 import * as THREE from 'three';
 
+function runtimeProfileInitKey(profile: RuntimeProfile | null): string {
+  if (!profile) return 'none';
+  return [
+    profile.isMobile ? '1' : '0',
+    profile.isTouchPrimary ? '1' : '0',
+    profile.pixelRatioCap,
+    profile.qualityTier,
+    profile.minSupportedYear,
+  ].join(':');
+}
+
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
@@ -45,6 +56,8 @@ export function App() {
     };
   }, []);
 
+  const runtimeInitKey = runtimeProfileInitKey(runtimeProfile);
+
   useEffect(() => {
     if (!canvasRef.current || !runtimeProfile || gameRef.current) return;
     const canvas = canvasRef.current;
@@ -72,7 +85,7 @@ export function App() {
       game.dispose();
       gameRef.current = null;
     };
-  }, [runtimeProfile, gameEpoch]);
+  }, [runtimeInitKey, gameEpoch]);
 
   // Detect uiMode transitions for flash effects
   useEffect(() => {

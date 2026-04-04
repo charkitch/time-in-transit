@@ -22,6 +22,7 @@ export function StationUI({ onUndock }: StationUIProps) {
   const removeCargo = useGameState(s => s.removeCargo);
   const setFuel = useGameState(s => s.setFuel);
   const setShields = useGameState(s => s.setShields);
+  const saveGame = useGameState(s => s.saveGame);
 
   const starData = cluster[currentSystemId];
   const civState = currentSystemPayload?.civState;
@@ -34,6 +35,7 @@ export function StationUI({ onUndock }: StationUIProps) {
     if (banned || stock === 0 || cargoSpace === 0 || player.credits < price) return;
     addCredits(-price);
     addCargo(good, 1, price);
+    saveGame();
   };
 
   const handleSell = (good: GoodName, price: number) => {
@@ -41,6 +43,7 @@ export function StationUI({ onUndock }: StationUIProps) {
     if (qty === 0) return;
     addCredits(price);
     removeCargo(good, 1);
+    saveGame();
   };
 
   const fuelNeeded = Math.max(0, HYPERSPACE.tankSize - player.fuel);
@@ -51,6 +54,7 @@ export function StationUI({ onUndock }: StationUIProps) {
     if (player.credits < refuelCost || fuelNeeded === 0) return;
     addCredits(-refuelCost);
     setFuel(HYPERSPACE.tankSize);
+    saveGame();
   };
 
   const shieldMissing = Math.max(0, 100 - Math.floor(player.shields));
@@ -59,6 +63,7 @@ export function StationUI({ onUndock }: StationUIProps) {
     if (player.credits < repairCost || shieldMissing === 0) return;
     addCredits(-repairCost);
     setShields(100);
+    saveGame();
   };
 
   return (
