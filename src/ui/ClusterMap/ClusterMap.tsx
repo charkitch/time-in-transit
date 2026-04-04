@@ -482,122 +482,124 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
             YEAR {galaxyYear.toLocaleString()}
           </span>
         </div>
-        <div className={styles.canvasViewport}>
-          <canvas
-            ref={canvasRef}
-            width={MAP_W}
-            height={MAP_H}
-            className={styles.canvas}
-            onPointerDown={handleCanvasDown}
-            onPointerMove={handleCanvasMove}
-            onPointerUp={handleCanvasUp}
-            onPointerCancel={handleCanvasCancel}
-            onPointerLeave={() => setHovered(null)}
-          />
-        </div>
-        <div className={styles.info}>
-          <div className={styles.infoPrimary}>
-            <div>CURRENT: <span className={styles.selected}>{currentSys.name.toUpperCase()}</span></div>
-            {selectedSys && (
-              <div style={{ marginTop: '4px' }}>
-                TARGET: <span className={styles.selected}>{selectedSys.name.toUpperCase()}</span>
-                <br />
-                FUEL COST: {jumpCost.toFixed(1)} / {player.fuel.toFixed(1)}
-                <br />
-                {(() => {
-                  const dx = selectedSys.x - currentSys.x;
-                  const dy = selectedSys.y - currentSys.y;
-                  const yrs = jumpYearsElapsed(Math.sqrt(dx * dx + dy * dy));
-                  return <span style={{ color: 'var(--color-warning)' }}>+{yrs.toLocaleString()} YRS</span>;
-                })()}
-                <br />
-                TECH LV: {selectedSummary?.techLevel ?? selectedSys.techLevel} · {selectedSummary?.economy ?? selectedSys.economy}
-                {galaxySimState && (() => {
-                  const sim = galaxySimState.find(s => s.systemId === selectedSys.id);
-                  if (!sim) return null;
-                  const stabilityLabel = sim.stability > 0.7 ? 'STABLE' : sim.stability > 0.4 ? 'UNSETTLED' : 'CHAOS';
-                  const prosperityLabel = sim.prosperity > 0.7 ? 'BOOMING' : sim.prosperity > 0.4 ? 'MODERATE' : 'DEPRESSED';
-                  const sColor = sim.stability > 0.7 ? '#44FF88' : sim.stability > 0.4 ? '#FFAA44' : '#FF4444';
-                  const pColor = sim.prosperity > 0.7 ? '#44FF88' : sim.prosperity > 0.4 ? '#FFAA44' : '#FF4444';
-                  return <>
-                    <br />
-                    <span style={{ color: sColor }}>{stabilityLabel}</span>
-                    {' · '}
-                    <span style={{ color: pColor }}>{prosperityLabel}</span>
-                  </>;
-                })()}
-                {visitedSystems.has(selectedSys.id) && lastVisitYear[selectedSys.id] != null && (() => {
-                  const seen = lastVisitYear[selectedSys.id];
-                  const ago = galaxyYear - seen;
-                  return <>
-                    <br />
-                    <span style={{ color: 'var(--color-hud-dim)' }}>
-                      LAST SEEN: YEAR {seen.toLocaleString()}{ago > 0 ? ` (${ago.toLocaleString()} YRS AGO)` : ''}
-                    </span>
-                  </>;
-                })()}
-                {(() => {
-                  if (!selectedSummary) return null;
-                  const f = getFaction(selectedSummary.controllingFactionId);
-                  if (!f || !knownFactions.has(f.id)) return null;
-                  const fc = `#${f.color.toString(16).padStart(6, '0')}`;
-                  return <>
-                    <br />
-                    <span style={{ color: 'var(--color-hud-dim)' }}>{selectedSummary.politics.toUpperCase()}</span>
-                    <br />
-                    <span style={{ color: fc }}>{f.name.toUpperCase()}</span>
-                    {selectedSummary.contestingFactionId && (() => {
-                      const cf = getFaction(selectedSummary.contestingFactionId);
-                      if (!cf || !knownFactions.has(cf.id)) return null;
-                      const cc = `#${cf.color.toString(16).padStart(6, '0')}`;
-                      return <span style={{ color: cc }}> vs {cf.name.toUpperCase()}</span>;
-                    })()}
-                  </>;
-                })()}
-              </div>
-            )}
-            {previewYears !== null && !selectedSys && hovered && reachableIds.has(hovered.id) && (
-              <div style={{ marginTop: '4px', color: 'var(--color-warning)', fontSize: '11px' }}>
-                HOVER: {hovered.name.toUpperCase()} +{previewYears.toLocaleString()} YRS
-                {visitedSystems.has(hovered.id) && lastVisitYear[hovered.id] != null && (() => {
-                  const ago = galaxyYear - lastVisitYear[hovered.id];
-                  return ago > 0
-                    ? <span style={{ color: 'var(--color-hud-dim)', marginLeft: 6 }}>SEEN {ago.toLocaleString()}Y AGO</span>
-                    : null;
-                })()}
-                {(() => {
-                  const hoveredSummary = clusterSummaryById.get(hovered.id);
-                  if (!hoveredSummary) return null;
-                  const f = getFaction(hoveredSummary.controllingFactionId);
-                  if (!f || !knownFactions.has(f.id)) return null;
-                  const fc = `#${f.color.toString(16).padStart(6, '0')}`;
-                  return <span style={{ color: fc, marginLeft: 6 }}>{f.name.toUpperCase()}</span>;
-                })()}
-              </div>
-            )}
+        <div className={styles.content}>
+          <div className={styles.canvasViewport}>
+            <canvas
+              ref={canvasRef}
+              width={MAP_W}
+              height={MAP_H}
+              className={styles.canvas}
+              onPointerDown={handleCanvasDown}
+              onPointerMove={handleCanvasMove}
+              onPointerUp={handleCanvasUp}
+              onPointerCancel={handleCanvasCancel}
+              onPointerLeave={() => setHovered(null)}
+            />
           </div>
-          <div className={styles.infoSecondary}>
-            {recentJumps.length > 0 && (
-              <div className={styles.recentJumps}>
-                <div style={{ marginBottom: '3px', letterSpacing: '1px' }}>RECENT JUMPS</div>
-                {recentJumps.map((entry, i) => {
-                  const fromName = cluster[entry.fromSystemId]?.name ?? '?';
-                  const toName = cluster[entry.toSystemId]?.name ?? '?';
-                  return (
-                    <div key={i} style={{ marginBottom: '2px' }}>
-                      {fromName.toUpperCase()} → {toName.toUpperCase()}
-                      <span style={{ color: 'var(--color-warning)', marginLeft: 4 }}>
-                        +{entry.yearsElapsed.toLocaleString()}Y
+          <div className={styles.info}>
+            <div className={styles.infoPrimary}>
+              <div>CURRENT: <span className={styles.selected}>{currentSys.name.toUpperCase()}</span></div>
+              {selectedSys && (
+                <div style={{ marginTop: '4px' }}>
+                  TARGET: <span className={styles.selected}>{selectedSys.name.toUpperCase()}</span>
+                  <br />
+                  FUEL COST: {jumpCost.toFixed(1)} / {player.fuel.toFixed(1)}
+                  <br />
+                  {(() => {
+                    const dx = selectedSys.x - currentSys.x;
+                    const dy = selectedSys.y - currentSys.y;
+                    const yrs = jumpYearsElapsed(Math.sqrt(dx * dx + dy * dy));
+                    return <span style={{ color: 'var(--color-warning)' }}>+{yrs.toLocaleString()} YRS</span>;
+                  })()}
+                  <br />
+                  TECH LV: {selectedSummary?.techLevel ?? selectedSys.techLevel} · {selectedSummary?.economy ?? selectedSys.economy}
+                  {galaxySimState && (() => {
+                    const sim = galaxySimState.find(s => s.systemId === selectedSys.id);
+                    if (!sim) return null;
+                    const stabilityLabel = sim.stability > 0.7 ? 'STABLE' : sim.stability > 0.4 ? 'UNSETTLED' : 'CHAOS';
+                    const prosperityLabel = sim.prosperity > 0.7 ? 'BOOMING' : sim.prosperity > 0.4 ? 'MODERATE' : 'DEPRESSED';
+                    const sColor = sim.stability > 0.7 ? '#44FF88' : sim.stability > 0.4 ? '#FFAA44' : '#FF4444';
+                    const pColor = sim.prosperity > 0.7 ? '#44FF88' : sim.prosperity > 0.4 ? '#FFAA44' : '#FF4444';
+                    return <>
+                      <br />
+                      <span style={{ color: sColor }}>{stabilityLabel}</span>
+                      {' · '}
+                      <span style={{ color: pColor }}>{prosperityLabel}</span>
+                    </>;
+                  })()}
+                  {visitedSystems.has(selectedSys.id) && lastVisitYear[selectedSys.id] != null && (() => {
+                    const seen = lastVisitYear[selectedSys.id];
+                    const ago = galaxyYear - seen;
+                    return <>
+                      <br />
+                      <span style={{ color: 'var(--color-hud-dim)' }}>
+                        LAST SEEN: YEAR {seen.toLocaleString()}{ago > 0 ? ` (${ago.toLocaleString()} YRS AGO)` : ''}
                       </span>
-                    </div>
-                  );
-                })}
+                    </>;
+                  })()}
+                  {(() => {
+                    if (!selectedSummary) return null;
+                    const f = getFaction(selectedSummary.controllingFactionId);
+                    if (!f || !knownFactions.has(f.id)) return null;
+                    const fc = `#${f.color.toString(16).padStart(6, '0')}`;
+                    return <>
+                      <br />
+                      <span style={{ color: 'var(--color-hud-dim)' }}>{selectedSummary.politics.toUpperCase()}</span>
+                      <br />
+                      <span style={{ color: fc }}>{f.name.toUpperCase()}</span>
+                      {selectedSummary.contestingFactionId && (() => {
+                        const cf = getFaction(selectedSummary.contestingFactionId);
+                        if (!cf || !knownFactions.has(cf.id)) return null;
+                        const cc = `#${cf.color.toString(16).padStart(6, '0')}`;
+                        return <span style={{ color: cc }}> vs {cf.name.toUpperCase()}</span>;
+                      })()}
+                    </>;
+                  })()}
+                </div>
+              )}
+              {previewYears !== null && !selectedSys && hovered && reachableIds.has(hovered.id) && (
+                <div style={{ marginTop: '4px', color: 'var(--color-warning)', fontSize: '11px' }}>
+                  HOVER: {hovered.name.toUpperCase()} +{previewYears.toLocaleString()} YRS
+                  {visitedSystems.has(hovered.id) && lastVisitYear[hovered.id] != null && (() => {
+                    const ago = galaxyYear - lastVisitYear[hovered.id];
+                    return ago > 0
+                      ? <span style={{ color: 'var(--color-hud-dim)', marginLeft: 6 }}>SEEN {ago.toLocaleString()}Y AGO</span>
+                      : null;
+                  })()}
+                  {(() => {
+                    const hoveredSummary = clusterSummaryById.get(hovered.id);
+                    if (!hoveredSummary) return null;
+                    const f = getFaction(hoveredSummary.controllingFactionId);
+                    if (!f || !knownFactions.has(f.id)) return null;
+                    const fc = `#${f.color.toString(16).padStart(6, '0')}`;
+                    return <span style={{ color: fc, marginLeft: 6 }}>{f.name.toUpperCase()}</span>;
+                  })()}
+                </div>
+              )}
+            </div>
+            <div className={styles.infoSecondary}>
+              {recentJumps.length > 0 && (
+                <div className={styles.recentJumps}>
+                  <div style={{ marginBottom: '3px', letterSpacing: '1px' }}>RECENT JUMPS</div>
+                  {recentJumps.map((entry, i) => {
+                    const fromName = cluster[entry.fromSystemId]?.name ?? '?';
+                    const toName = cluster[entry.toSystemId]?.name ?? '?';
+                    return (
+                      <div key={i} style={{ marginBottom: '2px' }}>
+                        {fromName.toUpperCase()} → {toName.toUpperCase()}
+                        <span style={{ color: 'var(--color-warning)', marginLeft: 4 }}>
+                          +{entry.yearsElapsed.toLocaleString()}Y
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div className={styles.hint} style={{ marginTop: recentJumps.length > 0 ? '8px' : 0 }}>
+                {isMobile ? 'Drag to pan local stars' : 'Tap to select target'}<br />
+                Use close button to return<br />
+                Tap JUMP to initiate
               </div>
-            )}
-            <div className={styles.hint} style={{ marginTop: recentJumps.length > 0 ? '8px' : 0 }}>
-              {isMobile ? 'Drag to pan local stars' : 'Tap to select target'}<br />
-              Use close button to return<br />
-              Tap JUMP to initiate
             </div>
           </div>
         </div>

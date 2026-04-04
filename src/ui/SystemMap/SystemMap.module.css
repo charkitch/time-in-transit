@@ -21,6 +21,7 @@
   flex-direction: column;
   gap: 10px;
   overflow: hidden;
+  min-height: 0;
 }
 
 .title {
@@ -28,6 +29,23 @@
   font-size: var(--font-size-lg);
   letter-spacing: 4px;
   flex: 0 0 auto;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.mapViewport {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  flex: 0 0 auto;
+  min-height: 0;
 }
 
 .canvas {
@@ -74,6 +92,33 @@
   .title {
     font-size: 14px;
     letter-spacing: 2px;
+  }
+
+  .overlay {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  .panel {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border-left: 0;
+    border-right: 0;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .content {
+    gap: 8px;
+  }
+
+  .canvas {
+    width: 100%;
+    height: auto;
+    max-height: min(34dvh, 220px);
+    min-height: 150px;
+    flex: 0 0 auto;
   }
 }
 

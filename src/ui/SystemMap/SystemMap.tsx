@@ -248,17 +248,21 @@ export function SystemMap({ onClose }: SystemMapProps) {
     <div className={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className={styles.panel}>
         <div className={styles.title}>{starData?.name.toUpperCase()} SYSTEM</div>
-        <canvas ref={canvasRef} width={W} height={H} className={styles.canvas} />
-        <div className={styles.legend}>
-          <span><span className={styles.dot} style={{ background: '#33FF88' }} />Planet</span>
-          <span><span className={styles.dot} style={{ background: '#44CCFF', outline: '1px solid #44CCFF' }} />Station</span>
-          <span><span className={styles.dot} style={{ background: '#888877' }} />Asteroids</span>
-          {currentSystem && currentSystem.dysonShells.length > 0 && (
-            <span><span className={styles.dot} style={{ background: '#B9C2CF' }} />Dyson Shell</span>
-          )}
-          {currentSystem && currentSystem.secretBases.length > 0 && (
-            <span><span className={styles.dot} style={{ background: '#8844FF' }} />Secret Base</span>
-          )}
+        <div className={styles.content}>
+          <div className={styles.mapViewport}>
+            <canvas ref={canvasRef} width={W} height={H} className={styles.canvas} />
+          </div>
+          <div className={styles.legend}>
+            <span><span className={styles.dot} style={{ background: '#33FF88' }} />Planet</span>
+            <span><span className={styles.dot} style={{ background: '#44CCFF', outline: '1px solid #44CCFF' }} />Station</span>
+            <span><span className={styles.dot} style={{ background: '#888877' }} />Asteroids</span>
+            {currentSystem && currentSystem.dysonShells.length > 0 && (
+              <span><span className={styles.dot} style={{ background: '#B9C2CF' }} />Dyson Shell</span>
+            )}
+            {currentSystem && currentSystem.secretBases.length > 0 && (
+              <span><span className={styles.dot} style={{ background: '#8844FF' }} />Transmission Ghost</span>
+            )}
+          </div>
         </div>
         <button className={styles.closeBtn} onClick={onClose}>CLOSE</button>
       </div>
