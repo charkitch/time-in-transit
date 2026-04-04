@@ -206,7 +206,6 @@ export function App() {
   const handleTouchTargetCycle = () => gameRef.current?.requestCycleTarget();
   const handleTouchClusterMap = () => gameRef.current?.requestClusterMapToggle();
   const handleTouchSystemMap = () => gameRef.current?.requestSystemMapToggle();
-  const handleTouchJump = () => gameRef.current?.requestJump();
   const handleTouchMenu = () => setUIMode('menu');
 
   return (
@@ -237,7 +236,6 @@ export function App() {
           onTargetCycle={handleTouchTargetCycle}
           onClusterMap={handleTouchClusterMap}
           onSystemMap={handleTouchSystemMap}
-          onJump={handleTouchJump}
           onMenu={handleTouchMenu}
         />
       )}

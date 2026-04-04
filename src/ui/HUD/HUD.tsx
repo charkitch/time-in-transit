@@ -23,7 +23,6 @@ interface HUDProps {
   onTargetCycle: () => void;
   onClusterMap: () => void;
   onSystemMap: () => void;
-  onJump: () => void;
   onMenu: () => void;
 }
 
@@ -39,7 +38,6 @@ export function HUD({
   onTargetCycle,
   onClusterMap,
   onSystemMap,
-  onJump,
   onMenu,
 }: HUDProps) {
   const [isStarTooltipOpen, setIsStarTooltipOpen] = useState(false);
@@ -266,7 +264,6 @@ export function HUD({
           onTargetCycle={onTargetCycle}
           onClusterMap={onClusterMap}
           onSystemMap={onSystemMap}
-          onJump={onJump}
           onMenu={onMenu}
         />
       )}

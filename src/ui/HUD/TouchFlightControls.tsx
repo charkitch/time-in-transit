@@ -18,7 +18,6 @@ interface TouchFlightControlsProps {
   onTargetCycle: () => void;
   onClusterMap: () => void;
   onSystemMap: () => void;
-  onJump: () => void;
   onMenu: () => void;
 }
 
@@ -37,7 +36,6 @@ export function TouchFlightControls({
   onTargetCycle,
   onClusterMap,
   onSystemMap,
-  onJump,
   onMenu,
 }: TouchFlightControlsProps) {
   const leftStickRef = useRef<HTMLDivElement>(null);
@@ -210,11 +208,6 @@ export function TouchFlightControls({
             transform: `translate(${rightX * STICK_RADIUS}px, ${rightY * STICK_RADIUS}px)`,
           }}
         />
-        <div className={styles.rightLegend}>
-          <span>ROLL</span>
-          <span className={centerThrustActive ? styles.boostHot : ''}>THRUST CENTER</span>
-          <span className={boostActive ? styles.boostHot : ''}>BOOST TOP</span>
-        </div>
       </div>
 
       {enabled && canDockNow && (
@@ -230,23 +223,30 @@ export function TouchFlightControls({
       <div className={styles.menuWrap}>
         <button
           type="button"
-          className={`${styles.menuButton} ${actionsOpen ? styles.menuButtonOpen : ''}`}
-          onClick={() => enabled && setActionsOpen(v => !v)}
+          className={styles.targetButton}
+          onClick={() => enabled && onTargetCycle()}
           disabled={!enabled}
         >
-          ACTIONS
+          TARGET
         </button>
-        {actionsOpen && enabled && (
-          <div className={styles.actionMenu}>
-            <button type="button" className={styles.actionButton} onClick={() => runAction(onDock)}>DOCK</button>
-            <button type="button" className={styles.actionButton} onClick={() => runAction(onHail)}>HAIL</button>
-            <button type="button" className={styles.actionButton} onClick={() => runAction(onTargetCycle)}>TARGET</button>
-            <button type="button" className={styles.actionButton} onClick={() => runAction(onClusterMap)}>CLUSTER</button>
-            <button type="button" className={styles.actionButton} onClick={() => runAction(onSystemMap)}>SYSTEM</button>
-            <button type="button" className={styles.actionButton} onClick={() => runAction(onJump)}>JUMP</button>
-            <button type="button" className={styles.actionButton} onClick={() => runAction(onMenu)}>MENU</button>
-          </div>
-        )}
+        <div className={styles.actionsWrap}>
+          <button
+            type="button"
+            className={`${styles.menuButton} ${actionsOpen ? styles.menuButtonOpen : ''}`}
+            onClick={() => enabled && setActionsOpen(v => !v)}
+            disabled={!enabled}
+          >
+            ACTIONS
+          </button>
+          {actionsOpen && enabled && (
+            <div className={styles.actionMenu}>
+              <button type="button" className={styles.actionButton} onClick={() => runAction(onHail)}>HAIL</button>
+              <button type="button" className={styles.actionButton} onClick={() => runAction(onClusterMap)}>CLUSTER</button>
+              <button type="button" className={styles.actionButton} onClick={() => runAction(onSystemMap)}>SYSTEM</button>
+              <button type="button" className={styles.actionButton} onClick={() => runAction(onMenu)}>MENU</button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
