@@ -24,6 +24,7 @@ pub struct EventContext<'a> {
     pub triggers: &'a HashMap<String, Trigger>,
     pub surface: Option<SurfaceType>,
     pub current_cluster: u32,
+    pub current_system_id: u32,
 }
 
 fn system_choices_or_default<'a>(ctx: &'a EventContext<'a>) -> SystemChoices {
@@ -64,6 +65,11 @@ fn check_condition(cond: &EventCondition, ctx: &EventContext) -> bool {
             ctx.surface.map_or(false, |surface| surfaces.contains(&surface))
         }
         EventCondition::TriggerFired(id) => choices.fired_triggers.contains(id),
+        EventCondition::ChainTargetHere(chain_id) => {
+            ctx.player_state.chain_targets.iter().any(|ct| {
+                ct.chain_id == *chain_id && ct.target_system_id == ctx.current_system_id
+            })
+        }
     }
 }
 
@@ -160,13 +166,14 @@ mod tests {
             known_factions: vec![],
             faction_memory: HashMap::new(),
             seen_system_dialog_ids: vec![],
+            chain_targets: vec![],
         }
     }
 
     #[test]
     fn event_counts() {
         assert_eq!(content::landing_events().len(), 10);
-        assert_eq!(content::asteroid_base_events().len(), 5);
+        assert_eq!(content::asteroid_base_events().len(), 9);
         assert_eq!(content::oort_cloud_base_events().len(), 7);
         assert_eq!(content::maximum_space_events().len(), 3);
         assert_eq!(content::triggered_events().len(), 1);
@@ -184,6 +191,7 @@ mod tests {
             triggers: &triggers,
             surface: None,
             current_cluster: 0,
+            current_system_id: 0,
         };
         assert!(select_game_event(EventPool::Landing, &ctx, 42).is_some());
     }
@@ -203,6 +211,7 @@ mod tests {
             triggers: &triggers,
             surface: None,
             current_cluster: 0,
+            current_system_id: 0,
         };
         let no_event = select_game_event(EventPool::Triggered, &ctx_without_flag, 1);
         assert!(no_event.is_none());
@@ -216,6 +225,7 @@ mod tests {
             triggers: &triggers,
             surface: None,
             current_cluster: 0,
+            current_system_id: 0,
         };
         let event = select_game_event(EventPool::Triggered, &ctx_with_flag, 2);
         assert!(event.is_some());

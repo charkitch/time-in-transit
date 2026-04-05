@@ -1,43 +1,57 @@
 id: ARRAY_OORT_SPINE_REPAIRS
-title: "REPAIR RUN: SPINE NODE"
+title: "THE PATTERN"
 requires:
   - !AnyFlagSet quasar_array_stage2_done
   - !AnyFlagNotSet quasar_array_stage3_done
-  - !FlagNotSet quasar_array_stage1_done
-  - !FlagNotSet quasar_array_stage2_done
+  - !ChainTargetHere quasar_array
 narrativeLines:
   - >-
-    This node is older than the others, wrapped around a split comet like a bracelet repaired too many times to count.
+    This node is the oldest of the three you've visited. The comet it's anchored to has
+    split and been pinned back together with cables that look like they predate the station
+    itself. Someone has painted a mural on the inner hull — a field of stars with certain
+    ones circled in red.
   - >-
-    A foreman in a magnetic harness greets you at the lock. "You brought the actuator rings? Bless every star you've passed through."
+    The chief astronomer meets you at the lock. She's older than the others, with the
+    patient face of someone who has spent a career looking at things that take centuries
+    to change. She accepts the actuator rings without ceremony.
   - >-
-    The replacement parts are for a tracking gimbal that has to keep a distant quasar pinned for weeks without drift.
-  - >-
-    Nobody asks you to touch a tool. They just want the right hardware delivered intact, and maybe a second pair of eyes on what they've been seeing.
+    "Come," she says. "You've earned a look at the board."
 choices:
   - id: deliver_actuator_rings
-    label: Deliver the actuator rings and stay for debrief
-    description: "Complete repair delivery and hear the latest findings"
+    label: Follow her to the operations room
+    description: "Complete delivery and see the full picture"
     effect:
       tradingReputation: 0
     nextMoment:
       narrativeLines:
         - >-
-          During the debrief, an analyst overlays their fresh track against pre-war archival baselines.
+          The board is a wall-sized display showing quasars — dozens of them, scattered across
+          every direction the sky has to offer. Some are circled in blue, some in red. The red
+          ones pulse.
         - >-
-          "The war-affected sources don't just brighten and dim," she says. "Some of them precess off-axis as if the central engines were physically reconfigured."
+          "Eighteen thousand years ago," she says, "forty-five quasars went dark over the course
+          of nineteen days. Three days later, four more detonated. Biggest events ever directly
+          observed." She lets that sit. "They were in every direction. The two most distant ones were
+          roughly twenty-four billion light years apart."
         - >-
-          The foreman folds his arms. "Whatever happened out there, it wasn't a clean kill-shot. It left machinery of reality bent out of true."
+          "Whatever did this was not in one place. Whatever did this did not care about distance."
+          She taps a red circle. "People call it the Quasar War. Nobody knows if it was actually a
+          war. Could have been engineering. Communication. Art. But the name stuck."
+        - >-
+          "And the reason we're sitting in the cold watching the light from those scars —" she
+          pours herself a drink, something amber, "— is that we think the aftermath is still going.
+          Still propagating. Still ringing. Eighteen thousand years later, and we're just now getting
+          the echoes."
       choices:
         - id: back_comparative_study
-          label: Back a broader comparative study
+          label: "Twenty-four billion light years apart. In nineteen days."
           description: "CR 650 contract payment, +Reputation, stage complete"
           effect:
             creditsReward: 650
             tradingReputation: 1
             setsFlags: [quasar_array_stage3_done]
         - id: back_targeted_monitoring
-          label: Back tighter monitoring of known scar sites
+          label: Ask if it could happen here
           description: "CR 700 priority payment, stage complete"
           effect:
             creditsReward: 700

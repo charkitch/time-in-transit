@@ -1,0 +1,73 @@
+id: BURNT_ACCORD_RESCUE
+title: THE BURNING SHIP
+requires:
+  - !AnyFlagSet burnt_accord_stage3_done
+  - !AnyFlagNotSet burnt_accord_stage4_done
+  - !ChainTargetHere burnt_accord
+narrativeLines:
+  - >-
+    You find her ship first — a small diplomatic courier, old but fast, tumbling
+    without power in maximum space. One engine is slagged. The hull is pocked
+    with the distinctive starburst craters of kinetic rounds. Someone found
+    Tessaly Vane.
+  - >-
+    She's alive. Barely. When you dock and cut through the emergency seal, she's
+    in the cockpit, pressure-suited, breathing from a portable tank that reads
+    eleven percent. The scar on her temple has a fresh companion on the other
+    side.
+  - >-
+    "Draimar interceptor," she says, her voice raw. "Two of them. I got away.
+    Mostly." She coughs. "Tell me you have the data case."
+  - >-
+    When you show her both halves — Renn's evidence and Hadiq's analysis — she
+    closes her eyes and something in her face unknots, just slightly.
+choices:
+  - id: help_tessaly
+    label: Get her into your med bay and hear the rest
+    description: "Help Tessaly and learn the full picture"
+    effect:
+      tradingReputation: 0
+    nextMoment:
+      narrativeLines:
+        - >-
+          She talks while your autodoc works. She's been running for five months.
+          The Draimar didn't just provoke the war — they've been feeding
+          intelligence to both sides, prolonging it. Every time a ceasefire gets
+          close, a new "atrocity" happens. Always at the worst possible moment.
+          Always with just enough ambiguity.
+        - >-
+          "I was naive," she says. "I thought if I gathered enough proof, the
+          right people would act. But the right people are dead, or bought, or
+          scared." She looks at you with the clear, exhausted focus of someone
+          who has burned through desperation and come out the other side.
+        - >-
+          "There's one more meeting point. A station in deep maximum space where
+          Renn and Hadiq have agreed to bring their people — low-level officers
+          on both sides who still believe in something. If I can present the
+          combined evidence there, in person, in front of witnesses from both
+          factions, it can't be buried."
+        - >-
+          She grips your arm. "But the Draimar know about it. They'll have people
+          there. And when we arrive, you're going to have to choose who you
+          stand with. I'm sorry about that. I really am."
+      choices:
+        - id: commit_to_meeting
+          label: "You didn't start this. But you'll help finish it."
+          description: "Fuel bonus, stage complete"
+          effect:
+            fuelReward: 0.6
+            setsFlags: [burnt_accord_stage4_done]
+        - id: commit_reluctantly
+          label: Tell Tessaly you'll get her there, but after that you're out
+          description: "CR 300, stage complete"
+          effect:
+            creditsReward: 300
+            setsFlags: [burnt_accord_stage4_done]
+        - id: refuse_meeting
+          label: Patch her up, give her fuel, and wish her luck
+          description: No effect
+          effect: {}
+  - id: leave_her
+    label: She's alive. She has air. That's enough.
+    description: No effect
+    effect: {}

@@ -22,6 +22,7 @@ export const PALETTE = {
   starMG:           0xDD44FF,
   starBH:           0x220022,
   starXBB:          0xFF4466,
+  starMQ:           0x67D8FF,
   starSGR:          0xFFAA22,
   starIron:         0x2A2A2A,
   ambient:          0x112244,
@@ -89,6 +90,7 @@ export const STAR_COLORS: Record<string, number> = {
   MG: PALETTE.starMG,
   BH: PALETTE.starBH,
   XBB: PALETTE.starXBB,
+  MQ: PALETTE.starMQ,
   SGR: PALETTE.starSGR,
   IRON: PALETTE.starIron,
 };
@@ -116,6 +118,7 @@ export const STAR_ATTRIBUTES: Record<string, StarAttributes> = {
   MG:   { glow: true,  glowMul: 12, stellarEffects: true  },
   BH:   { glow: true,  glowMul: 6,  stellarEffects: true  },
   XBB:  { glow: true,  glowMul: 6,  stellarEffects: true  },
+  MQ:   { glow: true,  glowMul: 14, stellarEffects: true  },
   SGR:  { glow: true,  glowMul: 6,  stellarEffects: true  },
   IRON: { glow: false, glowMul: 0,  stellarEffects: false },
 };
@@ -133,6 +136,7 @@ export const STAR_TYPE_DISPLAY: Record<string, string> = {
   MG: 'MAGNETAR',
   BH: 'BLACK HOLE',
   XBB: 'X-RAY BURSTER',
+  MQ: 'MICROQUASAR',
   SGR: 'SGR',
   IRON: 'IRON STAR',
 };
@@ -185,6 +189,10 @@ export const STAR_DESCRIPTIONS: Record<string, { desc: string; wiki: string }> =
   XBB: {
     desc: "An X-ray Burster. A neutron star accreting from a main-sequence donor, producing sudden, intense X-ray bursts.",
     wiki: "https://en.wikipedia.org/wiki/X-ray_burster"
+  },
+  MQ: {
+    desc: "A Microquasar. A stellar-mass black hole feeding from a companion star and launching enormous relativistic jets.",
+    wiki: "https://en.wikipedia.org/wiki/Microquasar"
   },
   SGR: {
     desc: "A Soft Gamma Repeater. A magnetar that emits large bursts of gamma rays and X-rays at irregular intervals.",

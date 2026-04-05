@@ -1,37 +1,53 @@
 id: ARRAY_OORT_FINAL_MANIFEST
-title: FINAL MANIFEST
+title: FIRST LIGHT
 requires:
   - !AnyFlagSet quasar_array_stage3_done
   - !AnyFlagNotSet quasar_array_completed
-  - !FlagNotSet quasar_array_stage1_done
-  - !FlagNotSet quasar_array_stage2_done
-  - !FlagNotSet quasar_array_stage3_done
+  - !ChainTargetHere quasar_array
 narrativeLines:
   - >-
-    The final node is almost domestic: warm lights, handwritten checklists, engineers asleep in chairs between shifts.
+    The final node doesn't look like a telescope station. It looks like someone's home.
+    There are books on a shelf, actual books, and a cat asleep on a heating vent.
+    The air smells like bread.
   - >-
-    You unload your last manifest: vibration-damped lens packs, replacement thermal seals, and a crate of old-fashioned hand tools someone insisted on.
+    You unload the last crates — thermal seals, calibration weights, and a box of hand
+    tools that someone insisted on shipping across three star systems instead of
+    fabricating locally. Some things you just want done right.
   - >-
-    The coordinator scans your delivery signatures from three systems and smiles like she has been waiting a long time to make one phone call.
+    The coordinator checks your delivery signatures from every node in the chain
+    and makes a sound that is not quite a laugh and not quite a sob.
   - >-
-    "That's the chain complete. We can hold lock long enough to publish with confidence."
+    "That's the array. Four eyes across four systems, all watching the same impossible
+    thing." She scratches the cat behind its ears. "Want to stay for first light?"
 choices:
   - id: stay_for_results
-    label: Stay for the first full comparative readout
-    description: "See what your deliveries made possible"
+    label: You've come this far
+    description: "Stay for the first combined readout"
     effect:
       tradingReputation: 0
     nextMoment:
       narrativeLines:
         - >-
-          The room quiets as the readout stabilizes: several Quasar War scar sites show ongoing structural recovery signatures, while control quasars remain statistically calm.
+          The room fills quietly — a half-dozen scientists drifting in from sleep shifts and
+          greenhouse duty and whatever people do on a comet when they're waiting for the
+          universe to say something.
         - >-
-          The coordinator taps the screen. "Not apocalypse. Not nothing either. The war ended, but its fingerprints are still propagating."
+          The readout stabilizes. The Quasar War scar sites are there, pulsing in their
+          wounded rhythms. The control quasars sit calm and steady beside them. And between
+          the two, drawn in light that has been travelling for billions of years, is the shape
+          of something that happened on scales that make galaxies look like weather.
         - >-
-          She hands you a final transfer chit. "You didn't fix the universe. You kept good instruments alive long enough for us to stop guessing."
+          Nobody speaks for a while.
+        - >-
+          The coordinator finally breaks the silence. "It's not a threat. It's not a warning. It's
+          just — evidence. That somewhere, someone, did something so large it's still echoing
+          after eighteen thousand years. And we built a thing that can hear it."
+        - >-
+          She hands you a transfer chit. "You moved glass between stars and none of it
+          broke. That matters more than you think."
       choices:
         - id: authorize_public_release
-          label: Encourage immediate public release
+          label: Tell them to publish everything
           description: "CR 1200 completion bonus, +Reputation x2, chain complete"
           effect:
             creditsReward: 1200
@@ -39,7 +55,7 @@ choices:
             fuelReward: 0.6
             setsFlags: [quasar_array_completed]
         - id: authorize_peer_review_first
-          label: Encourage peer review before broad release
+          label: Suggest they let the data speak quietly first
           description: "CR 1400 completion bonus, +Reputation, chain complete"
           effect:
             creditsReward: 1400

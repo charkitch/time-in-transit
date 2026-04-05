@@ -72,7 +72,7 @@ function toWorld(px: number, py: number, viewport: MapViewport): [number, number
 const STAR_TYPE_COLOR: Record<string, string> = {
   G: '#FFEE88', K: '#FFAA44', M: '#FF6633', F: '#FFFFFF', A: '#AABBFF',
   WD: '#F0F0FF', HE: '#88CCAA', NS: '#CCDDFF', PU: '#44AAFF', XB: '#FF6688',
-  MG: '#DD44FF', BH: '#220022', XBB: '#FF4466', SGR: '#FFAA22',
+  MG: '#DD44FF', BH: '#220022', XBB: '#FF4466', MQ: '#67D8FF', SGR: '#FFAA22',
 };
 
 function applyAlpha(hex: string, alpha: number): string {
@@ -104,6 +104,7 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
   const lastVisitYear = useGameState(s => s.lastVisitYear);
   const galaxySimState = useGameState(s => s.galaxySimState);
   const clusterSummary = useGameState(s => s.clusterSummary);
+  const chainTargets = useGameState(s => s.chainTargets);
 
   const currentSys = cluster[currentSystemId];
   const reachable = hyperspace.getReachableSystems(currentSys, cluster);
@@ -333,6 +334,21 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
         }
       }
 
+      // Chain target indicator — small pulsing diamond
+      if (chainTargets.some(ct => ct.targetSystemId === sys.id)) {
+        const dx = 3;
+        const ix = sx - r - 8;
+        const iy = sy - r + 1;
+        ctx.fillStyle = 'rgba(255, 200, 80, 0.85)';
+        ctx.beginPath();
+        ctx.moveTo(ix, iy - dx);
+        ctx.lineTo(ix + dx, iy);
+        ctx.lineTo(ix, iy + dx);
+        ctx.lineTo(ix - dx, iy);
+        ctx.closePath();
+        ctx.fill();
+      }
+
       // Name label
       ctx.fillStyle = isCurrent
         ? '#33FF88'
@@ -344,7 +360,7 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
       ctx.font = '9px Courier New';
       ctx.fillText(sys.name.toUpperCase(), sx + 8, sy + 4);
     }
-  }, [cluster, currentSystemId, visitedSystems, hyperspaceTarget, reachableIds, hovered, currentSys, knownFactions, lastVisitYear, galaxyYear, galaxySimState, clusterSummaryById, isMobile, mobileCenter.x, mobileCenter.y]);
+  }, [cluster, currentSystemId, visitedSystems, hyperspaceTarget, reachableIds, hovered, currentSys, knownFactions, lastVisitYear, galaxyYear, galaxySimState, clusterSummaryById, chainTargets, isMobile, mobileCenter.x, mobileCenter.y]);
 
   useEffect(() => { draw(); }, [draw]);
 

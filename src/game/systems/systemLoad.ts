@@ -51,6 +51,7 @@ export function buildWasmPlayerState(
     knownFactions: Array.from(state.knownFactions),
     factionMemory,
     seenSystemDialogIds: [...state.seenSystemDialogIds],
+    chainTargets: state.chainTargets,
   };
 }
 

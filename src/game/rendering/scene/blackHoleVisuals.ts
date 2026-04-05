@@ -18,6 +18,11 @@ export interface XRayAccretorOptions {
   diskTintStrength?: number;
 }
 
+export interface MicroquasarJetOptions {
+  radius: number;
+  color?: number;
+}
+
 interface DiskPalette {
   hot: THREE.Color;
   inner: THREE.Color;
@@ -130,6 +135,75 @@ function createDonorTintedDiskTexture(palette: DiskPalette): THREE.CanvasTexture
   const texture = new THREE.CanvasTexture(canvas);
   texture.needsUpdate = true;
   return texture;
+}
+
+function createJetMaterial(color: number, opacity: number): THREE.MeshBasicMaterial {
+  return new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}
+
+export function createMicroquasarJetGroup(options: MicroquasarJetOptions): THREE.Group {
+  const { radius, color = 0x67D8FF } = options;
+  const group = new THREE.Group();
+  const jetColor = new THREE.Color(color);
+  const brightJetColor = jetColor.clone().lerp(new THREE.Color(0xFFFFFF), 0.34).getHex();
+  const lobeColor = jetColor.clone().lerp(new THREE.Color(0xD5F6FF), 0.5).getHex();
+
+  const outerLength = radius * 34;
+  const plumeLength = radius * 24;
+  const coreLength = radius * 38;
+  const baseOffset = radius * 1.05;
+
+  const sheathMaterial = createJetMaterial(color, 0.18);
+  const plumeMaterial = createJetMaterial(brightJetColor, 0.34);
+  const coreMaterial = createJetMaterial(0xFFFFFF, 0.7);
+  const shockMaterial = createJetMaterial(lobeColor, 0.46);
+
+  const buildJet = (length: number, nearRadius: number, farRadius: number, material: THREE.Material, sign: number) => {
+    const jet = new THREE.Mesh(
+      new THREE.CylinderGeometry(farRadius, nearRadius, length, 18, 1, true),
+      material,
+    );
+    jet.position.y = sign * (baseOffset + length / 2);
+    if (sign < 0) jet.rotation.z = Math.PI;
+    group.add(jet);
+  };
+
+  for (const sign of [1, -1]) {
+    buildJet(outerLength, radius * 0.82, radius * 0.2, sheathMaterial, sign);
+    buildJet(plumeLength, radius * 0.42, radius * 0.09, plumeMaterial, sign);
+    buildJet(coreLength, radius * 0.16, radius * 0.03, coreMaterial, sign);
+
+    const shockRing = new THREE.Mesh(
+      new THREE.TorusGeometry(radius * 1.18, radius * 0.07, 8, 48),
+      shockMaterial,
+    );
+    shockRing.rotation.x = Math.PI / 2;
+    shockRing.position.y = sign * (baseOffset + outerLength * 0.8);
+    group.add(shockRing);
+
+    const terminalLobe = makeGlowSprite(lobeColor, radius * 8.4);
+    const terminalLobeMat = terminalLobe.material as THREE.SpriteMaterial;
+    terminalLobeMat.opacity = 0.22;
+    terminalLobe.position.y = sign * (baseOffset + outerLength + radius * 2.5);
+    group.add(terminalLobe);
+  }
+
+  const throatGlow = makeGlowSprite(brightJetColor, radius * 5.8);
+  const throatGlowMat = throatGlow.material as THREE.SpriteMaterial;
+  throatGlowMat.opacity = 0.24;
+  group.add(throatGlow);
+
+  // Slight precession tilt keeps the jets visible against the disk plane.
+  group.rotation.x = -0.2;
+  group.rotation.z = 0.32;
+  return group;
 }
 
 export function createBlackHoleGroup(radius: number, xRayMode = false): THREE.Group {

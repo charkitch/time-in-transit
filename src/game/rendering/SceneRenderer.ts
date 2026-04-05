@@ -26,7 +26,7 @@ import type { FleetBattle } from '../mechanics/FleetBattleSystem';
 import { getFaction } from '../data/factions';
 import { PRNG } from '../generation/prng';
 import { CLUSTER_SEED, RENDER_CONFIG } from '../constants';
-import { createBlackHoleGroup, createXRayAccretorGroup } from './scene/blackHoleVisuals';
+import { createBlackHoleGroup, createMicroquasarJetGroup, createXRayAccretorGroup } from './scene/blackHoleVisuals';
 import type { SceneEntity, XRayTransferStream } from './scene/types';
 import { createXRayTransferStream, updateXRayTransferStreams } from './scene/xrayStreams';
 import {
@@ -255,6 +255,9 @@ export class SceneRenderer {
     const starColor = STAR_COLORS[data.starType] ?? PALETTE.starG;
     const isBlackHole = data.starType === 'BH';
     const isIntense = data.starType === 'NS' || data.starType === 'PU' || data.starType === 'MG';
+    const isAccretingBinary =
+      (data.starType === 'XB' || data.starType === 'XBB' || data.starType === 'MQ')
+      && data.companion !== null;
     const starGroup = new THREE.Group();
     let starOrbitRadius = 0;
     let starOrbitSpeed = 0;
@@ -267,37 +270,51 @@ export class SceneRenderer {
       this.starLight = new THREE.PointLight(0xFF8B47, 0.9, 60000);
       this.scene.add(this.starLight);
       this.systemObjects.push(this.starLight);
-    } else if ((data.starType === 'XB' || data.starType === 'XBB') && data.companion) {
-      const companion = data.companion;
+    } else if (isAccretingBinary) {
+      const companion = data.companion!;
       const isBurster = data.starType === 'XBB';
+      const isMicroquasar = data.starType === 'MQ';
       const compactRadius = isBurster ? data.starRadius * 1.12 : data.starRadius;
-      const diskHaloMul = isBurster ? 11.8 : 10.5;
-      const diskHaloOpacity = isBurster ? 0.29 : 0.24;
+      const diskHaloMul = isBurster ? 11.8 : (isMicroquasar ? 14.8 : 10.5);
+      const diskHaloOpacity = isBurster ? 0.29 : (isMicroquasar ? 0.32 : 0.24);
 
-      // Compact accretor visuals: BH for XB, neutron-star core for XBB.
+      // Compact accretor visuals: BH for XB and MQ, neutron-star core for XBB.
       this.xbDiskGroup = createXRayAccretorGroup({
         radius: compactRadius,
         accretorKind: isBurster ? 'neutron_star' : 'black_hole',
         donorColor: companion.color,
-        diskTintStrength: 0.82,
+        diskTintStrength: isMicroquasar ? 0.96 : 0.82,
       });
       starGroup.add(this.xbDiskGroup);
 
-      const diskHalo = makeGlowSprite(0xA9DCFF, data.starRadius * diskHaloMul);
+      const diskHalo = makeGlowSprite(isMicroquasar ? 0x8AE8FF : 0xA9DCFF, data.starRadius * diskHaloMul);
       const diskHaloMat = diskHalo.material as THREE.SpriteMaterial;
       diskHaloMat.opacity = diskHaloOpacity;
       starGroup.add(diskHalo);
 
-      const accretorLightColor = isBurster ? 0xCFE5FF : starColor;
-      const xRayCorona = makeGlowSprite(accretorLightColor, data.starRadius * 12.6);
+      const accretorLightColor = isBurster ? 0xCFE5FF : (isMicroquasar ? 0xA8EAFF : starColor);
+      const xRayCorona = makeGlowSprite(accretorLightColor, data.starRadius * (isMicroquasar ? 16.8 : 12.6));
       const xRayCoronaMat = xRayCorona.material as THREE.SpriteMaterial;
-      xRayCoronaMat.opacity = 0.24;
+      xRayCoronaMat.opacity = isMicroquasar ? 0.28 : 0.24;
       starGroup.add(xRayCorona);
+
+      if (isMicroquasar) {
+        const jetGroup = createMicroquasarJetGroup({
+          radius: data.starRadius,
+          color: 0x67D8FF,
+        });
+        starGroup.add(jetGroup);
+
+        const jetHalo = makeGlowSprite(0xB6F3FF, data.starRadius * 19.2);
+        const jetHaloMat = jetHalo.material as THREE.SpriteMaterial;
+        jetHaloMat.opacity = 0.14;
+        starGroup.add(jetHalo);
+      }
 
       // Light travels with the compact object group (no static starLight needed)
       if (this.starLight) this.scene.remove(this.starLight);
       this.starLight = null;
-      starGroup.add(new THREE.PointLight(accretorLightColor, 2, 60000));
+      starGroup.add(new THREE.PointLight(accretorLightColor, isMicroquasar ? 2.8 : 2, 60000));
 
       // Compact object orbits opposite the companion, closer to CoM
       starOrbitRadius = companion.orbitRadius * 0.4;
@@ -410,10 +427,11 @@ export class SceneRenderer {
       collisionRadius: data.starRadius,
     });
 
-    if ((data.starType === 'XB' || data.starType === 'XBB') && data.companion) {
+    if (isAccretingBinary) {
+      const companion = data.companion!;
       const captureRadiusRaw = this.xbDiskGroup?.userData.captureRadius;
       const captureRadius = typeof captureRadiusRaw === 'number' ? captureRadiusRaw : data.starRadius * 2.2;
-      const transferStream = createXRayTransferStream(data.companion.color, captureRadius * 0.96);
+      const transferStream = createXRayTransferStream(companion.color, captureRadius * 0.96);
       this.scene.add(transferStream.spine);
       this.scene.add(transferStream.ribbon);
       this.systemObjects.push(transferStream.spine, transferStream.ribbon);

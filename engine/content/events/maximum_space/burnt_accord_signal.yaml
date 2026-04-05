@@ -1,0 +1,70 @@
+id: BURNT_ACCORD_SIGNAL
+title: THE DEAD DROP
+requires:
+  - !AnyFlagNotSet burnt_accord_stage1_done
+narrativeLines:
+  - >-
+    The station sits in maximum space — so far from the local star that sunlight
+    is just another point among millions. It's a fuel cache, officially.
+    Unofficially, it's the kind of place where people leave things for other
+    people they don't want to meet in person.
+  - >-
+    You find the message cube wedged behind a coolant pipe in the head. It's not
+    addressed to you — it's addressed to nobody, which is a style of address you
+    recognize from your years on the trade routes. Somebody wanted whoever found
+    this to find it.
+  - >-
+    The cube projects a woman's face. Mid-fifties, sharp jaw, a scar that runs
+    from her left temple into her hairline. She speaks quickly and without
+    pleasantries.
+  - >-
+    "My name is Tessaly Vane. I am — was — a diplomatic attaché to the Korathi
+    trade legation. If you're hearing this, you're in the right place at the
+    right time, and I need someone with a ship and no faction colors painted on
+    it."
+choices:
+  - id: play_message
+    label: Let the message play out
+    description: "Hear what she's asking"
+    effect:
+      tradingReputation: 0
+    nextMoment:
+      narrativeLines:
+        - >-
+          The projection flickers. Wherever she recorded this, the power was
+          unreliable. "The border conflict between the Korathi and the Ashundi in
+          the Thennic Reach — the one that's killed four thousand people and
+          closed eight trade routes? It was manufactured. I have proof. The
+          provocations, the 'pirate attacks,' the intercepted communiqués — all
+          of it was staged by a third party."
+        - >-
+          She pauses, and for a moment the careful composure cracks. "I tried to
+          bring this through official channels. My own delegation tried to have
+          me arrested. So I went dark."
+        - >-
+          "I need a courier. Someone who can carry documents between people who
+          would shoot each other on sight. If you're willing, go to the next set
+          of coordinates on this cube. Ask for Renn. Tell him the accord still
+          burns."
+        - >-
+          The projection dies. The cube holds one more thing — a nav point,
+          blinking quietly.
+      choices:
+        - id: accept_mission
+          label: "'The accord still burns.' You can remember that."
+          description: "Begin the chain — no faction commitment yet"
+          effect:
+            setsFlags: [burnt_accord_stage1_done]
+        - id: accept_cautious
+          label: Pocket the cube. You'll think about it in jump space.
+          description: "Begin the chain"
+          effect:
+            setsFlags: [burnt_accord_stage1_done]
+        - id: leave_cube
+          label: Put the cube back. Not your war.
+          description: No effect
+          effect: {}
+  - id: ignore_cube
+    label: Leave it where you found it
+    description: No effect
+    effect: {}

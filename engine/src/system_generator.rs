@@ -21,6 +21,7 @@ fn star_color(st: StarType) -> u32 {
         StarType::MG  => 0xDD44FF,
         StarType::BH  => 0x220022,
         StarType::XBB => 0xFF4466,
+        StarType::MQ  => 0x67D8FF,
         StarType::SGR => 0xFFAA22,
         StarType::Iron => 0x2A2A2A,
     }
@@ -37,6 +38,7 @@ fn star_radius_range(st: StarType) -> (f64, f64) {
         StarType::MG  => (8.0, 12.0),
         StarType::BH  => (90.0, 140.0),
         StarType::XBB => (28.0, 48.0),
+        StarType::MQ  => (42.0, 70.0),
         StarType::SGR => (8.0, 12.0),
         _ => (400.0, 600.0),
     }
@@ -111,7 +113,7 @@ const MOON_WEIGHTS_IRON: &[(SurfaceType, f64)] = &[
     (SurfaceType::Volcanic, 0.15),
 ];
 
-// Exotic compact (BH, XB, XBB) — maximum hostility, tidal disruption
+// Exotic compact (BH, XB, XBB, MQ) — maximum hostility, tidal disruption
 const ROCKY_WEIGHTS_EXOTIC: &[(SurfaceType, f64)] = &[
     (SurfaceType::Barren,   0.55),
     (SurfaceType::Volcanic, 0.30),
@@ -159,7 +161,7 @@ fn system_profile_for(st: StarType) -> SystemProfile {
             inner_count: (0, 2), outer_count: (1, 2),
             asteroid_chance: 0.70, ring_chance: 0.40,
         },
-        StarType::BH | StarType::XB | StarType::XBB => SystemProfile {
+        StarType::BH | StarType::XB | StarType::XBB | StarType::MQ => SystemProfile {
             rocky_weights:   ROCKY_WEIGHTS_EXOTIC,
             moon_weights:    MOON_WEIGHTS_EXOTIC,
             gas_giant_types: GAS_EXOTIC,
@@ -410,8 +412,8 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
     let (radius_min, radius_max) = star_radius_range(star.star_type);
     let star_radius = rng.float(radius_min, radius_max);
 
-    // Binary companion for X-ray binaries (XB, XBB)
-    let companion = if matches!(star.star_type, StarType::XB | StarType::XBB) {
+    // Binary companion for accreting compact systems (XB, XBB, MQ)
+    let companion = if matches!(star.star_type, StarType::XB | StarType::XBB | StarType::MQ) {
         let companion_type = match star.star_type {
             StarType::XBB => {
                 // X-ray bursters favor cooler main-sequence donors.
@@ -424,6 +426,17 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
                     StarType::G
                 }
             }
+            StarType::MQ => {
+                // Microquasars skew toward brighter donors so the binary reads clearly.
+                let roll = rng.next();
+                if roll < 0.42 {
+                    StarType::A
+                } else if roll < 0.77 {
+                    StarType::F
+                } else {
+                    StarType::G
+                }
+            }
             _ => {
                 let companion_types = [StarType::G, StarType::K, StarType::F, StarType::A];
                 *rng.pick(&companion_types)
@@ -431,10 +444,22 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
         };
         Some(BinaryCompanionData {
             star_type: companion_type,
-            radius: rng.float(350.0, 550.0),
+            radius: if matches!(star.star_type, StarType::MQ) {
+                rng.float(420.0, 620.0)
+            } else {
+                rng.float(350.0, 550.0)
+            },
             color: star_color(companion_type),
-            orbit_radius: rng.float(850.0, 1150.0),
-            orbit_speed: rng.float(0.00016, 0.00034),
+            orbit_radius: if matches!(star.star_type, StarType::MQ) {
+                rng.float(900.0, 1250.0)
+            } else {
+                rng.float(850.0, 1150.0)
+            },
+            orbit_speed: if matches!(star.star_type, StarType::MQ) {
+                rng.float(0.00014, 0.00028)
+            } else {
+                rng.float(0.00016, 0.00034)
+            },
             orbit_phase: rng.float(0.0, PI * 2.0),
         })
     } else {
@@ -718,6 +743,38 @@ mod tests {
 
         assert!(matches!(companion.star_type, StarType::G | StarType::K | StarType::M));
         assert!((28.0..=48.0).contains(&system.star_radius));
+        assert!(innermost_planet >= binary_outer_edge + 200.0);
+    }
+
+    #[test]
+    fn star_type_weights_align_with_star_type_table() {
+        assert_eq!(StarType::ALL.len(), StarType::WEIGHTS.len());
+    }
+
+    #[test]
+    fn mq_systems_have_hotter_companions_and_clear_space() {
+        let mq_star = StarSystemData {
+            id: 1001,
+            name: "Test MQ".to_string(),
+            x: 0.0,
+            y: 0.0,
+            star_type: StarType::MQ,
+            economy: EconomyType::HighTech,
+            tech_level: 5,
+            population: 9,
+        };
+
+        let system = generate_solar_system(&mq_star);
+        let companion = system.companion.as_ref().expect("MQ systems should have a companion");
+        let compact_outer_edge = companion.orbit_radius * 0.4 + system.star_radius;
+        let companion_outer_edge = companion.orbit_radius + companion.radius;
+        let binary_outer_edge = f64::max(compact_outer_edge, companion_outer_edge);
+        let innermost_planet = system.planets.iter()
+            .map(|planet| planet.orbit_radius)
+            .fold(f64::INFINITY, f64::min);
+
+        assert!(matches!(companion.star_type, StarType::A | StarType::F | StarType::G));
+        assert!((42.0..=70.0).contains(&system.star_radius));
         assert!(innermost_planet >= binary_outer_edge + 200.0);
     }
 

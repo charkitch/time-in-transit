@@ -9,6 +9,7 @@ import type {
   SystemPayload,
   MarketEntry,
   SystemEntryDialog,
+  ChainTarget,
 } from './engine';
 import { STARTING_CREDITS, STARTING_FUEL, HYPERSPACE, GALAXY_YEAR_START, type GoodName } from './constants';
 import type { NPCCargoEntry } from './mechanics/NPCSystem';
@@ -106,6 +107,9 @@ export interface GameStateData {
 
   // ── Galaxy simulation state (from Rust) ─────────────────────────────────
   galaxySimState: SystemSimState[] | null;
+
+  // ── Story chain targets ────────────────────────────────────────────────
+  chainTargets: ChainTarget[];
 }
 
 export interface GameActions {
@@ -153,6 +157,7 @@ export interface GameActions {
   setCluster: (cluster: StarSystemData[]) => void;
   setClusterSummary: (summary: ClusterSystemSummary[]) => void;
   setGalaxySimState: (simState: SystemSimState[] | null) => void;
+  setChainTargets: (targets: ChainTarget[]) => void;
 }
 
 // Cluster is set from Rust engine init — starts empty, populated by Game.constructor
@@ -187,6 +192,7 @@ interface SaveData {
   knownFactions: string[];
   factionMemory: Record<number, FactionMemoryEntry>;
   seenSystemDialogIds: string[];
+  chainTargets: ChainTarget[];
 }
 
 function migrateLegacyGoodKeys<T>(record: Partial<Record<GoodName, T>> | undefined): Partial<Record<GoodName, T>> | undefined {
@@ -285,6 +291,9 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
 
   // Galaxy simulation state
   galaxySimState: null,
+
+  // Story chain targets
+  chainTargets: [],
 
   setInvertControls: (invert) => {
     set({ invertControls: invert });
@@ -400,6 +409,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   },
   setClusterSummary: (clusterSummary) => set({ clusterSummary }),
   setGalaxySimState: (simState) => set({ galaxySimState: simState }),
+  setChainTargets: (targets) => set({ chainTargets: targets }),
 
   resetGame: () => {
     localStorage.removeItem('space-game-save');
@@ -424,6 +434,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       pendingSystemEntryDialog: null,
       seenSystemDialogIds: [],
       galaxySimState: null,
+      chainTargets: [],
       ui: { mode: 'flight', alertMessage: null, hyperspaceTarget: null, hyperspaceCountdown: 0, deathMessage: null, canDockNow: false },
     });
   },
@@ -450,6 +461,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       knownFactions: new Set(saved.knownFactions ?? []),
       factionMemory: saved.factionMemory ?? {},
       seenSystemDialogIds: saved.seenSystemDialogIds ?? [],
+      chainTargets: saved.chainTargets ?? [],
     }));
   },
 
@@ -471,6 +483,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       knownFactions: Array.from(s.knownFactions),
       factionMemory: s.factionMemory,
       seenSystemDialogIds: s.seenSystemDialogIds,
+      chainTargets: s.chainTargets,
     };
     localStorage.setItem('space-game-save', JSON.stringify(data));
   },

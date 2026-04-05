@@ -1,0 +1,74 @@
+id: BURNT_ACCORD_CONTACT
+title: THE ASHUNDI OFFICER
+requires:
+  - !AnyFlagSet burnt_accord_stage1_done
+  - !AnyFlagNotSet burnt_accord_stage2_done
+  - !ChainTargetHere burnt_accord
+narrativeLines:
+  - >-
+    Another station at the edge of nothing. This one is older — pre-expansion
+    architecture, rounded corridors, the kind of place that was built when
+    people still thought space should feel like the inside of a submarine.
+  - >-
+    Renn is waiting in what passes for a cantina. He's Ashundi — you can tell by
+    the blue-thread rank braids woven into his collar, though he's tried to tuck
+    them out of sight. His hands are steady but his eyes aren't.
+  - >-
+    "The accord still burns," you say. He exhales like he's been holding that
+    breath for weeks.
+  - >-
+    "I didn't think she'd find anyone." He pushes a drink toward you — untouched,
+    ordered for whoever showed up. "Sit. I need to tell you what we're dealing
+    with before I give you anything to carry."
+choices:
+  - id: hear_renn
+    label: Sit. Listen.
+    description: "Learn about the manufactured war"
+    effect:
+      tradingReputation: 0
+    nextMoment:
+      narrativeLines:
+        - >-
+          Renn pulls out a data tablet and lays it flat. Charts, timelines,
+          shipping manifests. "Eighteen months ago, an Ashundi convoy was
+          destroyed in the Thennic Reach. Korathi weapons signatures. Clean hit.
+          The Ashundi fleet mobilized within hours. Three engagements later, we
+          had a border war."
+        - >-
+          He taps the manifest. "Except these weapons signatures — I've run them
+          through every database I can access. They're Korathi patterns, yes. But
+          the power curves are wrong. Whoever fired those shots was using Korathi
+          weapons that were manufactured six hundred years ago and modified with
+          components that don't exist in Korathi space."
+        - >-
+          He leans back. "Tessaly found the same discrepancy from the Korathi
+          side. The 'Ashundi provocations' that started the whole thing? Same
+          story. Old weapons, wrong components. Someone went to a lot of trouble
+          to make two civilizations shoot at each other."
+        - >-
+          "Tessaly thinks it's the Draimar. The Thennic Reach sits right across
+          their primary expansion corridor. A Korathi-Ashundi war clears the
+          board for them." He pushes a sealed data case across the table. "This
+          is my half of the evidence. Tessaly needs you to carry it to a Korathi
+          officer named Hadiq. He's the only one on their side she still trusts."
+      choices:
+        - id: take_evidence
+          label: Take the case. Ask where to find Hadiq.
+          description: "CR 300, stage complete"
+          effect:
+            creditsReward: 300
+            setsFlags: [burnt_accord_stage2_done]
+        - id: take_evidence_promise
+          label: Take it, but tell Renn you want to know who's behind this too
+          description: "+Reputation, stage complete"
+          effect:
+            tradingReputation: 1
+            setsFlags: [burnt_accord_stage2_done]
+        - id: refuse_evidence
+          label: This is espionage, not courier work. Walk away.
+          description: No effect
+          effect: {}
+  - id: wrong_person
+    label: Actually, you were just looking for the fuel depot
+    description: No effect
+    effect: {}

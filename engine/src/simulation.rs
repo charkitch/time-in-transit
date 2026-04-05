@@ -218,6 +218,7 @@ mod tests {
             known_factions: vec![],
             faction_memory: HashMap::new(),
             seen_system_dialog_ids: vec![],
+            chain_targets: vec![],
         }
     }
 

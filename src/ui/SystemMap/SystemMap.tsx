@@ -48,7 +48,56 @@ export function SystemMap({ onClose }: SystemMapProps) {
     // Star
     const starColor = '#' + new THREE.Color(STAR_COLORS[currentSystem.starType] ?? 0xFFEE88).getHexString();
     const starR = Math.max(6, currentSystem.starRadius * scale);
-    if (currentSystem.starType === 'BH') {
+    if (currentSystem.starType === 'MQ') {
+      const halo = ctx.createRadialGradient(cx, cy, starR * 0.5, cx, cy, starR * 4.2);
+      halo.addColorStop(0, 'rgba(180, 242, 255, 0.35)');
+      halo.addColorStop(0.42, 'rgba(103, 216, 255, 0.18)');
+      halo.addColorStop(1, 'rgba(103, 216, 255, 0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(cx, cy, starR * 4.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(-0.42);
+
+      ctx.strokeStyle = 'rgba(110, 226, 255, 0.4)';
+      ctx.lineWidth = Math.max(3, starR * 0.5);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-starR * 5.2, -starR * 8.2);
+      ctx.lineTo(-starR * 0.9, -starR * 1.3);
+      ctx.moveTo(starR * 0.9, starR * 1.3);
+      ctx.lineTo(starR * 5.2, starR * 8.2);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(230, 250, 255, 0.92)';
+      ctx.lineWidth = Math.max(1.5, starR * 0.22);
+      ctx.beginPath();
+      ctx.moveTo(-starR * 4.4, -starR * 7.0);
+      ctx.lineTo(-starR * 0.7, -starR);
+      ctx.moveTo(starR * 0.7, starR);
+      ctx.lineTo(starR * 4.4, starR * 7.0);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255, 224, 248, 0.82)';
+      ctx.lineWidth = Math.max(2, starR * 0.4);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, starR * 2.4, starR * 0.92, 0.24, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.fillStyle = '#020304';
+      ctx.beginPath();
+      ctx.arc(cx, cy, starR * 0.92, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#d8f6ff';
+      ctx.beginPath();
+      ctx.arc(cx, cy, starR * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (currentSystem.starType === 'BH') {
       const halo = ctx.createRadialGradient(cx, cy, starR * 0.9, cx, cy, starR * 2.8);
       halo.addColorStop(0, 'rgba(255,170,110,0)');
       halo.addColorStop(0.35, 'rgba(255,170,110,0.38)');

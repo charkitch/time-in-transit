@@ -1,0 +1,69 @@
+id: CARTOGRAPHERS_WAKE_INTRO
+title: THE IMPOSSIBLE CHART
+requires:
+  - !AnyFlagNotSet cartographers_wake_stage1_done
+narrativeLines:
+  - >-
+    The asteroid base is built into a potato-shaped rock spinning lazily in a
+    belt full of iron and regret. Someone has welded a bar to the outer hull. The
+    sign reads THE CROOKED ORBIT and the drinks are served in magnetic cups.
+  - >-
+    You're halfway through something amber when the woman on the next stool
+    unfolds a star chart across the bar. It's printed on actual vellum — thick,
+    yellowed, hand-annotated in a script you don't recognize.
+  - >-
+    "Bought this off a salvage haul two decades back," she says. "Thought it was
+    decorative. Then last year I jumped to Sennach-IV and found a protostellar
+    disc exactly where this chart says a star should be." She taps a point in
+    empty space. "This chart is eight hundred years old. That disc is maybe
+    forty."
+  - >-
+    She smooths a crease with obvious care. "Whoever drew this mapped a star
+    that didn't exist yet."
+choices:
+  - id: examine_chart
+    label: Ask if you can look at the chart properly
+    description: "Learn about the cartographer"
+    effect:
+      tradingReputation: 0
+    nextMoment:
+      narrativeLines:
+        - >-
+          Up close, the chart is extraordinary. It's not just one system — it
+          maps a whole region, maybe forty light-years across. Most of the stars
+          are where they should be. But six are circled in red ink, and three of
+          those circles sit in what should be empty space.
+        - >-
+          "I checked the other two I could reach," she says. "One has a brown
+          dwarf that's not in any catalog before 300 years ago. The other has a
+          T Tauri star so young it's still clearing its accretion disk."
+        - >-
+          She finishes her drink. "The chart is signed, if you can call it that.
+          Just a glyph — a compass rose with too many points. I've heard miners
+          on other rocks mention the same symbol. Someone was out here a long
+          time ago, drawing maps of a galaxy that hadn't happened yet."
+        - >-
+          She slides the chart toward you. "I've got my route and my cargo. But
+          if you're the wandering type, you might find more of these."
+      choices:
+        - id: take_chart
+          label: Accept the chart and promise to follow the trail
+          description: "+Reputation, begin tracking the cartographer"
+          effect:
+            tradingReputation: 1
+            setsFlags: [cartographers_wake_stage1_done]
+        - id: buy_chart
+          label: Offer to buy it — she shouldn't give away something this valuable
+          description: "CR -100, +Reputation, begin the chain"
+          effect:
+            creditsReward: -100
+            tradingReputation: 1
+            setsFlags: [cartographers_wake_stage1_done]
+        - id: decline_chart
+          label: Interesting, but you've got cargo to move
+          description: No effect
+          effect: {}
+  - id: mind_own_drink
+    label: Mind your own drink
+    description: No effect
+    effect: {}

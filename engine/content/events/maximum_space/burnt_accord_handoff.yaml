@@ -1,0 +1,72 @@
+id: BURNT_ACCORD_HANDOFF
+title: THE KORATHI OFFICER
+requires:
+  - !AnyFlagSet burnt_accord_stage2_done
+  - !AnyFlagNotSet burnt_accord_stage3_done
+  - !ChainTargetHere burnt_accord
+narrativeLines:
+  - >-
+    This station doesn't show up on the charts at all. You had to follow a
+    transponder frequency that Renn gave you — a heartbeat pulse, slow and
+    regular, hidden inside background radiation noise. Clever.
+  - >-
+    Commander Hadiq is tall, Korathi-formal, and clearly miserable about meeting
+    a trader in a place like this. His uniform is immaculate. The station is not.
+    He's brought his own chair.
+  - >-
+    He reads the data case in silence for a long time. His jaw tightens. His jaw
+    relaxes. His jaw tightens again.
+  - >-
+    "I knew it," he says, very quietly. "I told the admiralty the Ashundi
+    signatures were inconsistent. They said I was reading too much into
+    forensic scatter." He looks up. "Where is Tessaly?"
+choices:
+  - id: relay_situation
+    label: Tell him everything — Tessaly is dark, Renn is exposed, and someone is watching
+    description: "Share the full picture"
+    effect:
+      tradingReputation: 0
+    nextMoment:
+      narrativeLines:
+        - >-
+          Hadiq stands and paces — three steps in each direction, the station is
+          that small. His boots ring on the metal floor.
+        - >-
+          "If this is the Draimar — and it does smell like them — they'll have
+          people inside both delegations. My own staff, probably. Which means the
+          moment I file this through channels, it disappears and I have an
+          accident in a docking bay."
+        - >-
+          He stops. "But Tessaly has the other half of the evidence. The Ashundi
+          side. If we can put both halves together in front of the right people,
+          in the right room, it's too big to bury." He seals the data case and
+          hands it back to you.
+        - >-
+          "Find Tessaly. Bring her to the final meeting point — she'll know where.
+          And trader?" He almost smiles. "Fly fast. The people who started this
+          war will not be pleased that someone is trying to end it."
+        - >-
+          As you leave, you notice a ship undocking from the far side of the
+          station. No transponder. No running lights. It turns toward the same
+          jump corridor you came from.
+      choices:
+        - id: take_combined_case
+          label: Take the case and go. Fast.
+          description: "CR 400, stage complete"
+          effect:
+            creditsReward: 400
+            setsFlags: [burnt_accord_stage3_done]
+        - id: warn_hadiq
+          label: Tell Hadiq about the dark ship before you leave
+          description: "+Reputation, stage complete"
+          effect:
+            tradingReputation: 1
+            setsFlags: [burnt_accord_stage3_done]
+        - id: back_out
+          label: Tell Hadiq you can't carry this any further
+          description: No effect
+          effect: {}
+  - id: deliver_silently
+    label: Leave the case and go without a word
+    description: No effect
+    effect: {}

@@ -1,0 +1,71 @@
+id: CARTOGRAPHERS_WAKE_COLLECTOR
+title: THE CHART COLLECTOR
+requires:
+  - !AnyFlagSet cartographers_wake_stage1_done
+  - !AnyFlagNotSet cartographers_wake_stage2_done
+  - !ChainTargetHere cartographers_wake
+narrativeLines:
+  - >-
+    This base is older and quieter — carved into a nickel-iron asteroid with
+    veins of olivine running through the walls like frozen lightning. The docking
+    master waves you through without checking your manifest. Not many visitors
+    out here.
+  - >-
+    You find him in a chamber that was probably meant to be a cargo bay. Every
+    surface is covered in charts. Pinned, taped, magneted, propped. Star charts,
+    navigation plots, hand-drawn sketches of nebulae. And in the middle of it
+    all, a very old man sitting in a very old chair, eating soup.
+  - >-
+    "Ah," he says, seeing the vellum chart in your hand. "You've got one of
+    Enne's." He pronounces it carefully, like a name he's said many times. "Come
+    in. I've got thirty-seven more."
+choices:
+  - id: ask_about_enne
+    label: Ask who Enne was
+    description: "Learn the cartographer's story"
+    effect:
+      tradingReputation: 0
+    nextMoment:
+      narrativeLines:
+        - >-
+          He sets down his soup with the careful deliberation of someone who has
+          all the time in the galaxy and knows it. The charts rustle as he shifts
+          in his chair.
+        - >-
+          "Not 'was.' I don't use past tense for Enne." He holds up a chart —
+          this one on synthetic fabric, newer than yours. "They came through here
+          eleven years ago. Sat in that corner for three days, drawing. Didn't
+          eat much. Drank a lot of tea."
+        - >-
+          He gestures at the wall behind him, where charts are pinned in
+          overlapping layers, oldest at the back. "I've been collecting these for
+          sixty years. Different hands, different centuries, same compass rose.
+          Enne, or someone using that name, has been mapping impossible stars for
+          at least a thousand years."
+        - >-
+          "The really fun part?" He pulls down a chart and holds it next to
+          yours. Same region, different century. In the newer one, two of the
+          circled empty spaces now have stars drawn in — with dates. "They don't
+          just predict where stars will appear. They predict when."
+      choices:
+        - id: compare_charts
+          label: Help him cross-reference your chart with his collection
+          description: "CR 300, +Reputation, stage complete"
+          effect:
+            creditsReward: 300
+            tradingReputation: 1
+            setsFlags: [cartographers_wake_stage2_done]
+        - id: ask_where_next
+          label: Ask where Enne went after leaving here
+          description: "CR 200, stage complete"
+          effect:
+            creditsReward: 200
+            setsFlags: [cartographers_wake_stage2_done]
+        - id: leave_collector
+          label: This is fascinating but you need to go
+          description: No effect
+          effect: {}
+  - id: not_interested
+    label: Just here for fuel and provisions
+    description: No effect
+    effect: {}

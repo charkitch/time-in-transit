@@ -1,0 +1,99 @@
+id: BURNT_ACCORD_FINALE
+title: THE BURNT ACCORD
+requires:
+  - !AnyFlagSet burnt_accord_stage4_done
+  - !AnyFlagNotSet burnt_accord_completed
+  - !ChainTargetHere burnt_accord
+narrativeLines:
+  - >-
+    The station is a diplomatic module — old Solossa design, meant for exactly
+    this kind of meeting. Neutral ground in the emptiest space anyone could find.
+    It's already crowded when you arrive. Two Ashundi officers in unmarked
+    shuttles. Three Korathi in a courier with its weapons conspicuously powered
+    down. And a Draimar trade frigate, uninvited, sitting at the outer dock like
+    a cat watching a mousehole.
+  - >-
+    Tessaly straightens her jacket — borrowed from your ship's locker, two sizes
+    too large — and walks into the conference chamber like she still has a title
+    and a government behind her. Renn is there. Hadiq is there. They nod at each
+    other, stiffly, across a table where their nations' flags would normally fly.
+  - >-
+    She presents the evidence. Both halves. The weapons analysis, the
+    intelligence intercepts, the timeline of manufactured provocations. It takes
+    an hour. Nobody interrupts.
+  - >-
+    And then the Draimar delegation walks in. Three of them, led by a woman
+    named Seval Osh, who smiles like someone who has already won.
+    "Ambassador Vane," she says. "What a lovely story. We'd like to offer a
+    rebuttal."
+choices:
+  - id: stand_with_tessaly
+    label: Stand with Tessaly and demand the evidence be heard
+    description: "Full dramatic choice — read all options carefully"
+    effect:
+      tradingReputation: 0
+    nextMoment:
+      narrativeLines:
+        - >-
+          Seval Osh spreads her hands. "The evidence is compelling. We don't deny
+          that. But evidence can be arranged, as I'm sure Commander Hadiq will
+          agree." She produces her own data case. "We have evidence that
+          Ambassador Vane has been working with Ashundi intelligence for three
+          years. That this entire 'peace mission' is an Ashundi operation to
+          discredit the Draimar and seize the Thennic Reach for themselves."
+        - >-
+          It's a lie. You've spent enough time with these people to know that.
+          But it's a well-constructed lie, and the Korathi officers are
+          exchanging glances. Hadiq's face has gone rigid.
+        - >-
+          Renn stands. "That's fabricated and everyone in this room knows it."
+          Seval smiles wider. "Then let's settle it. Right here. Choose your
+          allies."
+        - >-
+          The room fractures. You see it happen in real time — trust crumbling,
+          hands moving toward sidearms, old hatreds resurfacing because they're
+          easier than new truths. Tessaly looks at you. She doesn't say anything.
+          She doesn't have to.
+      choices:
+        - id: side_korathi
+          label: Back Hadiq and the Korathi — they have the military strength to end this
+          description: "Korathi alliance. Hadiq becomes a contact. Ashundi trust broken."
+          effect:
+            factionTag: "faction-0"
+            tradingReputation: 2
+            creditsReward: 500
+            setsFlags: [burnt_accord_completed, hadiq_ally, korathi_accord, ashundi_distrust]
+        - id: side_ashundi
+          label: Back Renn and the Ashundi — they were the first victims of this lie
+          description: "Ashundi alliance. Renn becomes a contact. Korathi trust broken."
+          effect:
+            factionTag: "faction-2"
+            tradingReputation: 2
+            creditsReward: 500
+            setsFlags: [burnt_accord_completed, renn_ally, ashundi_accord, korathi_distrust]
+        - id: expose_draimar
+          label: Turn on Seval — present the combined evidence to the whole room and burn the Draimar lie
+          description: "No faction — but both sides respect you. Draimar become hostile. Tessaly is your friend."
+          effect:
+            tradingReputation: 3
+            creditsReward: 200
+            setsFlags: [burnt_accord_completed, tessaly_friend, draimar_exposed, thennic_peace]
+        - id: sell_to_draimar
+          label: You've seen the inside of this. Seval is going to win. Take her offer.
+          description: "Draimar alliance. Big payout. Tessaly is captured. Renn and Hadiq are finished."
+          effect:
+            factionTag: "faction-3"
+            tradingReputation: -2
+            creditsReward: 2000
+            setsFlags: [burnt_accord_completed, seval_ally, tessaly_captured, renn_captured, hadiq_captured]
+        - id: help_tessaly_escape
+          label: Grab Tessaly and run — blow the docking clamps and get out before the shooting starts
+          description: "Save Tessaly. No faction change. The war goes on, but you saved a good person."
+          effect:
+            fuelReward: -0.3
+            creditsReward: 0
+            setsFlags: [burnt_accord_completed, tessaly_friend, accord_collapsed]
+  - id: stay_back
+    label: This isn't your fight. Stay by the door.
+    description: No effect
+    effect: {}

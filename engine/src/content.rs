@@ -1,6 +1,45 @@
 use std::collections::HashMap;
 
-use crate::types::{GameEvent, SystemEntryDialog, Trigger, TriggerFile};
+use crate::types::{GameEvent, SecretBaseType, SystemEntryDialog, Trigger, TriggerFile};
+
+// ─── Story Chain Definitions ─────────────────────────────────────────────────
+
+pub struct StoryChainDef {
+    pub chain_id: &'static str,
+    pub stages: &'static [ChainStageDef],
+    pub min_distance: f64,
+    pub required_base_type: Option<SecretBaseType>,
+}
+
+pub struct ChainStageDef {
+    pub completion_flag: &'static str,
+    pub stage_label: &'static str,
+}
+
+pub fn story_chains() -> Vec<StoryChainDef> {
+    vec![
+        StoryChainDef {
+            chain_id: "quasar_array",
+            stages: &[
+                ChainStageDef { completion_flag: "quasar_array_stage1_done", stage_label: "stage2" },
+                ChainStageDef { completion_flag: "quasar_array_stage2_done", stage_label: "stage3" },
+                ChainStageDef { completion_flag: "quasar_array_stage3_done", stage_label: "stage4" },
+            ],
+            min_distance: 12.0,
+            required_base_type: Some(SecretBaseType::OortCloud),
+        },
+        StoryChainDef {
+            chain_id: "cartographers_wake",
+            stages: &[
+                ChainStageDef { completion_flag: "cartographers_wake_stage1_done", stage_label: "stage2" },
+                ChainStageDef { completion_flag: "cartographers_wake_stage2_done", stage_label: "stage3" },
+                ChainStageDef { completion_flag: "cartographers_wake_stage3_done", stage_label: "stage4" },
+            ],
+            min_distance: 12.0,
+            required_base_type: Some(SecretBaseType::Asteroid),
+        },
+    ]
+}
 
 fn parse_event(label: &str, raw: &str) -> GameEvent {
     serde_yaml::from_str::<GameEvent>(raw)
@@ -43,6 +82,10 @@ pub fn asteroid_base_events() -> Vec<GameEvent> {
         ("asteroid_base/ghost_signal.yaml", include_str!("../content/events/asteroid_base/ghost_signal.yaml")),
         ("asteroid_base/the_broker.yaml", include_str!("../content/events/asteroid_base/the_broker.yaml")),
         ("asteroid_base/miners_dispute.yaml", include_str!("../content/events/asteroid_base/miners_dispute.yaml")),
+        ("asteroid_base/cartographers_wake_intro.yaml", include_str!("../content/events/asteroid_base/cartographers_wake_intro.yaml")),
+        ("asteroid_base/cartographers_wake_collector.yaml", include_str!("../content/events/asteroid_base/cartographers_wake_collector.yaml")),
+        ("asteroid_base/cartographers_wake_workshop.yaml", include_str!("../content/events/asteroid_base/cartographers_wake_workshop.yaml")),
+        ("asteroid_base/cartographers_wake_finale.yaml", include_str!("../content/events/asteroid_base/cartographers_wake_finale.yaml")),
     ])
 }
 

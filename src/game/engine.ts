@@ -19,7 +19,7 @@ import type { GoodName, EconomyType, PoliticalType } from './constants';
 
 // ─── Types matching Rust camelCase serde output ─────────────────────────────
 
-export type StarType = 'G' | 'K' | 'M' | 'F' | 'A' | 'WD' | 'NS' | 'PU' | 'XB' | 'MG' | 'BH' | 'XBB' | 'SGR' | 'IRON';
+export type StarType = 'G' | 'K' | 'M' | 'F' | 'A' | 'WD' | 'NS' | 'PU' | 'XB' | 'MG' | 'BH' | 'XBB' | 'MQ' | 'SGR' | 'IRON';
 
 export type SurfaceType =
   | 'continental'
@@ -215,6 +215,12 @@ export interface GameEvent {
   triggeredOnly: boolean;
 }
 
+export interface ChainTarget {
+  chainId: string;
+  targetSystemId: number;
+  stage: string;
+}
+
 export interface ClusterSystemSummary {
   id: number;
   name: string;
@@ -253,6 +259,7 @@ export interface JumpResult {
   yearsElapsed: number;
   newGalaxyYear: number;
   galaxySimState: SystemSimState[];
+  chainTargets: ChainTarget[];
 }
 
 export interface InitResult {
@@ -260,6 +267,7 @@ export interface InitResult {
   clusterSummary: ClusterSystemSummary[];
   cluster: StarSystemData[];
   galaxySimState: SystemSimState[];
+  chainTargets: ChainTarget[];
 }
 
 // ─── Galaxy Simulation State ────────────────────────────────────────────────
@@ -300,6 +308,7 @@ export interface WasmPlayerState {
     galaxyYear: number;
   }>;
   seenSystemDialogIds: string[];
+  chainTargets: ChainTarget[];
 }
 
 // ─── Engine API ─────────────────────────────────────────────────────────────

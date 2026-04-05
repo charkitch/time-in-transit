@@ -152,6 +152,8 @@ pub enum StarType {
     BH,
     #[serde(rename = "XBB")]
     XBB,
+    #[serde(rename = "MQ")]
+    MQ,
     #[serde(rename = "SGR")]
     SGR,
     #[serde(rename = "IRON")]
@@ -162,13 +164,13 @@ impl StarType {
     pub const ALL: &'static [StarType] = &[
         StarType::G, StarType::K, StarType::M, StarType::F, StarType::A,
         StarType::WD, StarType::NS, StarType::PU, StarType::XB,
-        StarType::MG, StarType::BH, StarType::XBB, StarType::SGR,
+        StarType::MG, StarType::BH, StarType::XBB, StarType::MQ, StarType::SGR,
         // StarType::Iron is hand-placed, not randomly generated
     ];
     pub const WEIGHTS: &'static [f64] = &[
         0.16, 0.13, 0.11, 0.07, 0.05,
         0.08, 0.07, 0.06, 0.05, 0.06,
-        0.05, 0.08, 0.13,
+        0.05, 0.07, 0.01, 0.13,
     ];
 }
 
@@ -484,6 +486,8 @@ pub struct PlayerState {
     pub faction_memory: HashMap<u32, FactionMemoryEntry>,
     #[serde(default)]
     pub seen_system_dialog_ids: Vec<String>,
+    #[serde(default)]
+    pub chain_targets: Vec<ChainTarget>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -492,6 +496,16 @@ pub struct FactionMemoryEntry {
     pub faction_id: String,
     pub contesting_faction_id: Option<String>,
     pub galaxy_year: u32,
+}
+
+// ─── Story Chains ────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChainTarget {
+    pub chain_id: String,
+    pub target_system_id: u32,
+    pub stage: String,
 }
 
 // ─── Events ─────────────────────────────────────────────────────────────────
@@ -556,6 +570,7 @@ pub enum EventCondition {
     AnyFlagNotSet(String),
     SurfaceIs(Vec<SurfaceType>),
     TriggerFired(String),
+    ChainTargetHere(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -636,6 +651,7 @@ pub struct JumpResult {
     pub years_elapsed: u32,
     pub new_galaxy_year: u32,
     pub galaxy_sim_state: Vec<SystemSimState>,
+    pub chain_targets: Vec<ChainTarget>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -645,6 +661,7 @@ pub struct InitResult {
     pub cluster_summary: Vec<ClusterSystemSummary>,
     pub cluster: Vec<StarSystemData>,
     pub galaxy_sim_state: Vec<SystemSimState>,
+    pub chain_targets: Vec<ChainTarget>,
 }
 
 // ─── Galaxy Simulation State ────────────────────────────────────────────────

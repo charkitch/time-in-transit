@@ -1,0 +1,77 @@
+id: CARTOGRAPHERS_WAKE_FINALE
+title: THE GARDENER'S TRAIL
+requires:
+  - !AnyFlagSet cartographers_wake_stage3_done
+  - !AnyFlagNotSet cartographers_wake_completed
+  - !ChainTargetHere cartographers_wake
+narrativeLines:
+  - >-
+    The asteroid base is built around a core of pure crystalline carbon — a
+    diamond the size of a cathedral, cracked open and filled with light. Someone
+    has turned it into a workshop, an observatory, and a home.
+  - >-
+    Enne is shorter than you expected. They're sitting cross-legged on a
+    cushion, painting a star chart with actual brushes — sable hair on vellum,
+    the same kind you've been carrying across the cluster. They look up with
+    eyes that have the patient weight of very deep water.
+  - >-
+    "The keeper told me you were coming," they say. Their voice is quiet, warm,
+    accented in something that hasn't been spoken natively in centuries. "Sit.
+    I'll make tea. You've earned the good version of this story."
+choices:
+  - id: hear_the_story
+    label: Sit. Accept the tea. Listen.
+    description: "Hear what Enne has learned"
+    effect:
+      tradingReputation: 0
+    nextMoment:
+      narrativeLines:
+        - >-
+          The tea tastes like jasmine and something older — a flavor you can't
+          name but that makes you think of rain on warm stone. Enne paints while
+          they talk, adding a new star to the chart with three precise strokes.
+        - >-
+          "I was a navigation officer, once. Long time ago. I noticed that my
+          charts kept going wrong — not because the charts were bad, but because
+          new things kept appearing where nothing should be. Stars, protostars,
+          accretion discs. Too many, too fast, too neatly arranged."
+        - >-
+          They hold up the finished chart. A spiral of new stars, curving across
+          two hundred light-years, each one younger than it has any right to be.
+          "Someone is planting a garden. Not flowers — fusion reactors, each one
+          a million miles across. And the garden has a shape."
+        - >-
+          Enne traces the spiral with a paint-stained finger. "It's not a
+          weapon. It's not a message. Near as I can tell after twelve hundred
+          years of looking — it's landscaping. Someone thinks the galaxy needs
+          more light in this corner, and they are, very slowly and very
+          beautifully, adding some."
+        - >-
+          They smile — the smile of someone who chased a mystery to the end and
+          found it was even stranger than they hoped. "I can't find the gardener.
+          I'm not sure the gardener is a thing you find. But I can show you where
+          the next seeds are, if you want to watch a star be born."
+      choices:
+        - id: accept_final_chart
+          label: Accept Enne's chart of the next seed-stars
+          description: "CR 800, +Reputation, chain complete"
+          effect:
+            creditsReward: 800
+            tradingReputation: 2
+            setsFlags: [cartographers_wake_completed]
+        - id: ask_about_gardener
+          label: Ask Enne what kind of thing gardens a galaxy
+          description: "CR 600, fuel bonus, chain complete"
+          effect:
+            creditsReward: 600
+            fuelReward: 0.8
+            tradingReputation: 1
+            setsFlags: [cartographers_wake_completed]
+        - id: leave_enne
+          label: Thank Enne but decline the chart
+          description: No effect
+          effect: {}
+  - id: trade_only
+    label: You came to trade, not to listen to stories
+    description: No effect
+    effect: {}

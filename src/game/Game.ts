@@ -110,6 +110,7 @@ export class Game {
     state.setCluster(result.cluster);
     state.setClusterSummary(result.clusterSummary);
     state.setGalaxySimState(result.galaxySimState);
+    state.setChainTargets(result.chainTargets);
     this.engineReady = true;
 
     // Use system payload from Rust for first system

@@ -1,35 +1,45 @@
 id: ARRAY_ICE_NODE
-title: "LENS RUN: ICE NODE"
+title: "THE SECOND EYE"
 requires:
   - !AnyFlagSet quasar_array_stage1_done
   - !AnyFlagNotSet quasar_array_stage2_done
-  - !FlagNotSet quasar_array_stage1_done
+  - !ChainTargetHere quasar_array
 narrativeLines:
   - >-
-    This station hangs off a slow-rolling comet spine, all frost, work lights, and careful hands.
+    Different system, different comet, same quality of silence. This station has a greenhouse
+    module bolted to its spine — someone is growing actual tomatoes out here in the dark
+    between stars.
   - >-
-    A technician meets you at the hatch, sees the shock crate in your hold manifest, and exhales with obvious relief.
+    A young technician is waiting for you at the lock, bouncing on his heels. He checks
+    the lens crate seals before he checks your name. His relief is physical.
   - >-
-    "That lens assembly is our spare for the widefield branch," she says. "We lost the old one to microfracture."
-  - >-
-    Over tea that tastes faintly of copper, she shows you a wall display: quasar afterglow curves from war-affected targets drifting out of model range.
+    "Three months we've been running on a patched secondary," he says, already walking
+    you toward the installation bay. "Come see what we've been looking at with one bad eye."
 choices:
   - id: hand_off_lens
-    label: Hand over the lens crate and stay to talk
-    description: "Complete delivery and hear what this node has seen"
+    label: Deliver the lenses and see what they've found
+    description: "Complete delivery and view the data"
     effect:
       tradingReputation: 0
     nextMoment:
       narrativeLines:
         - >-
-          They install the assembly while you wait by the thermal lock.
+          The bay is small, warm, and covered in handwritten charts. Someone has pinned
+          actual photographs to the wall — not screens, photographs, printed on paper that
+          curls at the edges.
         - >-
-          The technician points at two traces on her console. "See this? Control quasar is boring. War-scarred quasar keeps 'ringing' like it remembers being struck."
+          He pulls up a display showing two light curves. One is steady, almost boring.
+          The other looks like a heartbeat that forgot how to stop.
         - >-
-          "If this is physical recovery and not noise, somebody fought on scales we still don't know how to measure."
+          "Both quasars," he says. "Brightest things in the universe, give or take. The calm one
+          has been calm forever. The other one — something happened to it. A long time ago and
+          very far away. And whatever happened, the light from it is still arriving."
+        - >-
+          He traces the oscillation with his finger. "It's not random. It's ringing. Like a bell
+          somebody struck so hard the sound is still travelling."
       choices:
         - id: encourage_open_briefing
-          label: Encourage them to brief the public sciences nets
+          label: Ask if anyone else is watching this
           description: "CR 450 delivery pay, +Reputation, stage complete"
           effect:
             creditsReward: 450
@@ -37,7 +47,7 @@ choices:
             fuelReward: 0.4
             setsFlags: [quasar_array_stage2_done]
         - id: recommend_caution
-          label: Recommend caution until the next node confirms
+          label: Ask how hard somebody would have to hit a quasar to make it ring
           description: "CR 550 discretion pay, stage complete"
           effect:
             creditsReward: 550

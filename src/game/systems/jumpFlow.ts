@@ -28,6 +28,7 @@ export function applyJumpExecution(params: {
 
   state.setClusterSummary(jumpResult.clusterSummary);
   state.setGalaxySimState(jumpResult.galaxySimState);
+  state.setChainTargets(jumpResult.chainTargets);
   state.advanceGalaxyYear(jumpResult.yearsElapsed);
   state.addJumpLogEntry({
     fromSystemId: state.currentSystemId,

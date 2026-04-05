@@ -20,6 +20,7 @@ use factions::{get_faction, get_system_faction_state};
 use trading::get_market;
 use events::{select_game_event, EventContext, EventPool};
 use simulation::{init_galaxy_state, simulate_galaxy};
+use content::story_chains;
 
 // ─── Persistent state across WASM calls ─────────────────────────────────────
 
@@ -51,6 +52,88 @@ fn build_cluster_summary(cluster: &[StarSystemData], galaxy_year: u32) -> Vec<Cl
             population: star.population,
         }
     }).collect()
+}
+
+fn compute_chain_targets(
+    cluster: &[StarSystemData],
+    player_state: &PlayerState,
+) -> Vec<ChainTarget> {
+    let mut targets = Vec::new();
+    let any_flag = |flag: &str| -> bool {
+        player_state.player_choices.values().any(|c| c.flags.contains(flag))
+    };
+
+    for chain in story_chains() {
+        // Find which stage we're at: the last completed stage
+        let mut active_stage_idx: Option<usize> = None;
+        for (i, stage) in chain.stages.iter().enumerate() {
+            if any_flag(stage.completion_flag) {
+                active_stage_idx = Some(i);
+            } else {
+                break;
+            }
+        }
+
+        // If a stage was completed, we need a target for the next event
+        let stage_idx = match active_stage_idx {
+            Some(i) => i,
+            None => continue,
+        };
+        let stage = &chain.stages[stage_idx];
+
+        // Check if already have a target for this chain at this stage
+        if player_state.chain_targets.iter().any(|ct| {
+            ct.chain_id == chain.chain_id && ct.stage == stage.stage_label
+        }) {
+            // Keep existing target
+            if let Some(existing) = player_state.chain_targets.iter().find(|ct| {
+                ct.chain_id == chain.chain_id && ct.stage == stage.stage_label
+            }) {
+                targets.push(existing.clone());
+            }
+            continue;
+        }
+
+        // Pick a target system: must have the right base type & be far enough away
+        let current = &cluster[player_state.current_system_id as usize];
+        let mut candidates: Vec<&StarSystemData> = Vec::new();
+
+        for star in cluster {
+            if star.id == player_state.current_system_id {
+                continue;
+            }
+            let dx = star.x - current.x;
+            let dy = star.y - current.y;
+            let dist = (dx * dx + dy * dy).sqrt();
+            if dist < chain.min_distance {
+                continue;
+            }
+            if let Some(required_base) = chain.required_base_type {
+                let sys = generate_solar_system(star);
+                if !sys.secret_bases.iter().any(|b| b.base_type == required_base) {
+                    continue;
+                }
+            }
+            candidates.push(star);
+        }
+
+        if candidates.is_empty() {
+            continue;
+        }
+
+        // Deterministic pick based on chain_id + stage
+        let seed = chain.chain_id.bytes().fold(0u32, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u32))
+            .wrapping_add(stage_idx as u32 * 7919);
+        let idx = (seed as usize) % candidates.len();
+
+        targets.push(ChainTarget {
+            chain_id: chain.chain_id.to_string(),
+            target_system_id: candidates[idx].id,
+            stage: stage.stage_label.to_string(),
+        });
+    }
+
+    targets
 }
 
 fn build_system_payload(
@@ -85,6 +168,7 @@ fn build_system_payload(
         triggers: &triggers,
         surface: None,
         current_cluster: 0,
+        current_system_id: star.id,
     };
     let game_event = if let Some(base_id) = secret_base_id {
         let base_type = system.secret_bases.iter()
@@ -207,6 +291,7 @@ pub fn init_game(player_state_json: &str) -> Result<String, JsValue> {
             known_factions: vec![],
             faction_memory: std::collections::HashMap::new(),
             seen_system_dialog_ids: vec![],
+            chain_targets: vec![],
         }
     } else {
         serde_json::from_str(player_state_json)
@@ -235,11 +320,14 @@ pub fn init_game(player_state_json: &str) -> Result<String, JsValue> {
         galaxy_state,
     });
 
+    let chain_targets = compute_chain_targets(&cluster, &player_state);
+
     let result = InitResult {
         system_payload,
         cluster_summary,
         cluster,
         galaxy_sim_state: sim_state_snapshot,
+        chain_targets,
     };
 
     serde_json::to_string(&result)
@@ -289,12 +377,15 @@ pub fn jump_to_system(target_system_id: u32, player_state_json: &str) -> Result<
 
     let cluster_summary = build_cluster_summary(cluster, new_galaxy_year);
 
+    let chain_targets = compute_chain_targets(cluster, &player_state);
+
     let result = JumpResult {
         system_payload,
         cluster_summary,
         years_elapsed,
         new_galaxy_year,
         galaxy_sim_state: engine.galaxy_state.systems.clone(),
+        chain_targets,
     };
 
     serde_json::to_string(&result)
@@ -392,6 +483,7 @@ pub fn get_game_event(
         triggers: &triggers,
         surface,
         current_cluster: 0,
+        current_system_id: system_id,
     };
 
     let event = select_game_event(pool, &ctx, event_seed);
@@ -443,6 +535,7 @@ mod tests {
             known_factions: vec![],
             faction_memory: HashMap::new(),
             seen_system_dialog_ids: vec![],
+            chain_targets: vec![],
         }
     }
 

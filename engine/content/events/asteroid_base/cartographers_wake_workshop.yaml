@@ -1,0 +1,76 @@
+id: CARTOGRAPHERS_WAKE_WORKSHOP
+title: THE WORKSHOP IN THE ROCK
+requires:
+  - !AnyFlagSet cartographers_wake_stage2_done
+  - !AnyFlagNotSet cartographers_wake_stage3_done
+  - !ChainTargetHere cartographers_wake
+narrativeLines:
+  - >-
+    The base doesn't appear on any registry you can find. It answers your hail
+    with a docking frequency and nothing else — no name, no faction tag, no
+    welcome message. Just an open bay and a green light.
+  - >-
+    Inside, the asteroid has been hollowed with surgical precision. The walls are
+    polished smooth and set with tiny lights that mimic a star field — not the
+    local one, you realize after a moment. A different sky. Maybe a very old one.
+  - >-
+    At the center of the main chamber, a holographic table is running. Star
+    systems rotate above it in miniature, trails of light connecting them in
+    patterns you almost recognize. And sitting beside the table, perfectly still,
+    is a machine shaped like a person who decided halfway through to become a
+    tree.
+  - >-
+    "You carry one of Enne's charts," it says. Its voice sounds like wind
+    through a canyon. "I am the keeper of this place. Enne built me to tend the
+    workshop between visits."
+choices:
+  - id: ask_about_project
+    label: Ask what Enne is really mapping
+    description: "Learn the truth about the charts"
+    effect:
+      tradingReputation: 0
+    nextMoment:
+      narrativeLines:
+        - >-
+          The keeper gestures, and the holographic table blooms outward. The
+          local cluster expands to show a region of space a thousand light-years
+          across. Hundreds of points pulse gold — and as you watch, new ones
+          appear, slowly, like flowers opening.
+        - >-
+          "Enne does not map stars as they are," the keeper says. "Enne maps
+          stars as they will be. The galaxy is not finished. It is still being
+          built."
+        - >-
+          It zooms in on a patch of dark nebula. Deep inside, something is
+          glowing — too hot, too organized. Not a natural collapse. "Molecular
+          clouds do not spontaneously compress themselves into protostars on this
+          timescale. Something is compressing them. Something is seeding new
+          stars, deliberately, across a region far larger than any civilization
+          we know."
+        - >-
+          The keeper turns to you with what might be patience. "Enne has been
+          following the seeder's trail for twelve hundred years. Not to stop it.
+          To understand why someone would garden a galaxy."
+      choices:
+        - id: study_the_map
+          label: Spend time studying the projection with the keeper
+          description: "CR 400, +Reputation, stage complete"
+          effect:
+            creditsReward: 400
+            tradingReputation: 1
+            setsFlags: [cartographers_wake_stage3_done]
+        - id: ask_about_enne_location
+          label: Ask where Enne is now
+          description: "CR 250, fuel bonus, stage complete"
+          effect:
+            creditsReward: 250
+            fuelReward: 0.5
+            setsFlags: [cartographers_wake_stage3_done]
+        - id: leave_workshop
+          label: This is beyond your pay grade
+          description: No effect
+          effect: {}
+  - id: leave_immediately
+    label: A talking tree-machine in an unlisted base — time to leave
+    description: No effect
+    effect: {}

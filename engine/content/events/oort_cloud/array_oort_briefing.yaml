@@ -4,36 +4,53 @@ requires:
   - !AnyFlagNotSet quasar_array_stage1_done
 narrativeLines:
   - >-
-    The station is carved into a carbon-black comet and lit like a library after midnight.
+    The station is dug into a slowly tumbling comet, frost on every surface that isn't warm enough
+    to touch. Someone has strung festival lights along the docking arm. They flicker in a pattern
+    that might be decorative and might be a countdown.
   - >-
-    A logistics chief in a patched pressure coat waves you toward a table covered in lens housings, shock foam, and handwritten route cards.
+    Inside, the common room smells like soldering flux and cardamom. A woman in a thermal
+    vest is building something at a workbench — not electronics, a wooden ship in a bottle.
+    She finishes a knot before she looks up.
   - >-
-    "You look like someone who knows how to keep fragile things alive between stars," she says.
+    "You're the trader? Good. We need someone who can move glass between stars without
+    breaking it." She gestures at a row of crates, each one swaddled like an infant. "Telescope
+    components. Very old designs, very new glass."
   - >-
-    When you ask what the parts are for, she lowers her voice. "A distributed telescope array. We've been watching long-tail changes in quasars touched by the old war."
+    When you ask what they're building out here in the deep cold, she smiles like someone
+    deciding how much of a good story to tell on a first meeting.
+    "A very long eye," she says. "Pointed at something very far away."
 choices:
   - id: hear_full_brief
-    label: Sit down and hear the whole job
-    description: "Ask what they're really tracking"
+    label: Ask what's worth watching from the edge of nowhere
+    description: "Learn more about the project"
     effect:
       tradingReputation: 0
     nextMoment:
       narrativeLines:
         - >-
-          She slides a star chart over: old Quasar War scar sites, plus distant control quasars that were never involved.
+          She pours you tea from a kettle that has clearly survived more star crossings than
+          most ships. It tastes like smoke and honey.
         - >-
-          "We're not chasing legends," she says. "We're testing whether the aftermath is still unfolding. If so, everybody deserves to know before policy hardens around bad assumptions."
+          "Light takes its time getting here from the interesting parts of the universe," she says.
+          "We're trying to catch some of it while it's still worth catching. Certain objects, very
+          distant, very bright — they've been changing. Or rather, the light from their changes is
+          finally arriving."
         - >-
-          "We don't need you to run optics. We need you to move impossible glass and replacement assemblies where freight insurers refuse to go."
+          She taps the bottle ship with a fingernail. "We need relay nodes in four or five systems.
+          Oort stations, specifically — nice and quiet, no local light pollution. Each one watches
+          the same targets. Combine the data, and we can see things no single telescope ever could."
+        - >-
+          "What we can't do is move precision optics across interstellar space without them
+          arriving as very expensive gravel. That's you."
       choices:
         - id: accept_lens_contract
-          label: Accept the courier contract
-          description: "+Reputation, begin the Oort relay chain"
+          label: "You had me at 'very long eye'"
+          description: "+Reputation, begin the telescope relay chain"
           effect:
             tradingReputation: 1
             setsFlags: [quasar_array_stage1_done]
         - id: negotiate_hazard_bonus
-          label: Accept, but ask for hazard terms
+          label: Accept, but insist the tea is included at every stop
           description: "CR 250 advance, begin the chain"
           effect:
             creditsReward: 250
@@ -43,6 +60,6 @@ choices:
           description: No effect
           effect: {}
   - id: no_time_today
-    label: You're in a hurry and move on
+    label: You're passing through
     description: No effect
     effect: {}
