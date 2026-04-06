@@ -175,7 +175,7 @@ mod tests {
         assert_eq!(content::landing_events().len(), 10);
         assert_eq!(content::asteroid_base_events().len(), 9);
         assert_eq!(content::oort_cloud_base_events().len(), 7);
-        assert_eq!(content::maximum_space_events().len(), 3);
+        assert_eq!(content::maximum_space_events().len(), 8);
         assert_eq!(content::triggered_events().len(), 1);
     }
 

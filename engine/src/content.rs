@@ -38,6 +38,17 @@ pub fn story_chains() -> Vec<StoryChainDef> {
             min_distance: 12.0,
             required_base_type: Some(SecretBaseType::Asteroid),
         },
+        StoryChainDef {
+            chain_id: "burnt_accord",
+            stages: &[
+                ChainStageDef { completion_flag: "burnt_accord_stage1_done", stage_label: "stage2" },
+                ChainStageDef { completion_flag: "burnt_accord_stage2_done", stage_label: "stage3" },
+                ChainStageDef { completion_flag: "burnt_accord_stage3_done", stage_label: "stage4" },
+                ChainStageDef { completion_flag: "burnt_accord_stage4_done", stage_label: "stage5" },
+            ],
+            min_distance: 14.0,
+            required_base_type: Some(SecretBaseType::MaximumSpace),
+        },
     ]
 }
 
@@ -106,6 +117,11 @@ pub fn maximum_space_events() -> Vec<GameEvent> {
         ("maximum_space/the_void_station.yaml", include_str!("../content/events/maximum_space/the_void_station.yaml")),
         ("maximum_space/edge_signal.yaml", include_str!("../content/events/maximum_space/edge_signal.yaml")),
         ("maximum_space/the_last_broadcast.yaml", include_str!("../content/events/maximum_space/the_last_broadcast.yaml")),
+        ("maximum_space/burnt_accord_signal.yaml", include_str!("../content/events/maximum_space/burnt_accord_signal.yaml")),
+        ("maximum_space/burnt_accord_contact.yaml", include_str!("../content/events/maximum_space/burnt_accord_contact.yaml")),
+        ("maximum_space/burnt_accord_handoff.yaml", include_str!("../content/events/maximum_space/burnt_accord_handoff.yaml")),
+        ("maximum_space/burnt_accord_rescue.yaml", include_str!("../content/events/maximum_space/burnt_accord_rescue.yaml")),
+        ("maximum_space/burnt_accord_finale.yaml", include_str!("../content/events/maximum_space/burnt_accord_finale.yaml")),
     ])
 }
 
