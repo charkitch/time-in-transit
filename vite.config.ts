@@ -6,6 +6,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import wasm from 'vite-plugin-wasm'
 import glsl from 'vite-plugin-glsl'
+import { VitePWA } from 'vite-plugin-pwa'
 
 const repoRoot = dirname(fileURLToPath(import.meta.url))
 const packageJson = JSON.parse(
@@ -47,7 +48,65 @@ const appBuild = {
 }
 
 export default defineConfig({
-  plugins: [react(), wasm(), glsl()],
+  plugins: [
+    react(),
+    wasm(),
+    glsl(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      manifest: {
+        name: 'Time in Transit',
+        short_name: 'Transit',
+        start_url: '/',
+        scope: '/',
+        display: 'fullscreen',
+        orientation: 'landscape',
+        theme_color: '#05070d',
+        background_color: '#05070d',
+        icons: [
+          {
+            src: '/icons/app-icon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'any maskable',
+          },
+        ],
+      },
+      includeAssets: ['icons/app-icon.svg', 'icons/apple-touch-icon.svg'],
+      workbox: {
+        cleanupOutdatedCaches: true,
+        navigateFallback: '/index.html',
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,wasm}'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ sameOrigin, url }) =>
+              sameOrigin && url.pathname.startsWith('/assets/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'app-assets',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+            },
+          },
+          {
+            urlPattern: ({ sameOrigin, url }) =>
+              sameOrigin && url.pathname.startsWith('/icons/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'app-icons',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+            },
+          },
+        ],
+      },
+    }),
+  ],
   define: {
     __APP_BUILD__: JSON.stringify(appBuild),
   },
