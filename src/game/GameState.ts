@@ -63,6 +63,8 @@ export interface PendingGameEventContext {
   rootEventId: string | null;
   yearsSinceLastVisit: number | null;
   returnMode: UIMode;
+  landingSiteLabel?: string | null;
+  landingHostLabel?: string | null;
 }
 
 export interface FactionMemoryEntry {
@@ -83,6 +85,8 @@ export interface GameStateData {
   ui: {
     mode: UIMode;
     alertMessage: string | null;
+    scanLabel: string | null;
+    scanProgress: number;
     hyperspaceTarget: number | null;
     hyperspaceCountdown: number;
     deathMessage: string[] | null;
@@ -110,6 +114,7 @@ export interface GameStateData {
 
   // ── Story chain targets ────────────────────────────────────────────────
   chainTargets: ChainTarget[];
+  scannedHosts: Record<number, Record<string, number>>; // systemId -> hostId -> galaxyYear scanned
 }
 
 export interface GameActions {
@@ -125,6 +130,7 @@ export interface GameActions {
   setCurrentSystemMarket: (market: MarketEntry[]) => void;
   setTarget: (id: string | null) => void;
   setAlert: (msg: string | null) => void;
+  setScanProgress: (progress: number, label?: string | null) => void;
   setHyperspaceTarget: (id: number | null) => void;
   setHyperspaceCountdown: (n: number) => void;
   setDeathMessage: (lines: string[] | null) => void;
@@ -158,6 +164,7 @@ export interface GameActions {
   setClusterSummary: (summary: ClusterSystemSummary[]) => void;
   setGalaxySimState: (simState: SystemSimState[] | null) => void;
   setChainTargets: (targets: ChainTarget[]) => void;
+  markHostScanned: (systemId: number, hostId: string, galaxyYear: number) => void;
 }
 
 // Cluster is set from Rust engine init — starts empty, populated by Game.constructor
@@ -193,6 +200,7 @@ interface SaveData {
   factionMemory: Record<number, FactionMemoryEntry>;
   seenSystemDialogIds: string[];
   chainTargets: ChainTarget[];
+  scannedHosts?: Record<number, Record<string, number>>;
 }
 
 function migrateLegacyGoodKeys<T>(record: Partial<Record<GoodName, T>> | undefined): Partial<Record<GoodName, T>> | undefined {
@@ -267,6 +275,8 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   ui: {
     mode: 'flight',
     alertMessage: null,
+    scanLabel: null,
+    scanProgress: 0,
     hyperspaceTarget: null,
     hyperspaceCountdown: 0,
     deathMessage: null,
@@ -294,6 +304,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
 
   // Story chain targets
   chainTargets: [],
+  scannedHosts: {},
 
   setInvertControls: (invert) => {
     set({ invertControls: invert });
@@ -318,6 +329,13 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   )),
   setTarget: (id) => set(s => ({ player: { ...s.player, targetId: id } })),
   setAlert: (msg) => set(s => ({ ui: { ...s.ui, alertMessage: msg } })),
+  setScanProgress: (progress, label = null) => set(s => ({
+    ui: {
+      ...s.ui,
+      scanProgress: Math.max(0, Math.min(1, progress)),
+      scanLabel: label,
+    },
+  })),
   setHyperspaceTarget: (id) => set(s => ({ ui: { ...s.ui, hyperspaceTarget: id } })),
   setHyperspaceCountdown: (n) => set(s => ({ ui: { ...s.ui, hyperspaceCountdown: n } })),
   setDeathMessage: (lines) => set(s => ({ ui: { ...s.ui, deathMessage: lines } })),
@@ -410,6 +428,18 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   setClusterSummary: (clusterSummary) => set({ clusterSummary }),
   setGalaxySimState: (simState) => set({ galaxySimState: simState }),
   setChainTargets: (targets) => set({ chainTargets: targets }),
+  markHostScanned: (systemId, hostId, galaxyYear) => set(s => {
+    const existing = s.scannedHosts[systemId] ?? {};
+    return {
+      scannedHosts: {
+        ...s.scannedHosts,
+        [systemId]: {
+          ...existing,
+          [hostId]: galaxyYear,
+        },
+      },
+    };
+  }),
 
   resetGame: () => {
     localStorage.removeItem('space-game-save');
@@ -435,7 +465,17 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       seenSystemDialogIds: [],
       galaxySimState: null,
       chainTargets: [],
-      ui: { mode: 'flight', alertMessage: null, hyperspaceTarget: null, hyperspaceCountdown: 0, deathMessage: null, canDockNow: false },
+      scannedHosts: {},
+      ui: {
+        mode: 'flight',
+        alertMessage: null,
+        scanLabel: null,
+        scanProgress: 0,
+        hyperspaceTarget: null,
+        hyperspaceCountdown: 0,
+        deathMessage: null,
+        canDockNow: false,
+      },
     });
   },
 
@@ -462,6 +502,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       factionMemory: saved.factionMemory ?? {},
       seenSystemDialogIds: saved.seenSystemDialogIds ?? [],
       chainTargets: saved.chainTargets ?? [],
+      scannedHosts: saved.scannedHosts ?? {},
     }));
   },
 
@@ -484,6 +525,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       factionMemory: s.factionMemory,
       seenSystemDialogIds: s.seenSystemDialogIds,
       chainTargets: s.chainTargets,
+      scannedHosts: s.scannedHosts,
     };
     localStorage.setItem('space-game-save', JSON.stringify(data));
   },

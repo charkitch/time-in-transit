@@ -16,6 +16,8 @@ interface TouchFlightControlsProps {
   onInputChange: (input: TouchFlightInput) => void;
   onDock: () => void;
   onHail: () => void;
+  onLand: () => void;
+  onScan: () => void;
   onTargetCycle: () => void;
   onClusterMap: () => void;
   onSystemMap: () => void;
@@ -33,6 +35,8 @@ export function TouchFlightControls({
   onInputChange,
   onDock,
   onHail,
+  onLand,
+  onScan,
   onTargetCycle,
   onClusterMap,
   onSystemMap,
@@ -264,6 +268,8 @@ export function TouchFlightControls({
           {actionsOpen && enabled && (
             <div className={styles.actionMenu}>
               <button type="button" className={styles.actionButton} onClick={() => runAction(onHail)}>HAIL</button>
+              <button type="button" className={styles.actionButton} onClick={() => runAction(onLand)}>LAND</button>
+              <button type="button" className={styles.actionButton} onClick={() => runAction(onScan)}>SCAN</button>
               <button type="button" className={styles.actionButton} onClick={() => runAction(onClusterMap)}>CLUSTER</button>
               <button type="button" className={styles.actionButton} onClick={() => runAction(onSystemMap)}>SYSTEM</button>
               <button type="button" className={styles.actionButton} onClick={() => runAction(onMenu)}>MENU</button>

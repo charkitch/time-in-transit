@@ -1,0 +1,21 @@
+id: SHELL_ACCESS_WAYSTATION
+title: SHELL ACCESS WAYSTATION
+requires:
+  - !HostTypeIs [dyson_shell]
+  - !SiteClassIs [shell_accessible, shell_weathered]
+narrativeLines:
+  - >-
+    A maintenance waystation rises from the shell's interior curve, all scaffolds and quiet signal lamps.
+  - >-
+    Custodians in pressure veils ask for your latest stellar drift telemetry before they clear you onward.
+choices:
+  - id: share_telemetry
+    label: Share your telemetry archive
+    description: "+Reputation"
+    effect:
+      tradingReputation: 1
+  - id: keep_logs_private
+    label: Keep your logs private
+    description: No effect
+    effect: {}
+

@@ -36,6 +36,16 @@ export type SurfaceType =
 export type DysonBiomeProfile = 'continental' | 'mixed' | 'desert' | 'arctic';
 
 export type GasGiantType = 'jovian' | 'saturnian' | 'neptunian' | 'inferno' | 'chromatic' | 'helium';
+export type InteractionTopology = 'sphere' | 'shell_patch';
+export type InteractionProfile = 'rocky' | 'gas_giant' | 'dyson_shell';
+
+export interface InteractionFieldData {
+  topology: InteractionTopology;
+  profile: InteractionProfile;
+  width: number;
+  height: number;
+  values: number[];
+}
 
 export interface StarSystemData {
   id: number;
@@ -81,6 +91,7 @@ export interface PlanetData {
   greatSpotSize: number;
   moons: MoonData[];
   hasStation: boolean;
+  interactionField: InteractionFieldData;
 }
 
 export interface AsteroidBeltData {
@@ -129,6 +140,7 @@ export interface DysonShellSegmentData {
   weatherBands: DysonWeatherBandData[];
   biomeProfile: DysonBiomeProfile;
   biomeSeed: number;
+  interactionField: InteractionFieldData;
 }
 
 export interface BinaryCompanionData {
@@ -347,9 +359,11 @@ export function engineGetGameEvent(
   systemId: number,
   playerState: WasmPlayerState,
   options?: {
-    context?: 'landing' | 'system_entry' | 'proximity_star' | 'proximity_base' | 'planet_landing' | 'triggered';
+    context?: 'landing' | 'system_entry' | 'proximity_star' | 'proximity_base' | 'planet_landing' | 'dyson_landing' | 'triggered';
     secretBaseId?: string;
     surface?: string;
+    siteClass?: string;
+    hostType?: string;
   },
 ): GameEvent | null {
   const result = get_game_event(
@@ -358,6 +372,8 @@ export function engineGetGameEvent(
     options?.context ?? 'landing',
     options?.secretBaseId ?? '',
     options?.surface ?? '',
+    options?.siteClass ?? '',
+    options?.hostType ?? '',
   );
   return JSON.parse(result);
 }

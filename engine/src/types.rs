@@ -228,6 +228,31 @@ pub enum SecretBaseType {
     MaximumSpace,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InteractionTopology {
+    Sphere,
+    ShellPatch,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InteractionProfile {
+    Rocky,
+    GasGiant,
+    DysonShell,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InteractionFieldData {
+    pub topology: InteractionTopology,
+    pub profile: InteractionProfile,
+    pub width: u16,
+    pub height: u16,
+    pub values: Vec<u8>,
+}
+
 // ─── Data Structures ────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -281,6 +306,7 @@ pub struct PlanetData {
     pub great_spot_size: f64,
     pub moons: Vec<MoonData>,
     pub has_station: bool,
+    pub interaction_field: InteractionFieldData,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -348,6 +374,7 @@ pub struct DysonShellSegmentData {
     pub weather_bands: Vec<DysonWeatherBandData>,
     pub biome_profile: DysonBiomeProfile,
     pub biome_seed: f64,
+    pub interaction_field: InteractionFieldData,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -569,6 +596,8 @@ pub enum EventCondition {
     AnyFlagSet(String),
     AnyFlagNotSet(String),
     SurfaceIs(Vec<SurfaceType>),
+    SiteClassIs(Vec<String>),
+    HostTypeIs(Vec<String>),
     TriggerFired(String),
     ChainTargetHere(String),
 }

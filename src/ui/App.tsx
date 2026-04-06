@@ -203,6 +203,8 @@ export function App() {
 
   const handleTouchDock = () => gameRef.current?.requestDock();
   const handleTouchHail = () => gameRef.current?.requestHail();
+  const handleTouchLand = () => gameRef.current?.requestLand();
+  const handleTouchScan = () => gameRef.current?.requestScan();
   const handleTouchTargetCycle = () => gameRef.current?.requestCycleTarget();
   const handleTouchClusterMap = () => gameRef.current?.requestClusterMapToggle();
   const handleTouchSystemMap = () => gameRef.current?.requestSystemMapToggle();
@@ -233,6 +235,8 @@ export function App() {
           onTouchFlightInput={handleTouchFlightInput}
           onDock={handleTouchDock}
           onHail={handleTouchHail}
+          onLand={handleTouchLand}
+          onScan={handleTouchScan}
           onTargetCycle={handleTouchTargetCycle}
           onClusterMap={handleTouchClusterMap}
           onSystemMap={handleTouchSystemMap}

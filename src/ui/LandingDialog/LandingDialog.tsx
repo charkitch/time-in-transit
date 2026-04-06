@@ -24,7 +24,7 @@ export function LandingDialog({ onChoice }: LandingDialogProps) {
 
   if (!pendingGameEvent) return null;
 
-  const { civState, event, yearsSinceLastVisit } = pendingGameEvent;
+  const { civState, event, yearsSinceLastVisit, landingSiteLabel, landingHostLabel } = pendingGameEvent;
   const currentSystemTechLevel = cluster[currentSystemId]?.techLevel ?? 0;
 
   const handleChoice = (choiceId: string) => {
@@ -67,6 +67,18 @@ export function LandingDialog({ onChoice }: LandingDialogProps) {
             </span>
           )}
         </div>
+        {landingSiteLabel && (
+          <div className={styles.civRow}>
+            <span className={styles.civTag}>
+              SITE: <span className={styles.civValue}>{landingSiteLabel}</span>
+            </span>
+            {landingHostLabel && (
+              <span className={styles.civTag}>
+                HOST: <span className={styles.civValue}>{landingHostLabel}</span>
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Event or default arrival */}
         {event ? (

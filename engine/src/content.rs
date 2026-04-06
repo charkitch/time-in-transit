@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Mutex;
 
 use crate::types::{GameEvent, SecretBaseType, SystemEntryDialog, Trigger, TriggerFile};
 
@@ -67,92 +68,105 @@ fn parse_dialog(label: &str, raw: &str) -> SystemEntryDialog {
         .unwrap_or_else(|e| panic!("Failed to parse dialog YAML {}: {}", label, e))
 }
 
+#[allow(dead_code)]
+mod generated_event_registry {
+    include!(concat!(env!("OUT_DIR"), "/generated_event_registry.rs"));
+}
+
 fn load_events(entries: &[(&str, &str)]) -> Vec<GameEvent> {
     entries.iter().map(|(label, raw)| parse_event(label, raw)).collect()
 }
 
+#[derive(Clone)]
+struct EventPools {
+    landing: Vec<GameEvent>,
+    asteroid_base: Vec<GameEvent>,
+    oort_cloud: Vec<GameEvent>,
+    maximum_space: Vec<GameEvent>,
+    triggered: Vec<GameEvent>,
+    system_entry: Vec<GameEvent>,
+    proximity_star: Vec<GameEvent>,
+    proximity_base: Vec<GameEvent>,
+    planet_landing: Vec<GameEvent>,
+    dyson_landing: Vec<GameEvent>,
+}
+
+static EVENT_CACHE: Mutex<Option<EventPools>> = Mutex::new(None);
+
+fn build_event_pools() -> EventPools {
+    EventPools {
+        landing: load_events(generated_event_registry::LANDING_EVENT_FILES),
+        asteroid_base: load_events(generated_event_registry::ASTEROID_BASE_EVENT_FILES),
+        oort_cloud: load_events(generated_event_registry::OORT_CLOUD_EVENT_FILES),
+        maximum_space: load_events(generated_event_registry::MAXIMUM_SPACE_EVENT_FILES),
+        triggered: load_events(generated_event_registry::TRIGGERED_EVENT_FILES),
+        system_entry: load_events(generated_event_registry::SYSTEM_ENTRY_EVENT_FILES),
+        proximity_star: load_events(generated_event_registry::PROXIMITY_STAR_EVENT_FILES),
+        proximity_base: load_events(generated_event_registry::PROXIMITY_BASE_EVENT_FILES),
+        planet_landing: load_events(generated_event_registry::PLANET_LANDING_EVENT_FILES),
+        dyson_landing: load_events(generated_event_registry::DYSON_LANDING_EVENT_FILES),
+    }
+}
+
+pub fn refresh_event_cache() {
+    let pools = build_event_pools();
+    let mut cache = EVENT_CACHE.lock().unwrap_or_else(|e| panic!("Event cache lock poisoned: {}", e));
+    *cache = Some(pools);
+}
+
+fn cached_pool_events(getter: impl FnOnce(&EventPools) -> &Vec<GameEvent>) -> Option<Vec<GameEvent>> {
+    let cache = EVENT_CACHE.lock().unwrap_or_else(|e| panic!("Event cache lock poisoned: {}", e));
+    cache.as_ref().map(|pools| getter(pools).clone())
+}
+
 pub fn landing_events() -> Vec<GameEvent> {
-    load_events(&[
-        ("landing/refugee_fleet.yaml", include_str!("../content/events/landing/refugee_fleet.yaml")),
-        ("landing/acquisition_proposal.yaml", include_str!("../content/events/landing/acquisition_proposal.yaml")),
-        ("landing/docking_inspection.yaml", include_str!("../content/events/landing/docking_inspection.yaml")),
-        ("landing/the_archivist.yaml", include_str!("../content/events/landing/the_archivist.yaml")),
-        ("landing/dead_drop_message.yaml", include_str!("../content/events/landing/dead_drop_message.yaml")),
-        ("landing/unregulated_market.yaml", include_str!("../content/events/landing/unregulated_market.yaml")),
-        ("landing/museum_of_ancients.yaml", include_str!("../content/events/landing/museum_of_ancients.yaml")),
-        ("landing/quarantine_advisory.yaml", include_str!("../content/events/landing/quarantine_advisory.yaml")),
-        ("landing/sector_toll.yaml", include_str!("../content/events/landing/sector_toll.yaml")),
-        ("landing/the_lineage.yaml", include_str!("../content/events/landing/the_lineage.yaml")),
-    ])
+    cached_pool_events(|p| &p.landing)
+        .unwrap_or_else(|| load_events(generated_event_registry::LANDING_EVENT_FILES))
 }
 
 pub fn asteroid_base_events() -> Vec<GameEvent> {
-    load_events(&[
-        ("asteroid_base/smuggler_haven.yaml", include_str!("../content/events/asteroid_base/smuggler_haven.yaml")),
-        ("asteroid_base/the_chop_shop.yaml", include_str!("../content/events/asteroid_base/the_chop_shop.yaml")),
-        ("asteroid_base/ghost_signal.yaml", include_str!("../content/events/asteroid_base/ghost_signal.yaml")),
-        ("asteroid_base/the_broker.yaml", include_str!("../content/events/asteroid_base/the_broker.yaml")),
-        ("asteroid_base/miners_dispute.yaml", include_str!("../content/events/asteroid_base/miners_dispute.yaml")),
-        ("asteroid_base/cartographers_wake_intro.yaml", include_str!("../content/events/asteroid_base/cartographers_wake_intro.yaml")),
-        ("asteroid_base/cartographers_wake_collector.yaml", include_str!("../content/events/asteroid_base/cartographers_wake_collector.yaml")),
-        ("asteroid_base/cartographers_wake_workshop.yaml", include_str!("../content/events/asteroid_base/cartographers_wake_workshop.yaml")),
-        ("asteroid_base/cartographers_wake_finale.yaml", include_str!("../content/events/asteroid_base/cartographers_wake_finale.yaml")),
-    ])
+    cached_pool_events(|p| &p.asteroid_base)
+        .unwrap_or_else(|| load_events(generated_event_registry::ASTEROID_BASE_EVENT_FILES))
 }
 
 pub fn oort_cloud_base_events() -> Vec<GameEvent> {
-    load_events(&[
-        ("oort_cloud/array_oort_briefing.yaml", include_str!("../content/events/oort_cloud/array_oort_briefing.yaml")),
-        ("oort_cloud/array_ice_node.yaml", include_str!("../content/events/oort_cloud/array_ice_node.yaml")),
-        ("oort_cloud/array_oort_spine_repairs.yaml", include_str!("../content/events/oort_cloud/array_oort_spine_repairs.yaml")),
-        ("oort_cloud/array_oort_final_manifest.yaml", include_str!("../content/events/oort_cloud/array_oort_final_manifest.yaml")),
-        ("oort_cloud/the_listener.yaml", include_str!("../content/events/oort_cloud/the_listener.yaml")),
-        ("oort_cloud/ice_monks.yaml", include_str!("../content/events/oort_cloud/ice_monks.yaml")),
-        ("oort_cloud/frozen_derelict.yaml", include_str!("../content/events/oort_cloud/frozen_derelict.yaml")),
-    ])
+    cached_pool_events(|p| &p.oort_cloud)
+        .unwrap_or_else(|| load_events(generated_event_registry::OORT_CLOUD_EVENT_FILES))
 }
 
 pub fn maximum_space_events() -> Vec<GameEvent> {
-    load_events(&[
-        ("maximum_space/the_void_station.yaml", include_str!("../content/events/maximum_space/the_void_station.yaml")),
-        ("maximum_space/edge_signal.yaml", include_str!("../content/events/maximum_space/edge_signal.yaml")),
-        ("maximum_space/the_last_broadcast.yaml", include_str!("../content/events/maximum_space/the_last_broadcast.yaml")),
-        ("maximum_space/burnt_accord_signal.yaml", include_str!("../content/events/maximum_space/burnt_accord_signal.yaml")),
-        ("maximum_space/burnt_accord_contact.yaml", include_str!("../content/events/maximum_space/burnt_accord_contact.yaml")),
-        ("maximum_space/burnt_accord_handoff.yaml", include_str!("../content/events/maximum_space/burnt_accord_handoff.yaml")),
-        ("maximum_space/burnt_accord_rescue.yaml", include_str!("../content/events/maximum_space/burnt_accord_rescue.yaml")),
-        ("maximum_space/burnt_accord_finale.yaml", include_str!("../content/events/maximum_space/burnt_accord_finale.yaml")),
-    ])
+    cached_pool_events(|p| &p.maximum_space)
+        .unwrap_or_else(|| load_events(generated_event_registry::MAXIMUM_SPACE_EVENT_FILES))
 }
 
 pub fn triggered_events() -> Vec<GameEvent> {
-    load_events(&[
-        ("triggered/rebel_contact_follows_up.yaml", include_str!("../content/events/triggered/rebel_contact_follows_up.yaml")),
-    ])
+    cached_pool_events(|p| &p.triggered)
+        .unwrap_or_else(|| load_events(generated_event_registry::TRIGGERED_EVENT_FILES))
 }
 
 pub fn system_entry_events() -> Vec<GameEvent> {
-    load_events(&[
-        ("system_entry/age_worn_transponder.yaml", include_str!("../content/events/system_entry/age_worn_transponder.yaml")),
-    ])
+    cached_pool_events(|p| &p.system_entry)
+        .unwrap_or_else(|| load_events(generated_event_registry::SYSTEM_ENTRY_EVENT_FILES))
 }
 
 pub fn proximity_star_events() -> Vec<GameEvent> {
-    load_events(&[
-        ("proximity_star/coronal_whisper.yaml", include_str!("../content/events/proximity_star/coronal_whisper.yaml")),
-    ])
+    cached_pool_events(|p| &p.proximity_star)
+        .unwrap_or_else(|| load_events(generated_event_registry::PROXIMITY_STAR_EVENT_FILES))
 }
 
 pub fn proximity_base_events() -> Vec<GameEvent> {
-    load_events(&[
-        ("proximity_base/buoy_tapper.yaml", include_str!("../content/events/proximity_base/buoy_tapper.yaml")),
-    ])
+    cached_pool_events(|p| &p.proximity_base)
+        .unwrap_or_else(|| load_events(generated_event_registry::PROXIMITY_BASE_EVENT_FILES))
 }
 
 pub fn planet_landing_events() -> Vec<GameEvent> {
-    load_events(&[
-        ("planet_landing/dust_choir.yaml", include_str!("../content/events/planet_landing/dust_choir.yaml")),
-    ])
+    cached_pool_events(|p| &p.planet_landing)
+        .unwrap_or_else(|| load_events(generated_event_registry::PLANET_LANDING_EVENT_FILES))
+}
+
+pub fn dyson_landing_events() -> Vec<GameEvent> {
+    cached_pool_events(|p| &p.dyson_landing)
+        .unwrap_or_else(|| load_events(generated_event_registry::DYSON_LANDING_EVENT_FILES))
 }
 
 pub fn all_triggers() -> HashMap<String, Trigger> {
@@ -172,4 +186,46 @@ pub fn iron_star_arrival_dialog() -> SystemEntryDialog {
         "dialogs/iron_star_arrival.yaml",
         include_str!("../content/dialogs/iron_star_arrival.yaml"),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generated_event_registry_count_matches_discovered_files() {
+        let pools = build_event_pools();
+        let total = pools.landing.len()
+            + pools.asteroid_base.len()
+            + pools.oort_cloud.len()
+            + pools.maximum_space.len()
+            + pools.triggered.len()
+            + pools.system_entry.len()
+            + pools.proximity_star.len()
+            + pools.proximity_base.len()
+            + pools.planet_landing.len()
+            + pools.dyson_landing.len();
+        assert_eq!(total, generated_event_registry::TOTAL_EVENT_FILE_COUNT);
+    }
+
+    #[test]
+    fn generated_registry_has_lexical_ordering() {
+        fn assert_sorted(entries: &[(&str, &str)]) {
+            let labels: Vec<&str> = entries.iter().map(|(label, _)| *label).collect();
+            let mut sorted = labels.clone();
+            sorted.sort();
+            assert_eq!(labels, sorted);
+        }
+
+        assert_sorted(generated_event_registry::LANDING_EVENT_FILES);
+        assert_sorted(generated_event_registry::ASTEROID_BASE_EVENT_FILES);
+        assert_sorted(generated_event_registry::OORT_CLOUD_EVENT_FILES);
+        assert_sorted(generated_event_registry::MAXIMUM_SPACE_EVENT_FILES);
+        assert_sorted(generated_event_registry::TRIGGERED_EVENT_FILES);
+        assert_sorted(generated_event_registry::SYSTEM_ENTRY_EVENT_FILES);
+        assert_sorted(generated_event_registry::PROXIMITY_STAR_EVENT_FILES);
+        assert_sorted(generated_event_registry::PROXIMITY_BASE_EVENT_FILES);
+        assert_sorted(generated_event_registry::PLANET_LANDING_EVENT_FILES);
+        assert_sorted(generated_event_registry::DYSON_LANDING_EVENT_FILES);
+    }
 }

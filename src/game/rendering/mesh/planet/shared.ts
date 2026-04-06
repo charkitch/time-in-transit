@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PALETTE } from '../../../constants';
-import type { SurfaceType } from '../../../engine';
+import type { InteractionFieldData, SurfaceType } from '../../../engine';
 
 export function makeWireframeObject(
   geo: THREE.BufferGeometry,
@@ -55,4 +55,23 @@ export const SURFACE_TYPE_SHADER_DEFINES = `
 
 export function withSurfaceTypeShaderDefines(fragmentShader: string): string {
   return `${SURFACE_TYPE_SHADER_DEFINES}\n\n${fragmentShader}`;
+}
+
+export function makeInteractionFieldTexture(field?: InteractionFieldData): THREE.DataTexture {
+  const width = field?.width ?? 1;
+  const height = field?.height ?? 1;
+  const values = field?.values ?? [128];
+  const data = new Uint8Array(values.length);
+  for (let i = 0; i < values.length; i++) {
+    data[i] = Math.max(0, Math.min(255, values[i] ?? 128));
+  }
+
+  const tex = new THREE.DataTexture(data, width, height, THREE.RedFormat, THREE.UnsignedByteType);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+  tex.needsUpdate = true;
+  return tex;
 }

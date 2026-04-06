@@ -15,6 +15,10 @@ import {
   GAS_GIANT_SCOOP,
   COMBAT_INTELLIGENCE_GOOD,
   STAR_ATTRIBUTES,
+  PLANET_SCAN_RANGE_PADDING,
+  DYSON_SCAN_RANGE_PADDING,
+  SCAN_DURATION_SECONDS,
+  SCAN_INTEL_MAX_AGE_YEARS,
 } from './constants';
 import type { GoodName } from './constants';
 import { MAX_CARGO } from './constants';
@@ -45,6 +49,9 @@ const SYSTEM_ENTRY_EVENT_CHANCE = 0.3;
 const PROXIMITY_EVENT_CHANCE = 0.08;
 const PROXIMITY_EVENT_COOLDOWN_HIT = 20;
 const PROXIMITY_EVENT_COOLDOWN_MISS = 8;
+const LAND_RANGE_PADDING_PLANET = 130;
+const LAND_RANGE_PADDING_DYSON = 180;
+const LAND_MAX_SPEED = 55;
 
 export class Game {
   private sceneRenderer: SceneRenderer;
@@ -65,6 +72,9 @@ export class Game {
   private pendingSystemPayload: SystemPayload | null = null;
   private engineReady = false;
   private proximityEventCooldown = 0;
+  private activeScanTargetId: string | null = null;
+  private activeScanTimer = 0;
+  private currentVisitScannedHosts = new Set<string>();
 
   private shouldTriggerEvent(chance: number): boolean {
     return Math.random() < chance;
@@ -95,6 +105,8 @@ export class Game {
     this.input.onCycleTargetEvent(() => this.cycleTarget());
     this.input.onJumpRequestEvent(() => this.tryJump());
     this.input.onHailRequest(() => this.tryHail());
+    this.input.onLandRequest(() => this.tryLandAtTarget());
+    this.input.onScanRequest(() => this.tryScanTarget());
     this.input.onEscapeEvent(() => this.handleEscape());
 
     // Load save, then initialize engine and first system
@@ -131,6 +143,8 @@ export class Game {
       starData.x,
       starData.y,
     );
+    this.syncCurrentVisitScanSetFromState(state);
+    this.restoreScanIntelForCurrentSystem(state);
 
     placeShipNearMainStation(this.sceneRenderer, systemData);
 
@@ -177,6 +191,14 @@ export class Game {
     this.input.triggerHailRequest();
   }
 
+  requestLand(): void {
+    this.input.triggerLandRequest();
+  }
+
+  requestScan(): void {
+    this.input.triggerScanRequest();
+  }
+
   requestEscape(): void {
     this.input.triggerEscapeEvent();
   }
@@ -198,6 +220,7 @@ export class Game {
     }
     if (uiMode !== 'flight') {
       state.setCanDockNow(false);
+      this.clearScanProgress(state);
     }
 
     // Always update orbits
@@ -241,6 +264,7 @@ export class Game {
     state.setPlayerPosition({ x: pos.x, y: pos.y, z: pos.z });
     state.setPlayerSpeed(speed);
     state.setCanDockNow(this.canDockNow(speed));
+    this.tickScanProgress(dt, state, pos);
 
     // Fuel scooping near star
     const starEntity = this.sceneRenderer.getAllEntities().get('star');
@@ -540,12 +564,195 @@ export class Game {
   private cycleTarget(): void {
     const state = useGameState.getState();
     const entities = this.sceneRenderer.getAllEntities();
-    const ids = Array.from(entities.keys()).filter(id => id !== 'star');
+    const ids = Array.from(entities.entries())
+      .filter(([id, entity]) => {
+        if (id === 'star') return false;
+        if (entity.type === 'landing_site' && !entity.siteDiscovered) return false;
+        return true;
+      })
+      .map(([id]) => id);
     if (ids.length === 0) return;
 
     const currentIdx = ids.indexOf(state.player.targetId ?? '');
     const nextIdx = (currentIdx + 1) % ids.length;
     state.setTarget(ids[nextIdx]);
+  }
+
+  private tryScanTarget(): void {
+    const state = useGameState.getState();
+    if (state.ui.mode !== 'flight') return;
+    if (this.activeScanTargetId) return;
+
+    const targetId = state.player.targetId;
+    if (!targetId) {
+      state.setAlert('NO TARGET TO SCAN');
+      setTimeout(() => useGameState.getState().setAlert(null), 1600);
+      return;
+    }
+    const entity = this.sceneRenderer.getAllEntities().get(targetId);
+    if (!entity || (entity.type !== 'planet' && entity.type !== 'dyson_shell')) {
+      state.setAlert('TARGET PLANET OR DYSON SHELL TO SCAN');
+      setTimeout(() => useGameState.getState().setAlert(null), 1800);
+      return;
+    }
+
+    const shipPos = this.sceneRenderer.shipGroup.position;
+    const dist = shipPos.distanceTo(entity.worldPos);
+    const required = entity.collisionRadius + (entity.type === 'dyson_shell' ? DYSON_SCAN_RANGE_PADDING : PLANET_SCAN_RANGE_PADDING);
+    if (dist > required) {
+      state.setAlert('TOO FAR TO SCAN');
+      setTimeout(() => useGameState.getState().setAlert(null), 1600);
+      return;
+    }
+    if (this.currentVisitScannedHosts.has(targetId)) {
+      state.setAlert('ALREADY SCANNED THIS VISIT');
+      setTimeout(() => useGameState.getState().setAlert(null), 1700);
+      return;
+    }
+
+    this.activeScanTargetId = targetId;
+    this.activeScanTimer = 0;
+    const hostLabel = entity.type === 'dyson_shell' ? 'DYSON SHELL' : 'PLANET';
+    state.setScanProgress(0, `SCANNING ${hostLabel}`);
+  }
+
+  private tryLandAtTarget(): void {
+    const state = useGameState.getState();
+    if (state.ui.mode !== 'flight') return;
+
+    const targetId = state.player.targetId;
+    if (!targetId) {
+      state.setAlert('NO TARGET TO LAND');
+      setTimeout(() => useGameState.getState().setAlert(null), 1400);
+      return;
+    }
+    const site = this.sceneRenderer.getAllEntities().get(targetId);
+    if (!site || site.type !== 'landing_site' || !site.siteDiscovered) {
+      state.setAlert('TARGET A SCANNED LANDING SITE');
+      setTimeout(() => useGameState.getState().setAlert(null), 1800);
+      return;
+    }
+    const hostId = site.siteHostId;
+    const host = hostId ? this.sceneRenderer.getAllEntities().get(hostId) : null;
+    if (!host || (host.type !== 'planet' && host.type !== 'dyson_shell')) {
+      state.setAlert('INVALID LANDING TARGET');
+      setTimeout(() => useGameState.getState().setAlert(null), 1600);
+      return;
+    }
+
+    const shipPos = this.sceneRenderer.shipGroup.position;
+    const dist = shipPos.distanceTo(site.worldPos);
+    const required = host.collisionRadius + (host.type === 'dyson_shell' ? LAND_RANGE_PADDING_DYSON : LAND_RANGE_PADDING_PLANET);
+    if (dist > required) {
+      state.setAlert('TOO FAR TO LAND');
+      setTimeout(() => useGameState.getState().setAlert(null), 1600);
+      return;
+    }
+    if (state.player.speed > LAND_MAX_SPEED) {
+      state.setAlert('SPEED TOO HIGH TO LAND');
+      setTimeout(() => useGameState.getState().setAlert(null), 1600);
+      return;
+    }
+
+    const wasmState = buildWasmPlayerState(state);
+    const currentPayload = state.currentSystemPayload;
+    if (!currentPayload) return;
+    let event: GameEvent | null = null;
+    if (host.type === 'planet') {
+      const planet = currentPayload.system.planets.find((p) => p.id === host.id);
+      event = engineGetGameEvent(state.currentSystemId, wasmState, {
+        context: 'planet_landing',
+        surface: planet?.surfaceType,
+        siteClass: site.siteClassification,
+        hostType: 'planet',
+      });
+    } else {
+      event = engineGetGameEvent(state.currentSystemId, wasmState, {
+        context: 'dyson_landing',
+        siteClass: site.siteClassification,
+        hostType: 'dyson_shell',
+      });
+    }
+
+    state.setPendingGameEvent({
+      systemId: state.currentSystemId,
+      civState: currentPayload.civState,
+      event,
+      rootEventId: event?.id ?? null,
+      yearsSinceLastVisit: null,
+      returnMode: 'flight',
+      landingSiteLabel: site.siteLabel ?? 'LANDING SITE',
+      landingHostLabel: site.siteHostLabel ?? null,
+    });
+    state.setUIMode('landing');
+  }
+
+  private clearScanProgress(state: ReturnType<typeof useGameState.getState>): void {
+    this.activeScanTargetId = null;
+    this.activeScanTimer = 0;
+    state.setScanProgress(0, null);
+  }
+
+  private tickScanProgress(
+    dt: number,
+    state: ReturnType<typeof useGameState.getState>,
+    shipPos: THREE.Vector3,
+  ): void {
+    const targetId = this.activeScanTargetId;
+    if (!targetId) return;
+    const entity = this.sceneRenderer.getAllEntities().get(targetId);
+    if (!entity || (entity.type !== 'planet' && entity.type !== 'dyson_shell')) {
+      this.clearScanProgress(state);
+      return;
+    }
+
+    const required = entity.collisionRadius + (entity.type === 'dyson_shell' ? DYSON_SCAN_RANGE_PADDING : PLANET_SCAN_RANGE_PADDING);
+    const dist = shipPos.distanceTo(entity.worldPos);
+    if (dist > required) {
+      this.clearScanProgress(state);
+      state.setAlert('SCAN INTERRUPTED');
+      setTimeout(() => useGameState.getState().setAlert(null), 1200);
+      return;
+    }
+
+    this.activeScanTimer += dt;
+    const p = Math.max(0, Math.min(1, this.activeScanTimer / SCAN_DURATION_SECONDS));
+    state.setScanProgress(p, entity.type === 'dyson_shell' ? 'SCANNING DYSON SHELL' : 'SCANNING PLANET');
+
+    if (p < 1) return;
+
+    state.markHostScanned(state.currentSystemId, targetId, state.galaxyYear);
+    this.currentVisitScannedHosts.add(targetId);
+    const revealed = this.sceneRenderer.revealLandingSitesForHost(targetId);
+    const stats = this.sceneRenderer.getLandingSiteStatsForHost(targetId);
+    this.clearScanProgress(state);
+    state.setAlert(`SCAN COMPLETE: ${revealed} NEW / ${stats.total} TOTAL SITES`);
+    setTimeout(() => useGameState.getState().setAlert(null), 1800);
+  }
+
+  private restoreScanIntelForCurrentSystem(state: ReturnType<typeof useGameState.getState>): void {
+    const perSystem = state.scannedHosts[state.currentSystemId];
+    if (!perSystem) return;
+    const freshHostIds = new Set<string>();
+    for (const [hostId, scannedYear] of Object.entries(perSystem)) {
+      if (state.galaxyYear - scannedYear <= SCAN_INTEL_MAX_AGE_YEARS) {
+        freshHostIds.add(hostId);
+      }
+    }
+    if (freshHostIds.size > 0) {
+      this.sceneRenderer.revealLandingSitesForHosts(freshHostIds);
+    }
+  }
+
+  private syncCurrentVisitScanSetFromState(state: ReturnType<typeof useGameState.getState>): void {
+    this.currentVisitScannedHosts.clear();
+    const perSystem = state.scannedHosts[state.currentSystemId];
+    if (!perSystem) return;
+    for (const [hostId, scannedYear] of Object.entries(perSystem)) {
+      if (state.galaxyYear - scannedYear <= SCAN_INTEL_MAX_AGE_YEARS) {
+        this.currentVisitScannedHosts.add(hostId);
+      }
+    }
   }
 
   private tryJump(): void {
@@ -626,6 +833,8 @@ export class Game {
       flightModel: this.flightModel,
       discoverFactions: discoverFactionsFromSystem,
     });
+    this.syncCurrentVisitScanSetFromState(state);
+    this.restoreScanIntelForCurrentSystem(state);
     this.tryProximityGameEvent(state, this.sceneRenderer.shipGroup.position);
     const refreshed = useGameState.getState();
     if (

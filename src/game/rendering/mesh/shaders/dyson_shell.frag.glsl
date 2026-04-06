@@ -7,6 +7,8 @@ uniform float uLightPhase;
 uniform vec3 uLightPos;
 uniform int biomeProfile;
 uniform float biomeSeed;
+uniform sampler2D interactionFieldTex;
+uniform float interactionFieldBlend;
 
 // ─── Biome color functions ───────────────────────────────────────────────────
 
@@ -71,7 +73,9 @@ void main() {
   // All profiles use a large-scale biome selector so every shell has spatial variety.
   // The profile controls which biomes dominate by biasing the selector thresholds.
   vec3 biomeNoisePos = normalize(vLocalPos) * 0.8 + vec3(biomeSeed * 3.71, biomeSeed * 1.37, biomeSeed * 5.13);
-  float bs = fbm(biomeNoisePos); // roughly in [-1, 1]
+  float bsNoise = fbm(biomeNoisePos); // roughly in [-1, 1]
+  float bsField = texture2D(interactionFieldTex, vUv).r * 2.0 - 1.0;
+  float bs = mix(bsNoise, bsField, interactionFieldBlend);
 
   vec3 cont  = continentalBiome(noisePos, n);
   vec3 des   = desertBiome(noisePos, n);

@@ -1,5 +1,9 @@
 use crate::prng::PRNG;
 use crate::types::*;
+use crate::world_interaction_field::{
+    build_dyson_shell_interaction_field,
+    build_planet_interaction_field,
+};
 use std::f64::consts::PI;
 
 const ROCKY_COLORS: &[u32] = &[0x8B6914, 0xA0522D, 0x7a6248, 0xB87333, 0x996633, 0xCC9966];
@@ -296,6 +300,114 @@ fn generate_great_spot(rng: &mut PRNG, gas_type: GasGiantType) -> (bool, f64, f6
     (has, lat, size)
 }
 
+fn generate_origin_debug_planets(star: &StarSystemData, rng: &mut PRNG) -> Vec<PlanetData> {
+    const DEBUG_ROCKY_SURFACES: &[SurfaceType] = &[
+        SurfaceType::Continental,
+        SurfaceType::Ocean,
+        SurfaceType::Marsh,
+        SurfaceType::Venus,
+        SurfaceType::Barren,
+        SurfaceType::Desert,
+        SurfaceType::Ice,
+        SurfaceType::Volcanic,
+        SurfaceType::ForestMoon,
+        SurfaceType::Mountain,
+    ];
+    const DEBUG_GAS_TYPES: &[GasGiantType] = &[
+        GasGiantType::Jovian,
+        GasGiantType::Saturnian,
+        GasGiantType::Neptunian,
+        GasGiantType::Inferno,
+        GasGiantType::Chromatic,
+        GasGiantType::Helium,
+    ];
+
+    let mut planets: Vec<PlanetData> = Vec::new();
+    let mut orbit_base = 1000.0;
+
+    for (i, &surface_type) in DEBUG_ROCKY_SURFACES.iter().enumerate() {
+        let orbit_radius = orbit_base + 350.0;
+        orbit_base = orbit_radius + 450.0;
+        let planet_radius = 85.0 + (i % 3) as f64 * 10.0;
+        let (has_clouds, cloud_density) = generate_rocky_clouds(rng, surface_type);
+        let interaction_field = build_planet_interaction_field(
+            star.id,
+            i as u32,
+            PlanetType::Rocky,
+            surface_type,
+            GasGiantType::Jovian,
+        );
+
+        planets.push(PlanetData {
+            id: format!("{}-debug-r{}", star.id, i),
+            name: planet_name(&star.name, i),
+            planet_type: PlanetType::Rocky,
+            surface_type,
+            gas_type: GasGiantType::Jovian,
+            radius: planet_radius,
+            orbit_radius,
+            orbit_speed: 0.00008 + (i as f64 * 0.000003),
+            orbit_phase: rng.float(0.0, PI * 2.0),
+            color: *rng.pick(ROCKY_COLORS),
+            has_rings: false,
+            ring_count: 1,
+            ring_inclination: 0.0,
+            has_clouds,
+            cloud_density,
+            great_spot: false,
+            great_spot_lat: 0.0,
+            great_spot_size: 0.0,
+            moons: Vec::new(),
+            has_station: i == 0,
+            interaction_field,
+        });
+    }
+
+    // Insert a clear orbit gap where asteroid belts usually appear.
+    orbit_base += 1200.0;
+
+    for (i, &gas_type) in DEBUG_GAS_TYPES.iter().enumerate() {
+        let orbit_radius = orbit_base + 1400.0;
+        orbit_base = orbit_radius + 1800.0;
+        let (great_spot, great_spot_lat, great_spot_size) = generate_great_spot(rng, gas_type);
+        let has_rings = matches!(gas_type, GasGiantType::Saturnian | GasGiantType::Helium);
+        let ring_count = if matches!(gas_type, GasGiantType::Saturnian) { 3 } else { 1 };
+        let interaction_field = build_planet_interaction_field(
+            star.id,
+            (DEBUG_ROCKY_SURFACES.len() + i) as u32,
+            PlanetType::GasGiant,
+            SurfaceType::Barren,
+            gas_type,
+        );
+
+        planets.push(PlanetData {
+            id: format!("{}-debug-g{}", star.id, i),
+            name: planet_name(&star.name, DEBUG_ROCKY_SURFACES.len() + i),
+            planet_type: PlanetType::GasGiant,
+            surface_type: SurfaceType::Barren,
+            gas_type,
+            radius: 215.0 + (i % 2) as f64 * 18.0,
+            orbit_radius,
+            orbit_speed: 0.000015 + (i as f64 * 0.000001),
+            orbit_phase: rng.float(0.0, PI * 2.0),
+            color: *rng.pick(GAS_COLORS),
+            has_rings,
+            ring_count,
+            ring_inclination: if has_rings { 0.12 } else { 0.0 },
+            has_clouds: false,
+            cloud_density: 0.0,
+            great_spot,
+            great_spot_lat,
+            great_spot_size,
+            moons: Vec::new(),
+            has_station: false,
+            interaction_field,
+        });
+    }
+
+    planets
+}
+
 fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData> {
     if star.star_type != StarType::Iron {
         return vec![];
@@ -373,6 +485,12 @@ fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData> {
                 chosen
             };
             let biome_seed = rng.float(0.0, 100.0);
+            let interaction_field = build_dyson_shell_interaction_field(
+                star.id,
+                band as u32,
+                segment as u32,
+                biome_profile,
+            );
 
             shells.push(DysonShellSegmentData {
                 id: format!("{}-dyson-b{}-s{}", star.id, band, segment),
@@ -393,6 +511,7 @@ fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData> {
                 weather_bands,
                 biome_profile,
                 biome_seed,
+                interaction_field,
             });
         }
 
@@ -404,6 +523,29 @@ fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData> {
 
 pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
     let mut rng = PRNG::from_index(CLUSTER_SEED, star.id.wrapping_mul(97).wrapping_add(13));
+
+    if star.id == 0 {
+        let (radius_min, radius_max) = star_radius_range(star.star_type);
+        let star_radius = rng.float(radius_min, radius_max);
+        let planets = generate_origin_debug_planets(star, &mut rng);
+        let main_station_planet_id = planets.iter()
+            .find(|p| p.has_station)
+            .or_else(|| planets.first())
+            .map(|p| p.id.clone())
+            .unwrap_or_default();
+
+        return SolarSystemData {
+            star_type: star.star_type,
+            star_radius,
+            companion: None,
+            planets,
+            dyson_shells: vec![],
+            asteroid_belt: None,
+            main_station_planet_id,
+            secret_bases: vec![],
+        };
+    }
+
     let profile = system_profile_for(star.star_type);
 
     let inner_count = rng.int(profile.inner_count.0, profile.inner_count.1);
@@ -507,6 +649,13 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
         }
         let rocky_surface = pick_weighted_surface(&mut rng, profile.rocky_weights);
         let (has_clouds, cloud_density) = generate_rocky_clouds(&mut rng, rocky_surface);
+        let interaction_field = build_planet_interaction_field(
+            star.id,
+            i as u32,
+            PlanetType::Rocky,
+            rocky_surface,
+            GasGiantType::Jovian,
+        );
         planets.push(PlanetData {
             id: format!("{}-p{}", star.id, i),
             name: planet_name(&star.name, i as usize),
@@ -528,6 +677,7 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             great_spot_size: 0.0,
             moons,
             has_station: star.tech_level >= 3 || i == 0,
+            interaction_field,
         });
     }
 
@@ -580,6 +730,13 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             });
         }
         let (great_spot, great_spot_lat, great_spot_size) = generate_great_spot(&mut rng, gas_type);
+        let interaction_field = build_planet_interaction_field(
+            star.id,
+            (inner_count + i) as u32,
+            PlanetType::GasGiant,
+            SurfaceType::Barren,
+            gas_type,
+        );
         planets.push(PlanetData {
             id: format!("{}-g{}", star.id, i),
             name: planet_name(&star.name, (inner_count + i) as usize),
@@ -601,6 +758,7 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             great_spot_size,
             moons,
             has_station: false,
+            interaction_field,
         });
     }
 
@@ -678,6 +836,12 @@ mod tests {
         let system = generate_solar_system(&cluster[0]);
         assert!(!system.planets.is_empty());
         assert!(!system.main_station_planet_id.is_empty());
+        assert!(system.planets.iter().all(|planet| {
+            let field = &planet.interaction_field;
+            field.width > 0
+                && field.height > 0
+                && field.values.len() == (field.width as usize * field.height as usize)
+        }));
     }
 
     #[test]
@@ -690,6 +854,7 @@ mod tests {
         for (pa, pb) in a.planets.iter().zip(b.planets.iter()) {
             assert_eq!(pa.id, pb.id);
             assert_eq!(pa.orbit_radius, pb.orbit_radius);
+            assert_eq!(pa.interaction_field.values, pb.interaction_field.values);
         }
     }
 
@@ -798,6 +963,12 @@ mod tests {
         assert!(system.dyson_shells.iter().all(|segment| {
             matches!(segment.star_phase, 0.0 | 0.25 | 0.5 | 0.75 | 1.0)
         }));
+        assert!(system.dyson_shells.iter().all(|segment| {
+            let field = &segment.interaction_field;
+            field.width > 0
+                && field.height > 0
+                && field.values.len() == (field.width as usize * field.height as usize)
+        }));
     }
 
     #[test]
@@ -809,5 +980,45 @@ mod tests {
 
         let system = generate_solar_system(non_iron);
         assert!(system.dyson_shells.is_empty());
+    }
+
+    #[test]
+    fn origin_system_includes_all_planet_variants_for_debugging() {
+        let cluster = generate_cluster();
+        let origin = &cluster[0];
+        let system = generate_solar_system(origin);
+
+        let rocky_surfaces = [
+            SurfaceType::Continental,
+            SurfaceType::Ocean,
+            SurfaceType::Marsh,
+            SurfaceType::Venus,
+            SurfaceType::Barren,
+            SurfaceType::Desert,
+            SurfaceType::Ice,
+            SurfaceType::Volcanic,
+            SurfaceType::ForestMoon,
+            SurfaceType::Mountain,
+        ];
+        let gas_types = [
+            GasGiantType::Jovian,
+            GasGiantType::Saturnian,
+            GasGiantType::Neptunian,
+            GasGiantType::Inferno,
+            GasGiantType::Chromatic,
+            GasGiantType::Helium,
+        ];
+
+        for surface in rocky_surfaces {
+            assert!(system.planets.iter().any(|planet| {
+                planet.planet_type == PlanetType::Rocky && planet.surface_type == surface
+            }));
+        }
+
+        for gas in gas_types {
+            assert!(system.planets.iter().any(|planet| {
+                planet.planet_type == PlanetType::GasGiant && planet.gas_type == gas
+            }));
+        }
     }
 }

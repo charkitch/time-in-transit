@@ -15,6 +15,7 @@ pub enum EventPool {
     ProximityStar,
     ProximityBase,
     PlanetLanding,
+    DysonLanding,
 }
 
 pub struct EventContext<'a> {
@@ -23,6 +24,8 @@ pub struct EventContext<'a> {
     pub system_choices: Option<&'a SystemChoices>,
     pub triggers: &'a HashMap<String, Trigger>,
     pub surface: Option<SurfaceType>,
+    pub site_class: Option<&'a str>,
+    pub host_type: Option<&'a str>,
     pub current_cluster: u32,
     pub current_system_id: u32,
 }
@@ -63,6 +66,16 @@ fn check_condition(cond: &EventCondition, ctx: &EventContext) -> bool {
         EventCondition::AnyFlagNotSet(flag) => !any_system_has_flag(flag),
         EventCondition::SurfaceIs(surfaces) => {
             ctx.surface.map_or(false, |surface| surfaces.contains(&surface))
+        }
+        EventCondition::SiteClassIs(classes) => {
+            ctx.site_class
+                .map(|site_class| classes.iter().any(|class| class == site_class))
+                .unwrap_or(false)
+        }
+        EventCondition::HostTypeIs(host_types) => {
+            ctx.host_type
+                .map(|host_type| host_types.iter().any(|ht| ht == host_type))
+                .unwrap_or(false)
         }
         EventCondition::TriggerFired(id) => choices.fired_triggers.contains(id),
         EventCondition::ChainTargetHere(chain_id) => {
@@ -108,6 +121,7 @@ fn pool_events(pool: EventPool) -> Vec<GameEvent> {
         EventPool::ProximityStar => content::proximity_star_events(),
         EventPool::ProximityBase => content::proximity_base_events(),
         EventPool::PlanetLanding => content::planet_landing_events(),
+        EventPool::DysonLanding => content::dyson_landing_events(),
     }
 }
 
@@ -177,6 +191,7 @@ mod tests {
         assert_eq!(content::oort_cloud_base_events().len(), 7);
         assert_eq!(content::maximum_space_events().len(), 8);
         assert_eq!(content::triggered_events().len(), 1);
+        assert_eq!(content::dyson_landing_events().len(), 2);
     }
 
     #[test]
@@ -190,10 +205,39 @@ mod tests {
             system_choices: None,
             triggers: &triggers,
             surface: None,
+            site_class: None,
+            host_type: None,
             current_cluster: 0,
             current_system_id: 0,
         };
         assert!(select_game_event(EventPool::Landing, &ctx, 42).is_some());
+    }
+
+    #[test]
+    fn selection_is_deterministic_for_same_seed_and_context() {
+        let civ = test_civ();
+        let player = test_player();
+        let triggers = content::all_triggers();
+        let ctx = EventContext {
+            civ_state: &civ,
+            player_state: &player,
+            system_choices: None,
+            triggers: &triggers,
+            surface: None,
+            site_class: None,
+            host_type: None,
+            current_cluster: 0,
+            current_system_id: 0,
+        };
+
+        let first = select_game_event(EventPool::Landing, &ctx, 4242)
+            .map(|event| event.id)
+            .unwrap_or_default();
+        let second = select_game_event(EventPool::Landing, &ctx, 4242)
+            .map(|event| event.id)
+            .unwrap_or_default();
+
+        assert_eq!(first, second);
     }
 
     #[test]
@@ -210,6 +254,8 @@ mod tests {
             system_choices: Some(&choices),
             triggers: &triggers,
             surface: None,
+            site_class: None,
+            host_type: None,
             current_cluster: 0,
             current_system_id: 0,
         };
@@ -224,6 +270,8 @@ mod tests {
             system_choices: Some(&choices_with_flag),
             triggers: &triggers,
             surface: None,
+            site_class: None,
+            host_type: None,
             current_cluster: 0,
             current_system_id: 0,
         };

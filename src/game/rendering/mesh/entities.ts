@@ -194,3 +194,45 @@ export function makeMaximumSpaceBase(size = 55): THREE.Group {
 
   return group;
 }
+
+export function makeLandingSiteMarker(classification: string): THREE.Group {
+  const group = new THREE.Group();
+  const color = classification.includes('hazard')
+    ? 0xFF6644
+    : classification.includes('water')
+      ? 0x44AADD
+      : classification.includes('storm')
+        ? 0xFFAA44
+        : classification.includes('weathered')
+          ? 0xD7C087
+          : 0x66FFAA;
+
+  // Low-profile surface glow
+  const glowDisc = new THREE.Mesh(
+    new THREE.CircleGeometry(5.4, 22),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.36,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+  );
+  group.add(glowDisc);
+
+  // Small pyramid tip
+  const tipGeo = new THREE.ConeGeometry(1.8, 4.2, 4);
+  const tip = makeWireframeObject(tipGeo, color, color, 0.85);
+  tip.rotation.x = Math.PI / 2;
+  tip.position.z = 2.4;
+  group.add(tip);
+
+  const glow = makeGlowSprite(color, 26);
+  const glowMat = glow.material as THREE.SpriteMaterial;
+  glowMat.opacity = 0.14;
+  glow.position.z = 1.0;
+  group.add(glow);
+
+  return group;
+}

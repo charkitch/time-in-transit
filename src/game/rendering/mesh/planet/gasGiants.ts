@@ -2,9 +2,10 @@ import * as THREE from 'three';
 import { PALETTE } from '../../../constants';
 import { loadTexture } from '../../textureCache';
 import type { PlanetSkin } from '../../planetSkins';
-import type { GasGiantType } from '../../../engine';
+import type { GasGiantType, InteractionFieldData } from '../../../engine';
 import planetVertex from '../shaders/includes/planet_vertex.glsl';
 import gasGiantFrag from '../shaders/gas_giant.frag.glsl';
+import { makeInteractionFieldTexture } from './shared';
 
 const GAS_TYPE_INDEX: Record<GasGiantType, number> = {
   jovian: 0,
@@ -19,9 +20,12 @@ export function makeGasGiant(
   radius: number, baseColor: number, rng: () => number,
   seed: number = 0, gasType: GasGiantType = 'jovian',
   greatSpot = false, greatSpotLat = 0, greatSpotSize = 0.5,
+  interactionField?: InteractionFieldData,
 ): THREE.Group {
   const group = new THREE.Group();
   const geo = new THREE.SphereGeometry(radius, 32, 24);
+  const interactionTex = makeInteractionFieldTexture(interactionField);
+  const interactionFieldBlend = interactionField ? 0.28 : 0.0;
 
   const mat = new THREE.ShaderMaterial({
     side: THREE.DoubleSide,
@@ -32,6 +36,8 @@ export function makeGasGiant(
       uGreatSpot: { value: greatSpot ? 1 : 0 },
       uSpotLat: { value: greatSpotLat },
       uSpotSize: { value: greatSpotSize },
+      interactionFieldTex: { value: interactionTex },
+      interactionFieldBlend: { value: interactionFieldBlend },
     },
     vertexShader: planetVertex,
     fragmentShader: gasGiantFrag,

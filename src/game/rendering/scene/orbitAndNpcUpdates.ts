@@ -58,6 +58,10 @@ export function updateOrbitalEntities(entities: Map<string, SceneEntity>, time: 
   for (const [, entity] of entities) {
     if (entity.type === 'star' && entity.orbitRadius === 0) continue;
     if (entity.type === 'npc_ship' || entity.type === 'fleet_ship') continue;
+    if (entity.type === 'landing_site') {
+      entity.group.getWorldPosition(entity.worldPos);
+      continue;
+    }
 
     const angle = entity.orbitPhase + time * entity.orbitSpeed;
 

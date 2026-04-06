@@ -5,7 +5,7 @@ import { TargetIndicator } from './TargetIndicator';
 import type { SceneEntity } from '../../game/rendering/SceneRenderer';
 import { getFaction } from '../../game/data/factions';
 import type { SecretBaseData } from '../../game/engine';
-import { STAR_TYPE_DISPLAY, STAR_DESCRIPTIONS } from '../../game/constants';
+import { STAR_TYPE_DISPLAY, STAR_DESCRIPTIONS, SCAN_INTEL_MAX_AGE_YEARS } from '../../game/constants';
 import type { RuntimeProfile } from '../../runtime/runtimeProfile';
 import { TouchFlightControls } from './TouchFlightControls';
 import styles from './HUD.module.css';
@@ -20,6 +20,8 @@ interface HUDProps {
   onTouchFlightInput: (input: { pitch: number; yaw: number; roll: number; thrust: number; boost: boolean }) => void;
   onDock: () => void;
   onHail: () => void;
+  onLand: () => void;
+  onScan: () => void;
   onTargetCycle: () => void;
   onClusterMap: () => void;
   onSystemMap: () => void;
@@ -35,6 +37,8 @@ export function HUD({
   onTouchFlightInput,
   onDock,
   onHail,
+  onLand,
+  onScan,
   onTargetCycle,
   onClusterMap,
   onSystemMap,
@@ -48,11 +52,14 @@ export function HUD({
   const currentSystemId = useGameState(s => s.currentSystemId);
   const alert = useGameState(s => s.ui.alertMessage);
   const hyperspaceTarget = useGameState(s => s.ui.hyperspaceTarget);
+  const scanProgress = useGameState(s => s.ui.scanProgress);
+  const scanLabel = useGameState(s => s.ui.scanLabel);
   const uiMode = useGameState(s => s.ui.mode);
   const canDockNow = useGameState(s => s.ui.canDockNow);
   const galaxyYear = useGameState(s => s.galaxyYear);
   const knownFactions = useGameState(s => s.knownFactions);
   const currentSystemPayload = useGameState(s => s.currentSystemPayload);
+  const scannedHosts = useGameState(s => s.scannedHosts);
 
   useEffect(() => {
     if (!isStarTooltipOpen) return;
@@ -87,11 +94,33 @@ export function HUD({
   const currentFactionKnown = currentFaction && knownFactions.has(currentFaction.id);
 
   // Target info
-  const targetEntity = player.targetId ? getEntities().get(player.targetId) : null;
+  const entities = getEntities();
+  const targetEntity = player.targetId ? entities.get(player.targetId) : null;
   let targetDist = 0;
   if (targetEntity) {
     const sp = getShipPos();
     targetDist = Math.round(sp.distanceTo(targetEntity.worldPos));
+  }
+  const targetScanHostId = targetEntity
+    ? (
+      targetEntity.type === 'landing_site'
+        ? targetEntity.siteHostId ?? null
+        : targetEntity.type === 'planet' || targetEntity.type === 'dyson_shell'
+          ? targetEntity.id
+          : null
+    )
+    : null;
+  const scannedYear = targetScanHostId ? scannedHosts[currentSystemId]?.[targetScanHostId] : undefined;
+  const targetIsScanned = scannedYear !== undefined && (galaxyYear - scannedYear <= SCAN_INTEL_MAX_AGE_YEARS);
+  let targetSiteTotal = 0;
+  let targetSiteDiscovered = 0;
+  if (targetScanHostId) {
+    for (const [, entity] of entities) {
+      if (entity.type !== 'landing_site') continue;
+      if (entity.siteHostId !== targetScanHostId) continue;
+      targetSiteTotal++;
+      if (entity.siteDiscovered) targetSiteDiscovered++;
+    }
   }
 
   // Check if target is a secret base
@@ -117,6 +146,14 @@ export function HUD({
 
       {/* Alert */}
       {alert && <div className={styles.alertBanner}>{alert}</div>}
+      {scanProgress > 0 && scanLabel && (
+        <div className={styles.scanWidget}>
+          <div className={styles.scanLabel}>{scanLabel}</div>
+          <div className={styles.scanBar}>
+            <div className={styles.scanFill} style={{ width: `${Math.round(scanProgress * 100)}%` }} />
+          </div>
+        </div>
+      )}
 
       {/* Top-left: system info + credits */}
       <div className={styles.topLeft}>
@@ -179,7 +216,7 @@ export function HUD({
           <div className={styles.controls}>
             W/S Pitch · A/D Roll · Q/E Yaw<br />
             SPACE Thrust · SHIFT Boost · TAB Target<br />
-            F Dock · G Cluster Map · 1 System Map · J Jump · H Hail
+            F Dock · L Land Site · G Cluster Map · 1 System Map · J Jump · H Hail · V Scan
           </div>
         )}
       </div>
@@ -216,13 +253,37 @@ export function HUD({
             ) : (
               <>
                 <div className={styles.targetLabel}>TARGET</div>
-                <div>{targetDyson ? targetDyson.name.toUpperCase() : targetEntity.id.replace(`${currentSystemId}-`, '')}</div>
+                <div>
+                  {targetEntity.type === 'landing_site'
+                    ? (targetEntity.siteLabel ?? 'INTERACTION SITE')
+                    : (targetDyson ? targetDyson.name.toUpperCase() : targetEntity.id.replace(`${currentSystemId}-`, ''))}
+                </div>
                 <div style={{ color: 'var(--color-hud-dim)', fontSize: '11px' }}>
                   DIST: {targetDist} wu
                 </div>
                 <div style={{ fontSize: '10px', opacity: 0.6 }}>
-                  TYPE: {targetEntity.type === 'dyson_shell' ? 'DYSON SHELL' : targetEntity.type.toUpperCase()}
+                  TYPE: {targetEntity.type === 'dyson_shell'
+                    ? 'DYSON SHELL'
+                    : targetEntity.type === 'landing_site'
+                      ? `SITE · ${(targetEntity.siteClassification ?? 'unknown').split('_').join(' ').toUpperCase()}`
+                      : targetEntity.type.toUpperCase()}
                 </div>
+                {targetEntity.type === 'landing_site' && targetEntity.siteHostLabel && (
+                  <div style={{ fontSize: '10px', opacity: 0.6 }}>
+                    HOST: {targetEntity.siteHostLabel.toUpperCase()}
+                  </div>
+                )}
+                {(targetEntity.type === 'planet' || targetEntity.type === 'dyson_shell' || targetEntity.type === 'landing_site') && (
+                  <div style={{ fontSize: '10px', opacity: 0.75 }}>
+                    SCAN: {targetIsScanned ? 'SCANNED' : 'UNSCANNED'}
+                    {targetIsScanned ? ` · SITES ${targetSiteDiscovered}/${targetSiteTotal}` : ''}
+                  </div>
+                )}
+                {targetEntity.type === 'landing_site' && (
+                  <div style={{ color: '#66FFAA', fontSize: '10px', marginTop: '4px', letterSpacing: '1px' }}>
+                    L TO LAND
+                  </div>
+                )}
               </>
             )}
             {targetEntity.type === 'npc_ship' && (
@@ -263,6 +324,8 @@ export function HUD({
           onInputChange={onTouchFlightInput}
           onDock={onDock}
           onHail={onHail}
+          onLand={onLand}
+          onScan={onScan}
           onTargetCycle={onTargetCycle}
           onClusterMap={onClusterMap}
           onSystemMap={onSystemMap}

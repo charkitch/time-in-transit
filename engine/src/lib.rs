@@ -8,6 +8,7 @@ mod trading;
 mod events;
 mod simulation;
 mod content;
+mod world_interaction_field;
 
 use wasm_bindgen::prelude::*;
 use std::sync::Mutex;
@@ -167,6 +168,8 @@ fn build_system_payload(
         system_choices,
         triggers: &triggers,
         surface: None,
+        site_class: None,
+        host_type: None,
         current_cluster: 0,
         current_system_id: star.id,
     };
@@ -274,6 +277,7 @@ fn jump_years_elapsed(distance: f64) -> u32 {
 /// Returns: JSON-serialized InitResult
 #[wasm_bindgen]
 pub fn init_game(player_state_json: &str) -> Result<String, JsValue> {
+    content::refresh_event_cache();
     let cluster = generate_cluster();
 
     let player_state: PlayerState = if player_state_json.is_empty() {
@@ -429,6 +433,8 @@ pub fn get_game_event(
     context: &str,
     secret_base_id: &str,
     surface: &str,
+    site_class: &str,
+    host_type: &str,
 ) -> Result<String, JsValue> {
     let player_state: PlayerState = serde_json::from_str(player_state_json)
         .map_err(|e| JsValue::from_str(&format!("Failed to parse player state: {}", e)))?;
@@ -466,6 +472,7 @@ pub fn get_game_event(
         "proximity_star" => EventPool::ProximityStar,
         "proximity_base" => EventPool::ProximityBase,
         "planet_landing" => EventPool::PlanetLanding,
+        "dyson_landing" => EventPool::DysonLanding,
         "triggered" => EventPool::Triggered,
         _ => EventPool::Landing,
     };
@@ -475,6 +482,8 @@ pub fn get_game_event(
     } else {
         serde_json::from_str::<SurfaceType>(&format!("\"{}\"", surface)).ok()
     };
+    let site_class = if site_class.is_empty() { None } else { Some(site_class) };
+    let host_type = if host_type.is_empty() { None } else { Some(host_type) };
 
     let ctx = EventContext {
         civ_state: &civ_state,
@@ -482,6 +491,8 @@ pub fn get_game_event(
         system_choices,
         triggers: &triggers,
         surface,
+        site_class,
+        host_type,
         current_cluster: 0,
         current_system_id: system_id,
     };
@@ -498,7 +509,7 @@ pub fn get_landing_event(
     player_state_json: &str,
     secret_base_id: &str,
 ) -> Result<String, JsValue> {
-    get_game_event(system_id, player_state_json, "landing", secret_base_id, "")
+    get_game_event(system_id, player_state_json, "landing", secret_base_id, "", "", "")
 }
 
 /// Get the current cluster summary (all 30 systems' state).

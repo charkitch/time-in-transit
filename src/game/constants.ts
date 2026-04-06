@@ -76,6 +76,11 @@ export const GAS_GIANT_SCOOP = {
   alert: 'GAS GIANT SCOOPING',
 } as const;
 
+export const PLANET_SCAN_RANGE_PADDING = 220;
+export const DYSON_SCAN_RANGE_PADDING = 280;
+export const SCAN_DURATION_SECONDS = 1.2;
+export const SCAN_INTEL_MAX_AGE_YEARS = 0;
+
 export const STAR_COLORS: Record<string, number> = {
   G: PALETTE.starG,
   K: PALETTE.starK,

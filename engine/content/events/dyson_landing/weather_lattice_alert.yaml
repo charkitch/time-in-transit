@@ -1,0 +1,22 @@
+id: WEATHER_LATTICE_ALERT
+title: WEATHER LATTICE ALERT
+requires:
+  - !HostTypeIs [dyson_shell]
+  - !SiteClassIs [shell_hazard]
+narrativeLines:
+  - >-
+    The weather lattice over this segment crackles with chained lightning, each strike mapped in pale geometric arcs.
+  - >-
+    An automated shepherd beacon warns that the next surge cycle will cut through exposed hull plating.
+choices:
+  - id: withdraw_before_surge
+    label: Withdraw before the surge
+    description: "+Fuel"
+    effect:
+      fuelReward: 0.3
+  - id: ride_the_window
+    label: Ride the surge window for data
+    description: "+Reputation"
+    effect:
+      tradingReputation: 1
+

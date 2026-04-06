@@ -12,13 +12,18 @@ export interface SceneEntity {
   shellArcWidth?: number;
   shellArcHeight?: number;
   parentId?: string;
-  type: 'planet' | 'station' | 'star' | 'moon' | 'npc_ship' | 'fleet_ship' | 'dyson_shell';
+  type: 'planet' | 'station' | 'star' | 'moon' | 'npc_ship' | 'fleet_ship' | 'dyson_shell' | 'landing_site';
   worldPos: THREE.Vector3;
   collisionRadius: number;
   collisionSampleRadius?: number;
   collisionSamplesLocal?: THREE.Vector3[];
   collisionSamplesWorld?: THREE.Vector3[];
   tidalTargetId?: string;
+  siteLabel?: string;
+  siteClassification?: string;
+  siteHostLabel?: string;
+  siteHostId?: string;
+  siteDiscovered?: boolean;
 }
 
 export interface XRayTransferStream {

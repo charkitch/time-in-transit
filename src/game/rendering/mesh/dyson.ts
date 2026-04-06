@@ -1,10 +1,11 @@
 import * as THREE from 'three';
-import type { DysonBiomeProfile, DysonWeatherBandData } from '../../engine';
+import type { DysonBiomeProfile, DysonWeatherBandData, InteractionFieldData } from '../../engine';
 import planetVertex from './shaders/includes/planet_vertex.glsl';
 import dysonShellFrag from './shaders/dyson_shell.frag.glsl';
 import dysonWeatherFrag from './shaders/dyson_weather.frag.glsl';
 import dysonCityLightsFrag from './shaders/dyson_city_lights.frag.glsl';
 import dysonShellExteriorFrag from './shaders/dyson_shell_exterior.frag.glsl';
+import { makeInteractionFieldTexture } from './planet/shared';
 
 export const BIOME_PROFILE_INDEX: Record<DysonBiomeProfile, number> = {
   continental: 0,
@@ -22,6 +23,7 @@ export function makeDysonShellSegment(
   seed = 0,
   biomeProfile: DysonBiomeProfile = 'continental',
   biomeSeed = 0,
+  interactionField?: InteractionFieldData,
 ): { group: THREE.Group; material: THREE.ShaderMaterial } {
   const group = new THREE.Group();
   const phiLength = THREE.MathUtils.clamp(arcWidth / curveRadius, 0.55, 1.6);
@@ -38,6 +40,8 @@ export function makeDysonShellSegment(
     thetaLength,
   );
 
+  const interactionTex = makeInteractionFieldTexture(interactionField);
+  const interactionFieldBlend = interactionField ? 0.14 : 0.0;
   const mat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     uniforms: {
@@ -47,6 +51,8 @@ export function makeDysonShellSegment(
       uLightPos: { value: new THREE.Vector3() },
       biomeProfile: { value: BIOME_PROFILE_INDEX[biomeProfile] },
       biomeSeed: { value: biomeSeed },
+      interactionFieldTex: { value: interactionTex },
+      interactionFieldBlend: { value: interactionFieldBlend },
     },
     vertexShader: planetVertex,
     fragmentShader: dysonShellFrag,

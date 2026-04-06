@@ -1,0 +1,32 @@
+id: VOLATILE_SUPERSTORM_DESCENT
+title: SUPERCELL DESCENT
+requires:
+  - !HostTypeIs [planet]
+  - !SiteClassIs [gas_volatile]
+narrativeLines:
+  - >-
+    The descent corridor flashes white as sheet lightning crawls across cloud towers larger than cities.
+  - >-
+    Your guidance system rides narrow calm bands between convective walls while local aerostats
+    broadcast storm-phase telemetry in clipped, practiced bursts.
+  - >-
+    A storm controller hails your cockpit: "Hold this vector for ninety seconds and we can save
+    a weather mast before the next discharge front rolls through."
+choices:
+  - id: hold_vector
+    label: Hold the vector through the cell edge
+    description: "+Reputation, +CR"
+    effect:
+      tradingReputation: 1
+      creditsReward: 450
+  - id: sell_sensor_pack
+    label: Sell them your archived storm sensor logs
+    description: "CR 700, -Reputation"
+    effect:
+      creditsReward: 700
+      tradingReputation: -1
+  - id: abort_descent
+    label: Abort and climb above the storm deck
+    description: No effect
+    effect: {}
+

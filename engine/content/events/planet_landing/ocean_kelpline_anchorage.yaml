@@ -1,0 +1,33 @@
+id: OCEAN_KELPLINE_ANCHORAGE
+title: KELPLINE ANCHORAGE
+requires:
+  - !HostTypeIs [planet]
+  - !SurfaceIs [ocean]
+narrativeLines:
+  - >-
+    The landing pad is a basalt crown barely above a warm, slate-blue sea.
+  - >-
+    A floating settlement nearby grows engineered kelp in kilometer-long ribbons,
+    weaving carbon fiber, food proteins, and medicine precursors from the same harvest.
+  - >-
+    Their quartermaster offers a simple deal: help stabilize a drifting anchor array,
+    and they will pay in fuel and goodwill.
+choices:
+  - id: help_reset_array
+    label: Help reset the anchor array
+    description: "+Reputation, +Fuel"
+    effect:
+      tradingReputation: 1
+      fuelReward: 0.8
+  - id: buy_rare_extracts
+    label: Buy premium kelp extracts (CR 250)
+    description: "CR -250, prices -10% locally"
+    effect:
+      creditsReward: -250
+      priceModifier: 0.90
+    requiresCredits: 250
+  - id: observe_tides
+    label: Observe and move on
+    description: No effect
+    effect: {}
+

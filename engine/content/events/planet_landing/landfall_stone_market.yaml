@@ -1,0 +1,32 @@
+id: LANDFALL_STONE_MARKET
+title: STONE MARKET
+requires:
+  - !HostTypeIs [planet]
+  - !SiteClassIs [rocky_landable]
+narrativeLines:
+  - >-
+    Your site beacon guides you into a terraced market carved straight into the local bedrock.
+  - >-
+    Traders from nearby valleys lay out precision ceramics, pressure-cast glass, and
+    seed vaults tagged by century.
+  - >-
+    The market warden asks if you'll arbitrate a dispute over water rights maps before
+    the afternoon caravans depart.
+choices:
+  - id: arbitrate_fairly
+    label: Arbitrate the dispute fairly
+    description: "+Reputation"
+    effect:
+      tradingReputation: 1
+  - id: buy_reserve_maps
+    label: Buy reserve water maps (CR 300)
+    description: "CR -300, prices -15% locally"
+    effect:
+      creditsReward: -300
+      priceModifier: 0.85
+    requiresCredits: 300
+  - id: decline_mediation
+    label: Decline and continue your route
+    description: No effect
+    effect: {}
+

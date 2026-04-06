@@ -81,6 +81,36 @@
   animation: blink 0.8s step-end infinite;
 }
 
+.scanWidget {
+  position: absolute;
+  top: calc(116px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(280px, 72vw);
+  padding: 6px 10px;
+  border: 1px solid rgba(102, 255, 170, 0.5);
+  background: rgba(5, 18, 12, 0.7);
+}
+
+.scanLabel {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: rgba(122, 255, 186, 0.95);
+  margin-bottom: 5px;
+}
+
+.scanBar {
+  width: 100%;
+  height: 6px;
+  background: rgba(31, 85, 64, 0.5);
+  border: 1px solid rgba(92, 170, 132, 0.45);
+}
+
+.scanFill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(84, 242, 170, 0.85), rgba(172, 255, 216, 0.95));
+}
+
 @keyframes blink {
   50% { opacity: 0.4; }
 }
@@ -211,4 +241,9 @@
   font-size: 12px;
   max-width: 90vw;
   text-align: center;
+}
+
+.mobile .scanWidget {
+  top: calc(92px + env(safe-area-inset-top));
+  width: min(240px, 82vw);
 }
