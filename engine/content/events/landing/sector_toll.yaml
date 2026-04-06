@@ -1,7 +1,7 @@
 id: SECTOR_TOLL
 title: SECTOR TOLL
 requires:
-  - !PoliticsIs [Feudal, MilitaryDictatorship, StagnantMilitancy]
+  - !PoliticsIs [WoundTithe, SilenceMandate, Vigil]
 narrativeLines:
   - >-
     A gunship flags you down inside the docking envelope. The insignia is unfamiliar - local warlord, recent vintage.

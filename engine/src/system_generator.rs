@@ -912,7 +912,7 @@ mod tests {
             x: 0.0,
             y: 0.0,
             star_type: StarType::XB,
-            economy: EconomyType::HighTech,
+            economy: EconomyType::Synthesis,
             tech_level: 5,
             population: 9,
         };
@@ -938,7 +938,7 @@ mod tests {
             x: 0.0,
             y: 0.0,
             star_type: StarType::XBB,
-            economy: EconomyType::HighTech,
+            economy: EconomyType::Synthesis,
             tech_level: 5,
             population: 9,
         };
@@ -970,7 +970,7 @@ mod tests {
             x: 0.0,
             y: 0.0,
             star_type: StarType::MQ,
-            economy: EconomyType::HighTech,
+            economy: EconomyType::Synthesis,
             tech_level: 5,
             population: 9,
         };

@@ -3,7 +3,7 @@ import { useGameState } from '../../game/GameState';
 import { HyperspaceSystem } from '../../game/mechanics/HyperspaceSystem';
 import { jumpYearsElapsed } from '../../game/mechanics/RelativisticTime';
 import type { StarSystemData, ClusterSystemSummary } from '../../game/engine';
-import { HYPERSPACE } from '../../game/constants';
+import { HYPERSPACE, POLITICAL_TYPE_DISPLAY } from '../../game/constants';
 import { getFaction } from '../../game/data/factions';
 import styles from './ClusterMap.module.css';
 
@@ -560,7 +560,7 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
                     const fc = `#${f.color.toString(16).padStart(6, '0')}`;
                     return <>
                       <br />
-                      <span style={{ color: 'var(--color-hud-dim)' }}>{selectedSummary.politics.toUpperCase()}</span>
+                      <span style={{ color: 'var(--color-hud-dim)' }}>{(POLITICAL_TYPE_DISPLAY[selectedSummary.politics] ?? selectedSummary.politics).toUpperCase()}</span>
                       <br />
                       <span style={{ color: fc }}>{f.name.toUpperCase()}</span>
                       {selectedSummary.contestingFactionId && (() => {

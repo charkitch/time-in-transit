@@ -4,10 +4,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 16px;
   background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(8px);
   z-index: 100;
   pointer-events: all;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .panel {
@@ -17,6 +21,8 @@
   padding: 48px 64px;
   width: 100%;
   max-width: 600px;
+  max-height: min(92vh, 900px);
+  overflow-y: auto;
   text-align: center;
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.05);
 }
@@ -69,6 +75,11 @@
   gap: 12px;
   margin-bottom: 32px;
   text-align: left;
+  max-height: min(44vh, 420px);
+  overflow-y: auto;
+  padding-right: 8px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .controlRow {
@@ -101,4 +112,40 @@
   color: rgba(255, 255, 255, 0.42);
   text-transform: uppercase;
   user-select: text;
+}
+
+.helpText {
+  font-family: 'Courier New', monospace;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  line-height: 1.6;
+  letter-spacing: 0.8px;
+  margin-bottom: 18px;
+}
+
+.statusText {
+  font-family: 'Courier New', monospace;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.8px;
+  margin: 0 0 18px;
+}
+
+@media (max-width: 640px), (max-height: 740px) {
+  .panel {
+    padding: 24px 18px;
+  }
+
+  .title {
+    font-size: 16px;
+    letter-spacing: 4px;
+  }
+
+  .menuBtn {
+    width: 100%;
+    max-width: 320px;
+    letter-spacing: 2px;
+    font-size: 13px;
+  }
 }

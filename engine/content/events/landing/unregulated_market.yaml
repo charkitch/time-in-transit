@@ -1,7 +1,7 @@
 id: UNREGULATED_MARKET
 title: UNREGULATED MARKET
 requires:
-  - !PoliticsIs [Anarchist]
+  - !PoliticsIs [DriftSovereignty]
 narrativeLines:
   - >-
     Someone has set up shop in the maintenance ring - no permits, no inspectors, no questions.

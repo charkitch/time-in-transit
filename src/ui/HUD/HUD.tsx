@@ -5,7 +5,7 @@ import { TargetIndicator } from './TargetIndicator';
 import type { SceneEntity } from '../../game/rendering/SceneRenderer';
 import { getFaction } from '../../game/data/factions';
 import type { SecretBaseData } from '../../game/engine';
-import { STAR_TYPE_DISPLAY, STAR_DESCRIPTIONS, SCAN_INTEL_MAX_AGE_YEARS } from '../../game/constants';
+import { STAR_TYPE_DISPLAY, STAR_DESCRIPTIONS, ECONOMY_DESCRIPTIONS, SCAN_INTEL_MAX_AGE_YEARS } from '../../game/constants';
 import type { RuntimeProfile } from '../../runtime/runtimeProfile';
 import { TouchFlightControls } from './TouchFlightControls';
 import styles from './HUD.module.css';
@@ -45,7 +45,9 @@ export function HUD({
   onMenu,
 }: HUDProps) {
   const [isStarTooltipOpen, setIsStarTooltipOpen] = useState(false);
+  const [isEconTooltipOpen, setIsEconTooltipOpen] = useState(false);
   const tooltipRef = useRef<HTMLSpanElement>(null);
+  const econTooltipRef = useRef<HTMLSpanElement>(null);
 
   const player = useGameState(s => s.player);
   const cluster = useGameState(s => s.cluster);
@@ -83,6 +85,29 @@ export function HUD({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isStarTooltipOpen]);
+
+  useEffect(() => {
+    if (!isEconTooltipOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (econTooltipRef.current && !econTooltipRef.current.contains(e.target as Node)) {
+        setIsEconTooltipOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsEconTooltipOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isEconTooltipOpen]);
 
   const currentStar = cluster[currentSystemId];
   const targetStar = hyperspaceTarget !== null ? cluster[hyperspaceTarget] : null;
@@ -192,7 +217,30 @@ export function HUD({
                 </a>
               </div>
             )}
-          </span><span className={styles.systemInfoText}> · {currentSystemPayload?.civState.economy ?? currentStar?.economy}
+          </span> · <span
+            ref={econTooltipRef}
+            className={`${styles.starType} ${isEconTooltipOpen ? styles.active : ''}`}
+            onClick={() => setIsEconTooltipOpen(!isEconTooltipOpen)}
+          >
+            {currentSystemPayload?.civState.economy ?? currentStar?.economy}
+            {(() => {
+              const econKey = currentSystemPayload?.civState.economy ?? currentStar?.economy;
+              return econKey && ECONOMY_DESCRIPTIONS[econKey] ? (
+                <div className={`${styles.tooltip} ${isEconTooltipOpen ? styles.tooltipOpen : ''}`}>
+                  <button
+                    className={styles.closeButton}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsEconTooltipOpen(false);
+                    }}
+                  >
+                    ×
+                  </button>
+                  {ECONOMY_DESCRIPTIONS[econKey].desc}
+                </div>
+              ) : null;
+            })()}
+          </span><span className={styles.systemInfoText}>
           {currentSystemPayload && (
             <span
               style={{
@@ -216,7 +264,7 @@ export function HUD({
           <div className={styles.controls}>
             W/S Pitch · A/D Roll · Q/E Yaw<br />
             SPACE Thrust · SHIFT Boost · TAB Target<br />
-            F Dock · L Land Site · G Cluster Map · 1 System Map · J Jump · H Hail · V Scan
+            F Dock / Land · G Cluster Map · 1 System Map · J Jump · H Hail · V Scan
           </div>
         )}
       </div>
@@ -281,7 +329,7 @@ export function HUD({
                 )}
                 {targetEntity.type === 'landing_site' && (
                   <div style={{ color: '#66FFAA', fontSize: '10px', marginTop: '4px', letterSpacing: '1px' }}>
-                    L TO LAND
+                    F TO LAND
                   </div>
                 )}
               </>
@@ -307,6 +355,15 @@ export function HUD({
         <div className={styles.bottomLeft}>
           <StatusBars />
         </div>
+      )}
+      {!isMobileHUD && uiMode === 'flight' && canDockNow && (
+        <button
+          type="button"
+          className={styles.desktopDockButton}
+          onClick={onDock}
+        >
+          DOCK
+        </button>
       )}
 
       {/* Top-center: thin status bars (mobile only) */}

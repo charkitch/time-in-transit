@@ -1,7 +1,7 @@
 id: ACQUISITION_PROPOSAL
 title: ACQUISITION PROPOSAL
 requires:
-  - !PoliticsIs [CorporateState, Technocracy]
+  - !PoliticsIs [PalimpsestAuthority, TheAsking]
 narrativeLines:
   - >-
     A sleek representative from a megacorporation intercepts you at the airlock.

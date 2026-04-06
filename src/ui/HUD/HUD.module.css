@@ -26,6 +26,23 @@
   left: calc(16px + env(safe-area-inset-left));
 }
 
+.desktopDockButton {
+  position: absolute;
+  left: 50%;
+  bottom: calc(32px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  min-width: 120px;
+  min-height: 42px;
+  border: 1px solid rgba(96, 223, 255, 0.72);
+  background: rgba(8, 34, 44, 0.84);
+  color: rgba(170, 235, 255, 0.96);
+  letter-spacing: 1.6px;
+  font-size: 12px;
+  box-shadow: 0 0 16px rgba(85, 196, 255, 0.22);
+  pointer-events: auto;
+  z-index: 7;
+}
+
 .topCenter {
   position: absolute;
   top: calc(6px + env(safe-area-inset-top));

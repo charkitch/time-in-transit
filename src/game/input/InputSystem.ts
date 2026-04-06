@@ -30,7 +30,6 @@ export class InputSystem {
   private onCycleTarget?: () => void;
   private onJumpRequest?: () => void;
   private onHail?: () => void;
-  private onLand?: () => void;
   private onScan?: () => void;
   private onEscape?: () => void;
 
@@ -49,7 +48,6 @@ export class InputSystem {
     if (e.code === 'Tab') { e.preventDefault(); if (!e.repeat) this.onCycleTarget?.(); }
     if (e.code === 'KeyJ' && !e.repeat) this.onJumpRequest?.();
     if (e.code === 'KeyH' && !e.repeat) this.onHail?.();
-    if (e.code === 'KeyL' && !e.repeat) this.onLand?.();
     if (e.code === 'KeyV' && !e.repeat) this.onScan?.();
     if (e.code === 'Escape' && !e.repeat) this.onEscape?.();
   };
@@ -111,7 +109,6 @@ export class InputSystem {
   triggerCycleTargetEvent() { this.onCycleTarget?.(); }
   triggerJumpRequestEvent() { this.onJumpRequest?.(); }
   triggerHailRequest() { this.onHail?.(); }
-  triggerLandRequest() { this.onLand?.(); }
   triggerScanRequest() { this.onScan?.(); }
   triggerEscapeEvent() { this.onEscape?.(); }
 
@@ -121,7 +118,6 @@ export class InputSystem {
   onCycleTargetEvent(fn: () => void) { this.onCycleTarget = fn; }
   onJumpRequestEvent(fn: () => void) { this.onJumpRequest = fn; }
   onHailRequest(fn: () => void) { this.onHail = fn; }
-  onLandRequest(fn: () => void) { this.onLand = fn; }
   onScanRequest(fn: () => void) { this.onScan = fn; }
   onEscapeEvent(fn: () => void) { this.onEscape = fn; }
 

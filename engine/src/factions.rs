@@ -145,8 +145,8 @@ mod tests {
 
     #[test]
     fn deterministic_control() {
-        let a = get_system_faction_state(5, 3500, PoliticalType::Democracy);
-        let b = get_system_faction_state(5, 3500, PoliticalType::Democracy);
+        let a = get_system_faction_state(5, 3500, PoliticalType::RemembranceCompact);
+        let b = get_system_faction_state(5, 3500, PoliticalType::RemembranceCompact);
         assert_eq!(a.controlling_faction_id, b.controlling_faction_id);
         assert_eq!(a.contesting_faction_id, b.contesting_faction_id);
     }

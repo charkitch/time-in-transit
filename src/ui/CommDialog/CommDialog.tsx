@@ -15,6 +15,9 @@ export function CommDialog({ onTrade, onDismiss }: CommDialogProps) {
   if (!ctx) return null;
 
   const canTrade = ctx.inTradeRange;
+  const bonusOnlyOffer = ctx.bonusDemand && !ctx.cargo.some(entry => entry.good === ctx.bonusDemand?.good)
+    ? ctx.bonusDemand
+    : null;
 
   return (
     <div className={styles.overlay}>
@@ -50,14 +53,33 @@ export function CommDialog({ onTrade, onDismiss }: CommDialogProps) {
             <span>Good</span>
             <span>Buy</span>
             <span>Sell</span>
+            <span>Paid</span>
             <span>Qty</span>
             {canTrade && <span></span>}
           </div>
-          {ctx.cargo.map(entry => (
-            <div key={entry.good} className={styles.manifestRow}>
-              <span className={styles.goodName}>{entry.good}</span>
+          {ctx.cargo.map(entry => {
+            const avgPaid = player.cargoCostBasis[entry.good];
+            const sellPrice = ctx.bonusDemand?.good === entry.good ? ctx.bonusDemand.sellPrice : entry.sellPrice;
+            const profit = avgPaid !== undefined ? sellPrice - avgPaid : null;
+            const isBonusGood = ctx.bonusDemand?.good === entry.good;
+            return (
+            <div key={entry.good} className={`${styles.manifestRow} ${isBonusGood ? styles.bonusRow : ''}`}>
+              <span className={styles.goodName}>
+                {entry.good}
+                {isBonusGood && (
+                  <span className={styles.bonusTag}>{ctx.bonusDemand?.label}</span>
+                )}
+              </span>
               <span className={styles.price}>{entry.buyPrice} CR</span>
-              <span className={styles.price}>{entry.sellPrice} CR</span>
+              <span className={styles.price} style={{ color: profit === null ? undefined : (profit >= 0 ? '#44FF88' : '#FF4422') }}>
+                {sellPrice} CR
+                {profit !== null && (
+                  <span className={styles.edge}>
+                    {profit >= 0 ? '+' : ''}{Math.round(profit)}
+                  </span>
+                )}
+              </span>
+              <span className={styles.paid}>{avgPaid !== undefined ? `${Math.round(avgPaid)} CR` : '—'}</span>
               <span className={styles.qty}>{entry.qty}</span>
               {canTrade && (
                 <span className={styles.tradeButtons}>
@@ -78,7 +100,40 @@ export function CommDialog({ onTrade, onDismiss }: CommDialogProps) {
                 </span>
               )}
             </div>
-          ))}
+          )})}
+          {bonusOnlyOffer && (
+            <div className={`${styles.manifestRow} ${styles.bonusRow}`}>
+              <span className={styles.goodName}>
+                {bonusOnlyOffer.good}
+                <span className={styles.bonusTag}>{bonusOnlyOffer.label}</span>
+              </span>
+              <span className={styles.price}>—</span>
+              <span className={styles.price}>{bonusOnlyOffer.sellPrice} CR</span>
+              <span className={styles.paid}>
+                {player.cargoCostBasis[bonusOnlyOffer.good] !== undefined
+                  ? `${Math.round(player.cargoCostBasis[bonusOnlyOffer.good] ?? 0)} CR`
+                  : '—'}
+              </span>
+              <span className={styles.qty}>—</span>
+              {canTrade && (
+                <span className={styles.tradeButtons}>
+                  <button
+                    className={styles.tradeBtn}
+                    disabled
+                  >
+                    BUY
+                  </button>
+                  <button
+                    className={styles.tradeBtn}
+                    disabled={(player.cargo[bonusOnlyOffer.good] ?? 0) <= 0}
+                    onClick={() => onTrade('sell', bonusOnlyOffer.good)}
+                  >
+                    SELL
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Dismiss */}

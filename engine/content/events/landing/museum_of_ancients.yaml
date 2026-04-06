@@ -1,7 +1,7 @@
 id: MUSEUM_OF_ANCIENTS
 title: MUSEUM OF THE ANCIENTS
 requires:
-  - !PoliticsIs [Technocracy, Democracy]
+  - !PoliticsIs [Kindness, RemembranceCompact]
 narrativeLines:
   - >-
     The curator of the System Heritage Museum has been waiting at your berth since 0400.

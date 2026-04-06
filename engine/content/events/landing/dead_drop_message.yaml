@@ -1,7 +1,7 @@
 id: DEAD_DROP_MESSAGE
 title: DEAD DROP MESSAGE
 requires:
-  - !PoliticsIs [MilitaryDictatorship, StagnantMilitancy]
+  - !PoliticsIs [SilenceMandate, Vigil]
 narrativeLines:
   - >-
     A maintenance bot delivers a data chip with no manifest number.

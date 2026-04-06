@@ -102,16 +102,6 @@ pub fn strategic_goods() -> Vec<GoodName> {
     ]
 }
 
-fn is_ritual(good: GoodName) -> bool {
-    matches!(
-        good,
-        GoodName::BurialSunstone
-            | GoodName::PilgrimMaps
-            | GoodName::OathFilaments
-            | GoodName::EmbassyMasks
-    )
-}
-
 fn is_vice(good: GoodName) -> bool {
     matches!(
         good,
@@ -136,58 +126,98 @@ fn is_strategic(good: GoodName) -> bool {
     )
 }
 
-fn is_bioactive(good: GoodName) -> bool {
-    matches!(good, GoodName::ImpossibleSeeds | GoodName::RainChoirSpools)
-}
-
 pub fn legality_for_good(politics: PoliticalType, good: GoodName) -> MarketLegality {
     match politics {
-        PoliticalType::Theocracy => {
-            if is_vice(good) || is_juridical(good) {
-                MarketLegality::Prohibited
-            } else if is_ritual(good) || is_bioactive(good) {
-                MarketLegality::Licensed
-            } else {
-                MarketLegality::Legal
-            }
-        }
-        PoliticalType::MilitaryDictatorship | PoliticalType::StagnantMilitancy => {
-            if is_vice(good) || matches!(good, GoodName::SurrenderCodes | GoodName::WitnessInk) {
-                MarketLegality::Prohibited
-            } else if is_strategic(good) || is_juridical(good) {
-                MarketLegality::Licensed
-            } else {
-                MarketLegality::Legal
-            }
-        }
-        PoliticalType::Feudal => {
-            if is_juridical(good) || matches!(good, GoodName::AncestralBackups) {
-                MarketLegality::Prohibited
-            } else if is_ritual(good) || is_strategic(good) {
-                MarketLegality::Licensed
-            } else {
-                MarketLegality::Legal
-            }
-        }
-        PoliticalType::Technocracy => {
-            if matches!(good, GoodName::MemoryCaskets) {
-                MarketLegality::Prohibited
-            } else if is_bioactive(good) || is_vice(good) || is_ritual(good) {
-                MarketLegality::Licensed
-            } else {
-                MarketLegality::Legal
-            }
-        }
-        PoliticalType::CorporateState => {
+        PoliticalType::RemembranceCompact => {
             if matches!(good, GoodName::SurrenderCodes) {
                 MarketLegality::Prohibited
-            } else if is_juridical(good) || is_vice(good) || is_strategic(good) {
+            } else if matches!(good, GoodName::SilenceVials) {
                 MarketLegality::Licensed
             } else {
                 MarketLegality::Legal
             }
         }
-        _ => {
+        PoliticalType::RequiemParliament => {
+            if matches!(good, GoodName::AncestralBackups | GoodName::SurrenderCodes) {
+                MarketLegality::Prohibited
+            } else if matches!(good, GoodName::MemoryCaskets | GoodName::BurialSunstone) {
+                MarketLegality::Licensed
+            } else {
+                MarketLegality::Legal
+            }
+        }
+        PoliticalType::Murmuration => {
+            if matches!(good, GoodName::WitnessInk) {
+                MarketLegality::Prohibited
+            } else if matches!(good, GoodName::OathFilaments | GoodName::BurialSunstone) {
+                MarketLegality::Licensed
+            } else {
+                MarketLegality::Legal
+            }
+        }
+        PoliticalType::Kindness => {
+            if matches!(good, GoodName::SurrenderCodes) {
+                MarketLegality::Licensed
+            } else {
+                MarketLegality::Legal
+            }
+        }
+        PoliticalType::SilenceMandate => {
+            if matches!(good, GoodName::DreamResin | GoodName::SilenceVials | GoodName::WitnessInk | GoodName::SurrenderCodes) {
+                MarketLegality::Prohibited
+            } else if matches!(good, GoodName::AncestralBackups | GoodName::WeatherKeys | GoodName::JurisdictionSeals) {
+                MarketLegality::Licensed
+            } else {
+                MarketLegality::Legal
+            }
+        }
+        PoliticalType::Vigil => {
+            if matches!(good, GoodName::DreamResin | GoodName::SurrenderCodes) {
+                MarketLegality::Prohibited
+            } else if matches!(good, GoodName::WeatherKeys | GoodName::GraviticBone) {
+                MarketLegality::Licensed
+            } else {
+                MarketLegality::Legal
+            }
+        }
+        PoliticalType::CovenantOfEchoes => {
+            if matches!(good, GoodName::DreamResin | GoodName::JurisdictionSeals) {
+                MarketLegality::Prohibited
+            } else if matches!(good, GoodName::BurialSunstone | GoodName::PilgrimMaps | GoodName::OathFilaments | GoodName::ImpossibleSeeds) {
+                MarketLegality::Licensed
+            } else {
+                MarketLegality::Legal
+            }
+        }
+        PoliticalType::WoundTithe => {
+            if matches!(good, GoodName::PilgrimMaps) {
+                MarketLegality::Prohibited
+            } else if matches!(good, GoodName::WeatherKeys | GoodName::GraviticBone | GoodName::ReactorSalt) {
+                MarketLegality::Licensed
+            } else {
+                MarketLegality::Legal
+            }
+        }
+        PoliticalType::PalimpsestAuthority => {
+            // Nothing explicitly prohibited, but everything juridical/strategic/vice is Licensed
+            if is_juridical(good) || is_strategic(good) || is_vice(good) {
+                MarketLegality::Licensed
+            } else {
+                MarketLegality::Legal
+            }
+        }
+        PoliticalType::TheAsking => {
+            if matches!(good, GoodName::MemoryCaskets | GoodName::AncestralBackups) {
+                MarketLegality::Licensed
+            } else {
+                MarketLegality::Legal
+            }
+        }
+        PoliticalType::Arrival => {
+            // Everything just... works.
+            MarketLegality::Legal
+        }
+        PoliticalType::DriftSovereignty => {
             if matches!(good, GoodName::SurrenderCodes) {
                 MarketLegality::Licensed
             } else {
@@ -199,35 +229,35 @@ pub fn legality_for_good(politics: PoliticalType, good: GoodName) -> MarketLegal
 
 fn economy_modifier(economy: EconomyType, good: GoodName) -> i32 {
     match (economy, good) {
-        (EconomyType::Agricultural, GoodName::StarwindRations) => -28,
-        (EconomyType::Agricultural, GoodName::HullskinLace) => -16,
-        (EconomyType::Agricultural, GoodName::RainChoirSpools) => -20,
-        (EconomyType::Agricultural, GoodName::ImpossibleSeeds) => 140,
+        (EconomyType::Remnant, GoodName::StarwindRations) => -38,
+        (EconomyType::Remnant, GoodName::DebtPetals) => -34,
+        (EconomyType::Remnant, GoodName::EmbassyMasks) => 92,
+        (EconomyType::Remnant, GoodName::SurrenderCodes) => 110,
 
-        (EconomyType::Industrial, GoodName::HullskinLace) => -28,
-        (EconomyType::Industrial, GoodName::ReactorSalt) => -36,
-        (EconomyType::Industrial, GoodName::StarwindRations) => 26,
-        (EconomyType::Industrial, GoodName::PilgrimMaps) => 40,
+        (EconomyType::Tithe, GoodName::StarwindRations) => -28,
+        (EconomyType::Tithe, GoodName::HullskinLace) => -16,
+        (EconomyType::Tithe, GoodName::RainChoirSpools) => -20,
+        (EconomyType::Tithe, GoodName::ImpossibleSeeds) => 140,
 
-        (EconomyType::HighTech, GoodName::AncestralBackups) => -180,
-        (EconomyType::HighTech, GoodName::WeatherKeys) => -110,
-        (EconomyType::HighTech, GoodName::JurisdictionSeals) => -60,
-        (EconomyType::HighTech, GoodName::ImpossibleSeeds) => 85,
+        (EconomyType::Extraction, GoodName::ReactorSalt) => -78,
+        (EconomyType::Extraction, GoodName::QuasarGlass) => -56,
+        (EconomyType::Extraction, GoodName::GraviticBone) => -40,
+        (EconomyType::Extraction, GoodName::StarwindRations) => 34,
 
-        (EconomyType::RichIndustrial, GoodName::EmbassyMasks) => -44,
-        (EconomyType::RichIndustrial, GoodName::QuasarGlass) => -120,
-        (EconomyType::RichIndustrial, GoodName::OathFilaments) => -55,
-        (EconomyType::RichIndustrial, GoodName::MemoryCaskets) => -40,
+        (EconomyType::Tributary, GoodName::HullskinLace) => -28,
+        (EconomyType::Tributary, GoodName::ReactorSalt) => -36,
+        (EconomyType::Tributary, GoodName::StarwindRations) => 26,
+        (EconomyType::Tributary, GoodName::PilgrimMaps) => 40,
 
-        (EconomyType::PoorAgricultural, GoodName::StarwindRations) => -38,
-        (EconomyType::PoorAgricultural, GoodName::DebtPetals) => -34,
-        (EconomyType::PoorAgricultural, GoodName::EmbassyMasks) => 92,
-        (EconomyType::PoorAgricultural, GoodName::SurrenderCodes) => 110,
+        (EconomyType::Resonance, GoodName::EmbassyMasks) => -44,
+        (EconomyType::Resonance, GoodName::QuasarGlass) => -120,
+        (EconomyType::Resonance, GoodName::OathFilaments) => -55,
+        (EconomyType::Resonance, GoodName::MemoryCaskets) => -40,
 
-        (EconomyType::Refinery, GoodName::ReactorSalt) => -78,
-        (EconomyType::Refinery, GoodName::QuasarGlass) => -56,
-        (EconomyType::Refinery, GoodName::GraviticBone) => -40,
-        (EconomyType::Refinery, GoodName::StarwindRations) => 34,
+        (EconomyType::Synthesis, GoodName::AncestralBackups) => -180,
+        (EconomyType::Synthesis, GoodName::WeatherKeys) => -110,
+        (EconomyType::Synthesis, GoodName::JurisdictionSeals) => -60,
+        (EconomyType::Synthesis, GoodName::ImpossibleSeeds) => 85,
         _ => 0,
     }
 }
@@ -429,7 +459,7 @@ mod tests {
 
     #[test]
     fn market_has_high_variance_listing_window() {
-        let market = get_market(0, EconomyType::Agricultural, None, None, None);
+        let market = get_market(0, EconomyType::Tithe, None, None, None);
         let listed = market
             .iter()
             .filter(|m| m.listing_mode == MarketListingMode::ListedBuySell)
@@ -440,7 +470,7 @@ mod tests {
 
     #[test]
     fn prices_positive_when_legal() {
-        let market = get_market(5, EconomyType::HighTech, None, None, None);
+        let market = get_market(5, EconomyType::Synthesis, None, None, None);
         for entry in &market {
             if entry.legality == MarketLegality::Prohibited {
                 continue;
@@ -454,7 +484,7 @@ mod tests {
 
     #[test]
     fn sell_less_than_buy_for_listed_items() {
-        let market = get_market(10, EconomyType::Industrial, None, None, None);
+        let market = get_market(10, EconomyType::Tributary, None, None, None);
         for entry in &market {
             if entry.listing_mode == MarketListingMode::ListedBuySell && entry.buy_price > 0 {
                 assert!(entry.sell_price <= entry.buy_price);
@@ -471,7 +501,7 @@ mod tests {
         for system_id in 0..60 {
             let market = get_market(
                 system_id,
-                EconomyType::Agricultural,
+                EconomyType::Tithe,
                 None,
                 None,
                 Some(&cargo),

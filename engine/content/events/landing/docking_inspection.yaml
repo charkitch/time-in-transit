@@ -1,7 +1,7 @@
 id: DOCKING_INSPECTION
 title: DOCKING INSPECTION
 requires:
-  - !PoliticsIs [Theocracy]
+  - !PoliticsIs [CovenantOfEchoes]
 narrativeLines:
   - >-
     Priests in full ceremonial hazmat suits board before you can cycle the airlock.

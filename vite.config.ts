@@ -13,6 +13,13 @@ const packageJson = JSON.parse(
   readFileSync(resolve(repoRoot, 'package.json'), 'utf-8')
 ) as { version?: string }
 
+const envBuildNumber = Number(
+  process.env.BUILD_NUMBER ??
+    process.env.CF_PAGES_BUILD_NUMBER ??
+    process.env.GITHUB_RUN_NUMBER ??
+    ''
+)
+
 let shortSha = 'nogit'
 try {
   shortSha =
@@ -41,10 +48,16 @@ try {
   // Fallback for environments without git metadata.
 }
 
+const buildNumber =
+  Number.isFinite(envBuildNumber) && envBuildNumber > 0
+    ? envBuildNumber
+    : commitCount
+
 const appBuild = {
   version: packageJson.version ?? '0.0.0',
   sha: shortSha,
-  number: commitCount,
+  number: buildNumber,
+  commitCount,
 }
 
 export default defineConfig({
@@ -66,6 +79,16 @@ export default defineConfig({
         background_color: '#05070d',
         icons: [
           {
+            src: '/icons/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: '/icons/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
             src: '/icons/app-icon.svg',
             sizes: 'any',
             type: 'image/svg+xml',
@@ -73,7 +96,7 @@ export default defineConfig({
           },
         ],
       },
-      includeAssets: ['icons/app-icon.svg', 'icons/apple-touch-icon.svg'],
+      includeAssets: ['icons/app-icon.svg', 'icons/apple-touch-icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'],
       workbox: {
         cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',

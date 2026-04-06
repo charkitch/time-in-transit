@@ -26,6 +26,11 @@ export interface PendingCommContext {
   cargo: NPCCargoEntry[];
   factionTag: string | null;
   inTradeRange: boolean;
+  bonusDemand: {
+    good: GoodName;
+    sellPrice: number;
+    label: string;
+  } | null;
 }
 
 export interface PlayerState {

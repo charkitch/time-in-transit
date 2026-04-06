@@ -243,7 +243,7 @@ export type GoodName = typeof GOODS[number];
 
 export const MARKET_GOODS: readonly GoodName[] = BUYABLE_GOODS;
 
-export const ECONOMY_TYPES = ['Agricultural', 'Industrial', 'High Tech', 'Rich Industrial', 'Poor Agricultural', 'Refinery'] as const;
+export const ECONOMY_TYPES = ['Remnant', 'Tithe', 'Extraction', 'Tributary', 'Resonance', 'Synthesis'] as const;
 export type EconomyType = typeof ECONOMY_TYPES[number];
 
 export const MAX_CARGO = 20;
@@ -254,17 +254,95 @@ export const GALAXY_YEAR_START = 3200;
 export const ERA_LENGTH = 250;
 
 export const POLITICAL_TYPES = [
-  'Democracy',
-  'Libertine Democracy',
-  'Corporate State',
-  'Military Dictatorship',
-  'Stagnant Militancy',
-  'Theocracy',
-  'Anarchist',
-  'Technocracy',
-  'Feudal',
+  'Remembrance Compact',
+  'Requiem Parliament',
+  'Murmuration',
+  'Kindness',
+  'Silence Mandate',
+  'Vigil',
+  'Covenant of Echoes',
+  'Wound Tithe',
+  'Palimpsest Authority',
+  'The Asking',
+  'Arrival',
+  'Drift Sovereignty',
 ] as const;
 export type PoliticalType = typeof POLITICAL_TYPES[number];
+
+export const POLITICAL_TYPE_DISPLAY: Record<string, string> = {
+  RemembranceCompact: 'Remembrance Compact',
+  RequiemParliament: 'Requiem Parliament',
+  Murmuration: 'Murmuration',
+  Kindness: 'Kindness',
+  SilenceMandate: 'Silence Mandate',
+  Vigil: 'Vigil',
+  CovenantOfEchoes: 'Covenant of Echoes',
+  WoundTithe: 'Wound Tithe',
+  PalimpsestAuthority: 'Palimpsest Authority',
+  TheAsking: 'The Asking',
+  Arrival: 'Arrival',
+  DriftSovereignty: 'Drift Sovereignty',
+};
+
+export const POLITICAL_DESCRIPTIONS: Record<string, { desc: string }> = {
+  RemembranceCompact: {
+    desc: "Governance by shared memory archive. The oldest memories carry the most authority. The dockmaster already knows you — or rather, someone who met you four hundred years ago contributed the memory.",
+  },
+  RequiemParliament: {
+    desc: "The dead outnumber the living millions to one. The living petition; the dead decide. Edicts arrive citing precedents from civilizations that no longer exist.",
+  },
+  Murmuration: {
+    desc: "Decisions emerge from collective movement patterns that no individual directs. Outsiders see chaos, then sudden perfect coordination, then chaos again. No one has identified a leader. There may not be one.",
+  },
+  Kindness: {
+    desc: "That's what the translation systems call it. No one knows what the actual word means. Ships are welcomed. Trade is permitted. Occasionally, entire populations relocate overnight without explanation. Prices are always fair.",
+  },
+  SilenceMandate: {
+    desc: "The state controls what is known, remembered, and spoken. They believe certain knowledge is literally dangerous to the fabric of space. Docking requires memory audits. Smuggling profits are enormous.",
+  },
+  Vigil: {
+    desc: "A civilization organized entirely around waiting — for a signal, a return, a completion. All governance is custodial. All activity serves maintenance of the wait. They don't explain what they're waiting for. They've been waiting for eleven thousand years.",
+  },
+  CovenantOfEchoes: {
+    desc: "Theocratic governance organized around cosmic phenomena — quasar signatures, gravitational harmonics, patterns in background radiation. Priest-scientists who believe the universe is speaking and their role is to listen.",
+  },
+  WoundTithe: {
+    desc: "Everything is oriented toward or away from a specific point in spacetime. Architecture, trade policy, navigation beacons — all reference a single event that happened, or will happen, or is happening. Cartographers who have visited the coordinates report empty space.",
+  },
+  PalimpsestAuthority: {
+    desc: "Layers of contradictory laws from dozens of extinct regimes, all technically still in force. Governance is archaeological — lawyers excavate which layer applies. Nothing is illegal. Nothing is clearly legal either.",
+  },
+  TheAsking: {
+    desc: "Every interaction begins with a question you don't understand. If you answer, trade proceeds normally. If you don't answer, trade proceeds normally. The questions are never the same twice. Scholars have spent centuries trying to determine if the answers matter. The current consensus is: probably.",
+  },
+  Arrival: {
+    desc: "You dock. Time passes differently here — not relativistically, just differently. Your cargo manifest rearranges itself into an order that makes more sense. Prices appear before you ask. You leave with a full hold and no memory of negotiating. Your ship logs show eleven minutes. Your beard grew three days.",
+  },
+  DriftSovereignty: {
+    desc: "Each entity — person, ship, habitat — is a sovereign state unto itself. Alliances form and dissolve by the hour. No laws, only negotiations. The docks are beautiful chaos.",
+  },
+};
+
+export const ECONOMY_DESCRIPTIONS: Record<string, { desc: string }> = {
+  Remnant: {
+    desc: "Scavenger economies built on the ruins of older civilizations. They harvest what was left behind. Archaeological wealth — great place to buy cheap basics, terrible place to sell them.",
+  },
+  Tithe: {
+    desc: "Economies organized around obligation and tribute — to ancestors, to gods, to treaties signed millennia ago. Everything is owed somewhere. Stable, modest, reliable.",
+  },
+  Extraction: {
+    desc: "Industrial civilizations that mine, refine, and process raw cosmic materials — reactor fuel, gravitic minerals, glass forged near stellar phenomena.",
+  },
+  Tributary: {
+    desc: "Hub economies that profit from flow — trade routes, information streams, migration patterns. They produce little themselves but everything passes through them.",
+  },
+  Resonance: {
+    desc: "Economies built around consciousness technology, memory trade, and identity services. The richest systems in the galaxy — they manufacture meaning.",
+  },
+  Synthesis: {
+    desc: "Post-scarcity research economies. They engineer impossibilities — seeds that shouldn't grow, weather that shouldn't exist, backups of things that were never alive.",
+  },
+};
 
 /** Mutable — settings UI can toggle at runtime */
 export const RENDER_CONFIG = {

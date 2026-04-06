@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useGameState } from '../../game/GameState';
-import { HYPERSPACE, MAX_CARGO, type GoodName } from '../../game/constants';
+import { HYPERSPACE, MAX_CARGO, POLITICAL_DESCRIPTIONS, POLITICAL_TYPE_DISPLAY, ECONOMY_DESCRIPTIONS, type GoodName } from '../../game/constants';
 import styles from './StationUI.module.css';
 
 const SHIELD_REPAIR_RATE = 5; // CR per shield point
@@ -13,6 +13,35 @@ type TabId = 'trade' | 'refuel' | 'cargo';
 
 export function StationUI({ onUndock }: StationUIProps) {
   const [tab, setTab] = useState<TabId>('trade');
+  const [isPoliticsTooltipOpen, setIsPoliticsTooltipOpen] = useState(false);
+  const [isEconTooltipOpen, setIsEconTooltipOpen] = useState(false);
+  const politicsTooltipRef = useRef<HTMLSpanElement>(null);
+  const econTooltipRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!isPoliticsTooltipOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (politicsTooltipRef.current && !politicsTooltipRef.current.contains(e.target as Node))
+        setIsPoliticsTooltipOpen(false);
+    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsPoliticsTooltipOpen(false); };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
+  }, [isPoliticsTooltipOpen]);
+
+  useEffect(() => {
+    if (!isEconTooltipOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (econTooltipRef.current && !econTooltipRef.current.contains(e.target as Node))
+        setIsEconTooltipOpen(false);
+    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsEconTooltipOpen(false); };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => { document.removeEventListener('mousedown', handleClick); document.removeEventListener('keydown', handleKey); };
+  }, [isEconTooltipOpen]);
+
   const cluster = useGameState(s => s.cluster);
   const currentSystemId = useGameState(s => s.currentSystemId);
   const currentSystemPayload = useGameState(s => s.currentSystemPayload);
@@ -84,10 +113,42 @@ export function StationUI({ onUndock }: StationUIProps) {
 
         <div className={styles.infoRow}>
           <div className={styles.infoItem}>
-            ECONOMY: <span className={styles.infoValue}>{civState.economy}</span>
+            ECONOMY:{' '}
+            <span
+              ref={econTooltipRef}
+              className={`${styles.infoValue} ${styles.tooltipAnchor}`}
+              onClick={() => setIsEconTooltipOpen(!isEconTooltipOpen)}
+            >
+              {civState.economy}
+              {ECONOMY_DESCRIPTIONS[civState.economy] && (
+                <div className={`${styles.tooltipPopup} ${isEconTooltipOpen ? styles.tooltipOpen : ''}`}>
+                  <button
+                    className={styles.tooltipClose}
+                    onClick={(e) => { e.stopPropagation(); setIsEconTooltipOpen(false); }}
+                  >×</button>
+                  {ECONOMY_DESCRIPTIONS[civState.economy].desc}
+                </div>
+              )}
+            </span>
           </div>
           <div className={styles.infoItem}>
-            POLITICS: <span className={styles.infoValue}>{civState.politics}</span>
+            POLITICS:{' '}
+            <span
+              ref={politicsTooltipRef}
+              className={`${styles.infoValue} ${styles.tooltipAnchor}`}
+              onClick={() => setIsPoliticsTooltipOpen(!isPoliticsTooltipOpen)}
+            >
+              {POLITICAL_TYPE_DISPLAY[civState.politics] ?? civState.politics}
+              {POLITICAL_DESCRIPTIONS[civState.politics] && (
+                <div className={`${styles.tooltipPopup} ${isPoliticsTooltipOpen ? styles.tooltipOpen : ''}`}>
+                  <button
+                    className={styles.tooltipClose}
+                    onClick={(e) => { e.stopPropagation(); setIsPoliticsTooltipOpen(false); }}
+                  >×</button>
+                  {POLITICAL_DESCRIPTIONS[civState.politics].desc}
+                </div>
+              )}
+            </span>
           </div>
           <div className={styles.infoItem}>
             TECH LV: <span className={styles.infoValue}>{starData.techLevel}</span>

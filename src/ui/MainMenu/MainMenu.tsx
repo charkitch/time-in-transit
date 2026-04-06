@@ -1,5 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './MainMenu.module.css';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
 
 interface MainMenuProps {
   onNewGame: () => void;
@@ -10,7 +15,46 @@ interface MainMenuProps {
 }
 
 export function MainMenu({ onNewGame, onResume, invertControls, onToggleInvertControls, buildLabel }: MainMenuProps) {
-  const [view, setView] = useState<'main' | 'controls'>('main');
+  const [view, setView] = useState<'main' | 'controls' | 'fullscreen'>('main');
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installMessage, setInstallMessage] = useState<string>('');
+
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+  const ua = window.navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+  const isAndroid = /android/.test(ua);
+  const isSafari = /safari/.test(ua) && !/crios|fxios|edgios/.test(ua);
+  const isChromium = /chrome|chromium|crios|edg|edgios/.test(ua);
+
+  useEffect(() => {
+    const onBeforeInstallPrompt = (event: Event) => {
+      const installEvent = event as BeforeInstallPromptEvent;
+      installEvent.preventDefault();
+      setDeferredPrompt(installEvent);
+    };
+    const onAppInstalled = () => {
+      setInstallMessage('Installed. Launch from your home screen for fullscreen mode.');
+      setDeferredPrompt(null);
+    };
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+    window.addEventListener('appinstalled', onAppInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', onAppInstalled);
+    };
+  }, []);
+
+  const handleInstallPrompt = async () => {
+    if (!deferredPrompt) return;
+    await deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    if (result.outcome === 'accepted') {
+      setInstallMessage('Install accepted. The app will be available on your home screen.');
+    } else {
+      setInstallMessage('Install dismissed. You can come back here and try again anytime.');
+    }
+    setDeferredPrompt(null);
+  };
 
   if (view === 'controls') {
     return (
@@ -81,6 +125,64 @@ export function MainMenu({ onNewGame, onResume, invertControls, onToggleInvertCo
     );
   }
 
+  if (view === 'fullscreen') {
+    return (
+      <div className={styles.overlay}>
+        <div className={styles.panel}>
+          <div className={styles.header}>
+            <div className={styles.title}>FULL SCREEN</div>
+            <div className={styles.buildTag} aria-hidden="true">{buildLabel}</div>
+          </div>
+          <p className={styles.helpText}>
+            Add this game to your home screen to run it like an app in fullscreen, with faster launch and fewer browser UI distractions.
+          </p>
+
+          {isStandalone && (
+            <p className={styles.statusText}>
+              This app is already running in standalone mode from your home screen.
+            </p>
+          )}
+
+          {!isStandalone && deferredPrompt && (
+            <button className={styles.menuBtn} onClick={handleInstallPrompt}>
+              SHOW INSTALL OPTION
+            </button>
+          )}
+
+          {!isStandalone && !deferredPrompt && isIOS && isSafari && (
+            <p className={styles.statusText}>
+              iPhone/iPad tip: Tap Share, then Add to Home Screen.
+            </p>
+          )}
+
+          {!isStandalone && !deferredPrompt && isIOS && !isSafari && (
+            <p className={styles.statusText}>
+              iPhone/iPad: open this page in Safari, then tap Share and Add to Home Screen.
+            </p>
+          )}
+
+          {!isStandalone && !deferredPrompt && isAndroid && isChromium && (
+            <p className={styles.statusText}>
+              Android: open browser menu and use Install app or Add to Home screen.
+            </p>
+          )}
+
+          {!isStandalone && !deferredPrompt && !isIOS && !(isAndroid && isChromium) && (
+            <p className={styles.statusText}>
+              Install is not currently available in this browser session. Try from a supported mobile browser over HTTPS.
+            </p>
+          )}
+
+          {installMessage && <p className={styles.statusText}>{installMessage}</p>}
+
+          <button className={styles.menuBtn} onClick={() => setView('main')}>
+            BACK
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.overlay}>
       <div className={styles.panel}>
@@ -94,6 +196,9 @@ export function MainMenu({ onNewGame, onResume, invertControls, onToggleInvertCo
           </button>
           <button className={styles.menuBtn} onClick={() => setView('controls')}>
             CONTROLS
+          </button>
+          <button className={styles.menuBtn} onClick={() => setView('fullscreen')}>
+            FIND OUT ABOUT FULL SCREEN
           </button>
           <button className={styles.menuBtn} onClick={onNewGame}>
             NEW GAME

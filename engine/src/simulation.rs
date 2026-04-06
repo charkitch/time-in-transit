@@ -49,12 +49,13 @@ pub fn simulate_galaxy(
 
             // Political volatility: some politics are inherently unstable
             let political_stability = match civ.politics {
-                PoliticalType::Anarchist => -0.05,
-                PoliticalType::StagnantMilitancy => -0.03,
-                PoliticalType::MilitaryDictatorship => -0.02,
-                PoliticalType::Democracy | PoliticalType::LibertineDemocracy => 0.03,
-                PoliticalType::Technocracy => 0.04,
-                PoliticalType::CorporateState => 0.02,
+                PoliticalType::DriftSovereignty => -0.05,
+                PoliticalType::PalimpsestAuthority => -0.03,
+                PoliticalType::SilenceMandate | PoliticalType::WoundTithe => -0.02,
+                PoliticalType::RemembranceCompact => 0.03,
+                PoliticalType::Kindness | PoliticalType::Arrival => 0.04,
+                PoliticalType::Murmuration | PoliticalType::Vigil => 0.02,
+                PoliticalType::RequiemParliament => 0.01,
                 _ => 0.0,
             };
 
@@ -94,11 +95,10 @@ pub fn simulate_galaxy(
 
             // ── Prosperity dynamics ─────────────────────────────────────────
             let econ_base = match civ.economy {
-                EconomyType::HighTech | EconomyType::RichIndustrial => 0.03,
-                EconomyType::Industrial => 0.01,
-                EconomyType::Agricultural => 0.0,
-                EconomyType::PoorAgricultural => -0.02,
-                EconomyType::Refinery => 0.01,
+                EconomyType::Synthesis | EconomyType::Resonance => 0.03,
+                EconomyType::Tributary | EconomyType::Extraction => 0.01,
+                EconomyType::Tithe => 0.0,
+                EconomyType::Remnant => -0.02,
             };
 
             // Stability feeds prosperity
@@ -147,9 +147,9 @@ pub fn simulate_galaxy(
                     .map(|tag| {
                         // If player is allied with a faction whose politics match this faction's affinity
                         match tag {
-                            "corp_ally" if faction.political_affinity.contains(&PoliticalType::CorporateState) => 0.05,
-                            "rebel_ally" if faction.political_affinity.contains(&PoliticalType::Anarchist) => 0.05,
-                            "gov_ally" if faction.political_affinity.contains(&PoliticalType::MilitaryDictatorship) => 0.05,
+                            "corp_ally" if faction.political_affinity.contains(&PoliticalType::PalimpsestAuthority) => 0.05,
+                            "rebel_ally" if faction.political_affinity.contains(&PoliticalType::DriftSovereignty) => 0.05,
+                            "gov_ally" if faction.political_affinity.contains(&PoliticalType::SilenceMandate) => 0.05,
                             _ => 0.0,
                         }
                     })
@@ -185,10 +185,10 @@ pub fn init_galaxy_state(cluster: &[StarSystemData], galaxy_year: u32) -> Galaxy
             system_id: star.id,
             stability: 0.6 + (star.tech_level as f64 * 0.02),
             prosperity: match star.economy {
-                EconomyType::HighTech | EconomyType::RichIndustrial => 0.7,
-                EconomyType::Industrial | EconomyType::Refinery => 0.5,
-                EconomyType::Agricultural => 0.4,
-                EconomyType::PoorAgricultural => 0.3,
+                EconomyType::Synthesis | EconomyType::Resonance => 0.7,
+                EconomyType::Tributary | EconomyType::Extraction => 0.5,
+                EconomyType::Tithe => 0.4,
+                EconomyType::Remnant => 0.3,
             },
             faction_strength,
             recent_events: vec![],

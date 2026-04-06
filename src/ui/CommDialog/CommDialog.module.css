@@ -97,7 +97,7 @@
 
 .manifestHeader {
   display: grid;
-  grid-template-columns: 2fr 1.2fr 1.2fr 0.8fr 1.8fr;
+  grid-template-columns: 2fr 1.2fr 1.3fr 1fr 0.8fr 1.8fr;
   font-size: 10px;
   letter-spacing: 1px;
   color: var(--color-hud-dim);
@@ -108,7 +108,7 @@
 
 .manifestRow {
   display: grid;
-  grid-template-columns: 2fr 1.2fr 1.2fr 0.8fr 1.8fr;
+  grid-template-columns: 2fr 1.2fr 1.3fr 1fr 0.8fr 1.8fr;
   align-items: center;
   padding: 5px 0;
   border-bottom: 1px solid rgba(51,255,136,0.05);
@@ -128,9 +128,31 @@
   font-size: 11px;
 }
 
+.paid {
+  color: var(--color-hud-dim);
+  font-size: 11px;
+}
+
+.edge {
+  margin-left: 5px;
+  font-size: 9px;
+  opacity: 0.9;
+}
+
 .qty {
   color: var(--color-hud-dim);
   font-size: 11px;
+}
+
+.bonusRow {
+  background: rgba(255, 202, 94, 0.08);
+}
+
+.bonusTag {
+  margin-left: 8px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: rgba(255, 222, 133, 0.9);
 }
 
 .tradeButtons {

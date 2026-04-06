@@ -14,6 +14,7 @@ import {
   FUEL_HARVEST,
   GAS_GIANT_SCOOP,
   COMBAT_INTELLIGENCE_GOOD,
+  MARKET_GOODS,
   STAR_ATTRIBUTES,
   PLANET_SCAN_RANGE_PADDING,
   DYSON_SCAN_RANGE_PADDING,
@@ -53,6 +54,7 @@ const PROXIMITY_EVENT_COOLDOWN_MISS = 8;
 const LAND_RANGE_PADDING_PLANET = 130;
 const LAND_RANGE_PADDING_DYSON = 180;
 const LAND_MAX_SPEED = 55;
+const TARGET_IDLE_RESET_MS = 20_000;
 
 export class Game {
   private sceneRenderer: SceneRenderer;
@@ -76,6 +78,10 @@ export class Game {
   private activeScanTargetId: string | null = null;
   private activeScanTimer = 0;
   private currentVisitScannedHosts = new Set<string>();
+  private lastTargetActionAt = 0;
+  private readonly _tmpCameraPos = new THREE.Vector3();
+  private readonly _tmpCameraForward = new THREE.Vector3();
+  private readonly _tmpToTarget = new THREE.Vector3();
 
   private shouldTriggerEvent(chance: number): boolean {
     return Math.random() < chance;
@@ -100,13 +106,12 @@ export class Game {
     this.hyperspace = new HyperspaceSystem();
 
     // Wire up one-shot input events
-    this.input.onDockRequest(() => this.tryDock());
+    this.input.onDockRequest(() => this.tryInteract());
     this.input.onClusterMapToggle(() => this.toggleClusterMap());
     this.input.onSystemMapToggle(() => this.toggleSystemMap());
     this.input.onCycleTargetEvent(() => this.cycleTarget());
     this.input.onJumpRequestEvent(() => this.tryJump());
     this.input.onHailRequest(() => this.tryHail());
-    this.input.onLandRequest(() => this.tryLandAtTarget());
     this.input.onScanRequest(() => this.tryScanTarget());
     this.input.onEscapeEvent(() => this.handleEscape());
 
@@ -193,7 +198,7 @@ export class Game {
   }
 
   requestLand(): void {
-    this.input.triggerLandRequest();
+    this.tryLandAtTarget();
   }
 
   requestScan(): void {
@@ -451,6 +456,20 @@ export class Game {
     }
   }
 
+  private tryInteract(): void {
+    const state = useGameState.getState();
+    if (state.ui.mode !== 'flight') return;
+    const targetId = state.player.targetId;
+    if (targetId) {
+      const target = this.sceneRenderer.getAllEntities().get(targetId);
+      if (target?.type === 'landing_site' && target.siteDiscovered) {
+        this.tryLandAtTarget();
+        return;
+      }
+    }
+    this.tryDock();
+  }
+
   private prepareLanding(systemId: number, stationId?: string): void {
     const state = useGameState.getState();
     const lastYear = state.lastVisitYear[systemId] ?? null;
@@ -573,17 +592,66 @@ export class Game {
     const state = useGameState.getState();
     const entities = this.sceneRenderer.getAllEntities();
     const ids = Array.from(entities.entries())
-      .filter(([id, entity]) => {
-        if (id === 'star') return false;
-        if (entity.type === 'landing_site' && !entity.siteDiscovered) return false;
-        return true;
-      })
+      .filter(([id, entity]) => this.isTargetableEntity(id, entity))
       .map(([id]) => id);
     if (ids.length === 0) return;
 
+    const now = performance.now();
+    const inactive = (state.player.targetId === null) || (now - this.lastTargetActionAt >= TARGET_IDLE_RESET_MS);
+    if (inactive) {
+      const nearestToReticleId = this.findNearestToForwardReticle(ids);
+      if (nearestToReticleId) {
+        this.setTargetAndRemember(nearestToReticleId);
+        return;
+      }
+    }
+
     const currentIdx = ids.indexOf(state.player.targetId ?? '');
     const nextIdx = (currentIdx + 1) % ids.length;
-    state.setTarget(ids[nextIdx]);
+    this.setTargetAndRemember(ids[nextIdx]);
+  }
+
+  private isTargetableEntity(id: string, entity: { type: string; siteDiscovered?: boolean }): boolean {
+    if (id === 'star') return false;
+    if (entity.type === 'landing_site' && !entity.siteDiscovered) return false;
+    return true;
+  }
+
+  private setTargetAndRemember(id: string): void {
+    const state = useGameState.getState();
+    state.setTarget(id);
+    this.lastTargetActionAt = performance.now();
+  }
+
+  private findNearestToForwardReticle(ids: string[]): string | null {
+    const camera = this.sceneRenderer.camera;
+    if (!camera) return null;
+
+    const entities = this.sceneRenderer.getAllEntities();
+    camera.getWorldPosition(this._tmpCameraPos);
+    camera.getWorldDirection(this._tmpCameraForward).normalize();
+
+    let bestId: string | null = null;
+    let bestScore = Infinity;
+
+    for (const id of ids) {
+      const entity = entities.get(id);
+      if (!entity) continue;
+
+      this._tmpToTarget.copy(entity.worldPos).sub(this._tmpCameraPos);
+      if (this._tmpToTarget.lengthSq() <= 1e-6) continue;
+      const forwardness = this._tmpToTarget.normalize().dot(this._tmpCameraForward);
+      if (forwardness <= 0) continue;
+
+      const ndc = entity.worldPos.clone().project(camera);
+      const score = (ndc.x * ndc.x) + (ndc.y * ndc.y);
+      if (score < bestScore) {
+        bestScore = score;
+        bestId = id;
+      }
+    }
+
+    return bestId;
   }
 
   private tryScanTarget(): void {
@@ -984,7 +1052,7 @@ export class Game {
       // Auto-find nearest NPC ship
       targetId = this.findNearestNPCShip();
       if (!targetId) return;
-      state.setTarget(targetId);
+      this.setTargetAndRemember(targetId);
     }
 
     const npcState = this.sceneRenderer.getNPCShip(targetId);
@@ -992,6 +1060,7 @@ export class Game {
 
     const entity = this.sceneRenderer.getAllEntities().get(targetId)!;
     const dist = this.sceneRenderer.shipGroup.position.distanceTo(entity.worldPos);
+    const bonusDemand = this.buildBonusDemandOffer(npcState.id);
     state.setPendingCommContext({
       npcId: npcState.id,
       npcName: npcState.name,
@@ -1001,8 +1070,49 @@ export class Game {
       cargo: npcState.cargo,
       factionTag: npcState.factionTag,
       inTradeRange: dist <= npcState.tradeRange,
+      bonusDemand,
     });
     state.setUIMode('comms');
+  }
+
+  private buildBonusDemandOffer(npcId: string): { good: GoodName; sellPrice: number; label: string } | null {
+    const state = useGameState.getState();
+    const market = state.currentSystemPayload?.market ?? [];
+    if (MARKET_GOODS.length === 0) return null;
+
+    const seed = this.hashInt(`${state.currentSystemId}:${state.galaxyYear}:${npcId}`);
+    const good = MARKET_GOODS[seed % MARKET_GOODS.length] as GoodName;
+    const marketEntry = market.find((entry) => entry.good === good);
+    const base = Math.max(1, marketEntry?.sellPrice ?? marketEntry?.buyPrice ?? 120);
+
+    const roll = (seed >>> 9) % 100;
+    let multiplier = 1.12;
+    let label = 'FLEX DEMAND';
+    if (roll < 18) {
+      multiplier = 1.72;
+      label = 'HOT BUYER';
+    } else if (roll < 42) {
+      multiplier = 1.45;
+      label = 'HIGH DEMAND';
+    } else if (roll < 70) {
+      multiplier = 1.26;
+      label = 'PRIORITY BUY';
+    }
+
+    return {
+      good,
+      sellPrice: Math.round(base * multiplier),
+      label,
+    };
+  }
+
+  private hashInt(text: string): number {
+    let h = 2166136261;
+    for (let i = 0; i < text.length; i++) {
+      h ^= text.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
   }
 
   private findNearestNPCShip(): string | null {
@@ -1028,9 +1138,9 @@ export class Game {
     const ctx = state.pendingCommContext;
     if (!ctx || !ctx.inTradeRange) return;
     const entry = ctx.cargo.find(c => c.good === good);
-    if (!entry) return;
 
     if (action === 'buy') {
+      if (!entry) return;
       const totalCargo = Object.values(state.player.cargo).reduce((a, b) => a + (b ?? 0), 0);
       if (state.player.credits >= entry.buyPrice && totalCargo < MAX_CARGO) {
         state.addCredits(-entry.buyPrice);
@@ -1038,8 +1148,13 @@ export class Game {
         state.saveGame();
       }
     } else {
+      const sellPrice =
+        ctx.bonusDemand?.good === good
+          ? ctx.bonusDemand.sellPrice
+          : entry?.sellPrice;
+      if (!sellPrice) return;
       if ((state.player.cargo[good] ?? 0) > 0) {
-        state.addCredits(entry.sellPrice);
+        state.addCredits(sellPrice);
         state.removeCargo(good, 1);
         state.saveGame();
       }

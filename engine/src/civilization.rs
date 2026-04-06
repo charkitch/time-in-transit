@@ -5,11 +5,20 @@ use crate::types::*;
 // ─── Political clusters (70% chance to stay within cluster across eras) ─────
 
 const POLITICAL_CLUSTERS: &[&[PoliticalType]] = &[
-    &[PoliticalType::Democracy, PoliticalType::LibertineDemocracy],
-    &[PoliticalType::CorporateState, PoliticalType::Technocracy],
-    &[PoliticalType::MilitaryDictatorship, PoliticalType::StagnantMilitancy],
-    &[PoliticalType::Theocracy, PoliticalType::Feudal],
-    &[PoliticalType::Anarchist],
+    // A: Memory
+    &[PoliticalType::RemembranceCompact, PoliticalType::RequiemParliament],
+    // B: Inscrutability
+    &[PoliticalType::Murmuration, PoliticalType::Kindness],
+    // C: Suppression
+    &[PoliticalType::SilenceMandate, PoliticalType::Vigil],
+    // D: Cosmic Devotion
+    &[PoliticalType::CovenantOfEchoes, PoliticalType::WoundTithe],
+    // E: Opacity
+    &[PoliticalType::PalimpsestAuthority, PoliticalType::TheAsking],
+    // F: Beyond
+    &[PoliticalType::Arrival],
+    // G: Dissolution
+    &[PoliticalType::DriftSovereignty],
 ];
 
 pub fn political_clusters() -> &'static [&'static [PoliticalType]] {
@@ -37,10 +46,10 @@ fn banned_goods(politics: PoliticalType) -> Vec<GoodName> {
 
 fn price_modifier(politics: PoliticalType) -> f64 {
     match politics {
-        PoliticalType::Theocracy => 1.15,
-        PoliticalType::MilitaryDictatorship => 1.20,
-        PoliticalType::CorporateState => 0.95,
-        PoliticalType::LibertineDemocracy => 0.95,
+        PoliticalType::SilenceMandate => 1.20,
+        PoliticalType::CovenantOfEchoes | PoliticalType::WoundTithe => 1.15,
+        PoliticalType::Vigil => 1.10,
+        PoliticalType::Kindness | PoliticalType::Arrival => 0.95,
         _ => 1.0,
     }
 }
@@ -49,15 +58,18 @@ fn price_modifier(politics: PoliticalType) -> f64 {
 
 fn allowed_economies(politics: PoliticalType) -> &'static [EconomyType] {
     match politics {
-        PoliticalType::Democracy => &[EconomyType::Agricultural, EconomyType::Industrial, EconomyType::RichIndustrial, EconomyType::HighTech],
-        PoliticalType::LibertineDemocracy => &[EconomyType::Agricultural, EconomyType::Industrial, EconomyType::RichIndustrial, EconomyType::HighTech],
-        PoliticalType::CorporateState => &[EconomyType::Industrial, EconomyType::RichIndustrial, EconomyType::HighTech],
-        PoliticalType::MilitaryDictatorship => &[EconomyType::Industrial, EconomyType::PoorAgricultural, EconomyType::Refinery],
-        PoliticalType::StagnantMilitancy => &[EconomyType::PoorAgricultural, EconomyType::Industrial, EconomyType::Refinery],
-        PoliticalType::Theocracy => &[EconomyType::Agricultural, EconomyType::PoorAgricultural, EconomyType::Industrial],
-        PoliticalType::Anarchist => &[EconomyType::PoorAgricultural, EconomyType::Agricultural, EconomyType::Refinery, EconomyType::Industrial],
-        PoliticalType::Technocracy => &[EconomyType::HighTech, EconomyType::Industrial, EconomyType::RichIndustrial, EconomyType::Refinery],
-        PoliticalType::Feudal => &[EconomyType::PoorAgricultural, EconomyType::Agricultural],
+        PoliticalType::RemembranceCompact => &[EconomyType::Tithe, EconomyType::Tributary, EconomyType::Synthesis, EconomyType::Resonance],
+        PoliticalType::RequiemParliament => &[EconomyType::Tithe, EconomyType::Remnant, EconomyType::Tributary],
+        PoliticalType::Murmuration => &[EconomyType::Tithe, EconomyType::Tributary, EconomyType::Resonance],
+        PoliticalType::Kindness => &[EconomyType::Tributary, EconomyType::Resonance, EconomyType::Synthesis, EconomyType::Tithe],
+        PoliticalType::SilenceMandate => &[EconomyType::Extraction, EconomyType::Tributary, EconomyType::Tithe],
+        PoliticalType::Vigil => &[EconomyType::Tithe, EconomyType::Extraction, EconomyType::Tributary],
+        PoliticalType::CovenantOfEchoes => &[EconomyType::Tithe, EconomyType::Remnant, EconomyType::Tributary],
+        PoliticalType::WoundTithe => &[EconomyType::Extraction, EconomyType::Tithe, EconomyType::Remnant],
+        PoliticalType::PalimpsestAuthority => &[EconomyType::Tributary, EconomyType::Resonance, EconomyType::Synthesis],
+        PoliticalType::TheAsking => &[EconomyType::Tributary, EconomyType::Synthesis, EconomyType::Resonance],
+        PoliticalType::Arrival => &[EconomyType::Resonance, EconomyType::Synthesis, EconomyType::Tributary],
+        PoliticalType::DriftSovereignty => &[EconomyType::Remnant, EconomyType::Tributary, EconomyType::Tithe, EconomyType::Extraction],
     }
 }
 
@@ -110,15 +122,15 @@ pub fn get_civ_state(system_id: u32, galaxy_year: u32, base_economy: EconomyType
 
     let banned = banned_goods(politics);
     let price_mod = price_modifier(politics);
-    let luxury_mod = if politics == PoliticalType::StagnantMilitancy
+    let luxury_mod = if politics == PoliticalType::PalimpsestAuthority
         && GoodName::ALL.iter().any(|good| is_luxury_good(*good))
     {
         1.30
     } else {
         1.0
     };
-    let anarchy_variance = politics == PoliticalType::Anarchist;
-    let tech_bonus = if politics == PoliticalType::Technocracy {
+    let anarchy_variance = politics == PoliticalType::DriftSovereignty;
+    let tech_bonus = if politics == PoliticalType::Kindness {
         strategic_goods()
     } else {
         vec![]
@@ -144,16 +156,16 @@ mod tests {
 
     #[test]
     fn deterministic_politics() {
-        let a = get_civ_state(5, 3500, EconomyType::Industrial);
-        let b = get_civ_state(5, 3500, EconomyType::Industrial);
+        let a = get_civ_state(5, 3500, EconomyType::Tributary);
+        let b = get_civ_state(5, 3500, EconomyType::Tributary);
         assert_eq!(a.politics, b.politics);
         assert_eq!(a.economy, b.economy);
     }
 
     #[test]
     fn era_changes() {
-        let era0 = get_civ_state(0, 3200, EconomyType::Agricultural);
-        let era1 = get_civ_state(0, 3500, EconomyType::Agricultural);
+        let era0 = get_civ_state(0, 3200, EconomyType::Tithe);
+        let era1 = get_civ_state(0, 3500, EconomyType::Tithe);
         // Different eras — politics may differ (or may not due to cluster continuity)
         assert_eq!(era0.era, 12); // 3200/250
         assert_eq!(era1.era, 14); // 3500/250
@@ -161,16 +173,16 @@ mod tests {
 
     #[test]
     fn banned_goods_populated() {
-        // Theocracy should ban at least one vice/juridical good.
+        // SilenceMandate should ban vice goods and information goods.
         let state = CivilizationState {
             system_id: 0, galaxy_year: 3200, era: 12,
-            politics: PoliticalType::Theocracy,
-            economy: EconomyType::Agricultural,
-            banned_goods: banned_goods(PoliticalType::Theocracy),
-            price_modifier: 1.15, luxury_mod: 1.0,
+            politics: PoliticalType::SilenceMandate,
+            economy: EconomyType::Extraction,
+            banned_goods: banned_goods(PoliticalType::SilenceMandate),
+            price_modifier: 1.20, luxury_mod: 1.0,
             anarchy_variance: false, tech_bonus: vec![],
         };
         assert!(state.banned_goods.contains(&GoodName::DreamResin));
-        assert!(state.banned_goods.contains(&GoodName::JurisdictionSeals));
+        assert!(state.banned_goods.contains(&GoodName::SilenceVials));
     }
 }

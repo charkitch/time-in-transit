@@ -16,7 +16,7 @@ import type { GoodName } from '../game/constants';
 import { detectRuntimeProfile, type RuntimeProfile } from '../runtime/runtimeProfile';
 import * as THREE from 'three';
 
-const BUILD_TAG_LABEL = `${__APP_BUILD__.sha}-${__APP_BUILD__.number}`;
+const BUILD_TAG_LABEL = `v${__APP_BUILD__.version} • build ${__APP_BUILD__.number} • commits ${__APP_BUILD__.commitCount} • ${__APP_BUILD__.sha}`;
 
 function runtimeProfileInitKey(profile: RuntimeProfile | null): string {
   if (!profile) return 'none';

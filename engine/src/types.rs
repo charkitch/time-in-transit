@@ -83,52 +83,56 @@ impl GoodName {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EconomyType {
-    Agricultural,
-    Industrial,
-    HighTech,
-    RichIndustrial,
-    PoorAgricultural,
-    Refinery,
+    Remnant,
+    Tithe,
+    Extraction,
+    Tributary,
+    Resonance,
+    Synthesis,
 }
 
 impl EconomyType {
     pub const ALL: &'static [EconomyType] = &[
-        EconomyType::Agricultural,
-        EconomyType::Industrial,
-        EconomyType::HighTech,
-        EconomyType::RichIndustrial,
-        EconomyType::PoorAgricultural,
-        EconomyType::Refinery,
+        EconomyType::Remnant,
+        EconomyType::Tithe,
+        EconomyType::Extraction,
+        EconomyType::Tributary,
+        EconomyType::Resonance,
+        EconomyType::Synthesis,
     ];
-
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PoliticalType {
-    Democracy,
-    LibertineDemocracy,
-    CorporateState,
-    MilitaryDictatorship,
-    StagnantMilitancy,
-    Theocracy,
-    Anarchist,
-    Technocracy,
-    Feudal,
+    RemembranceCompact,
+    RequiemParliament,
+    Murmuration,
+    Kindness,
+    SilenceMandate,
+    Vigil,
+    CovenantOfEchoes,
+    WoundTithe,
+    PalimpsestAuthority,
+    TheAsking,
+    Arrival,
+    DriftSovereignty,
 }
 
 impl PoliticalType {
     pub const ALL: &'static [PoliticalType] = &[
-        PoliticalType::Democracy,
-        PoliticalType::LibertineDemocracy,
-        PoliticalType::CorporateState,
-        PoliticalType::MilitaryDictatorship,
-        PoliticalType::StagnantMilitancy,
-        PoliticalType::Theocracy,
-        PoliticalType::Anarchist,
-        PoliticalType::Technocracy,
-        PoliticalType::Feudal,
+        PoliticalType::RemembranceCompact,
+        PoliticalType::RequiemParliament,
+        PoliticalType::Murmuration,
+        PoliticalType::Kindness,
+        PoliticalType::SilenceMandate,
+        PoliticalType::Vigil,
+        PoliticalType::CovenantOfEchoes,
+        PoliticalType::WoundTithe,
+        PoliticalType::PalimpsestAuthority,
+        PoliticalType::TheAsking,
+        PoliticalType::Arrival,
+        PoliticalType::DriftSovereignty,
     ];
-
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
