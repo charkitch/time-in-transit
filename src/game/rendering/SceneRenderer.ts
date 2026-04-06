@@ -55,6 +55,12 @@ function hashString32(input: string): number {
   return h >>> 0;
 }
 
+function stationSpinAxisForArchetype(archetype: string | null | undefined): THREE.Vector3 {
+  // Match spin axis to each model's dominant ring/hub orientation.
+  if (archetype === 'refinery_spindle') return new THREE.Vector3(0, 1, 0);
+  return new THREE.Vector3(0, 0, 1);
+}
+
 function sphereUvToLocal(radius: number, u: number, v: number, offset = 0): THREE.Vector3 {
   const lon = u * Math.PI * 2 - Math.PI;
   const lat = v * Math.PI - Math.PI * 0.5;
@@ -610,6 +616,7 @@ export class SceneRenderer {
           type: 'station',
           worldPos: new THREE.Vector3(),
           collisionRadius: 0,
+          stationSpinAxis: stationSpinAxisForArchetype(planet.stationArchetype),
         });
       }
 
@@ -773,6 +780,7 @@ export class SceneRenderer {
         type: 'station', // reuse station type so docking works
         worldPos: new THREE.Vector3(),
         collisionRadius: 0,
+        stationSpinAxis: new THREE.Vector3(0, 0, 1),
       });
 
       // Ambient particles around secret bases

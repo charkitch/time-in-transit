@@ -285,6 +285,24 @@ export function makeStation(options: StationMeshOptions = {}): THREE.Group {
     }
   }
 
+  if (archetype === 'refinery_spindle') {
+    // Add structural trusses tying the spindle core to the habitat ring.
+    const armCount = 6;
+    const armLength = size * 0.62;
+    const armRadius = size * 0.36;
+    for (let i = 0; i < armCount; i++) {
+      const angle = (i / armCount) * Math.PI * 2;
+      const arm = new THREE.Mesh(
+        new THREE.CylinderGeometry(size * 0.045, size * 0.045, armLength, 8),
+        material.clone(),
+      );
+      arm.position.set(Math.cos(angle) * armRadius, 0, Math.sin(angle) * armRadius);
+      arm.rotation.z = Math.PI / 2;
+      arm.rotation.y = angle;
+      addMeshWithWire(arm);
+    }
+  }
+
   const light = new THREE.PointLight(palette.emissive, 0.32, size * 8);
   group.add(light);
   return group;

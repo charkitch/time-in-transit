@@ -13,6 +13,7 @@ const _dysonSampleWorld = new THREE.Vector3();
 const _dysonNpcLocalPos = new THREE.Vector3();
 const _dysonNpcTargetWorld = new THREE.Vector3();
 const _tidalForward = new THREE.Vector3(1, 0, 0);
+const _stationSpinZ = new THREE.Vector3(0, 0, 1);
 const _tidalToTarget = new THREE.Vector3();
 const _tidalQuat = new THREE.Quaternion();
 
@@ -154,7 +155,8 @@ export function updateFleetShipWorldPositions(entities: Map<string, SceneEntity>
 export function rotateStations(entities: Map<string, SceneEntity>): void {
   for (const [, entity] of entities) {
     if (entity.type === 'station') {
-      entity.group.rotation.z += 0.001;
+      const axis = entity.stationSpinAxis ?? _stationSpinZ;
+      entity.group.rotateOnAxis(axis, 0.001);
     }
   }
 }

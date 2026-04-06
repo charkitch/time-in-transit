@@ -19,6 +19,7 @@ export interface SceneEntity {
   collisionSamplesLocal?: THREE.Vector3[];
   collisionSamplesWorld?: THREE.Vector3[];
   tidalTargetId?: string;
+  stationSpinAxis?: THREE.Vector3;
   siteLabel?: string;
   siteClassification?: string;
   siteHostLabel?: string;
