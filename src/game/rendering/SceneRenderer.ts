@@ -248,6 +248,22 @@ export class SceneRenderer {
     };
   }
 
+  private disableFogForObject(root: THREE.Object3D): void {
+    root.traverse(obj => {
+      const meshLike = obj as THREE.Mesh | THREE.Sprite | THREE.Points | THREE.Line;
+      const mat = meshLike.material;
+      if (!mat) return;
+
+      const materials = Array.isArray(mat) ? mat : [mat];
+      for (const material of materials) {
+        if ('fog' in material && (material as { fog?: boolean }).fog !== false) {
+          (material as { fog?: boolean }).fog = false;
+          material.needsUpdate = true;
+        }
+      }
+    });
+  }
+
   private handleContextLost = (event: Event) => {
     event.preventDefault();
     this.contextLost = true;
@@ -384,6 +400,7 @@ export class SceneRenderer {
         Math.cos(companion.orbitPhase) * companion.orbitRadius, 0,
         Math.sin(companion.orbitPhase) * companion.orbitRadius,
       );
+      this.disableFogForObject(companionGroup);
       this.scene.add(companionGroup);
       this.systemObjects.push(companionGroup);
 
@@ -409,15 +426,23 @@ export class SceneRenderer {
       });
       starGroup.add(new THREE.Mesh(starGeo, starMat));
 
-      // Inner glow to fill the center so the star looks uniformly luminous
-      const innerGlow = makeGlowSprite(0xFFFFFF, data.starRadius * 2.5);
-      starGroup.add(innerGlow);
-
       // Glow sprite — size and presence driven by star attributes
       const starAttrs = STAR_ATTRIBUTES[data.starType];
       if (starAttrs?.glow) {
-        const glow = makeGlowSprite(starColor, data.starRadius * starAttrs.glowMul);
-        starGroup.add(glow);
+        // Use a spherical glow shell instead of a billboard sprite to avoid
+        // depth-intersection banding when the star fills the screen.
+        const glowRadius = data.starRadius * Math.max(1.4, starAttrs.glowMul * 0.5);
+        const glowGeo = new THREE.SphereGeometry(glowRadius, 24, 24);
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: starColor,
+          transparent: true,
+          opacity: 0.14,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          fog: false,
+        });
+        const glowShell = new THREE.Mesh(glowGeo, glowMat);
+        starGroup.add(glowShell);
       }
 
       // Pulsar beam jets — tapered cones anchored at the star surface
@@ -460,6 +485,7 @@ export class SceneRenderer {
       this.systemObjects.push(this.starLight);
     }
 
+    this.disableFogForObject(starGroup);
     this.scene.add(starGroup);
     this.systemObjects.push(starGroup);
 
