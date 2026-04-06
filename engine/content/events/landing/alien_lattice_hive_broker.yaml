@@ -1,0 +1,22 @@
+id: ALIEN_LATTICE_HIVE_BROKER
+title: LATTICE HIVE BROKER
+requires:
+  - !SiteClassIs [station]
+  - !HostTypeIs [station_alien_lattice_hive]
+narrativeLines:
+  - >-
+    The hive's docking cradle seals around your hull with soft bio-ceramic jaws.
+    A broker organism blooms from the wall and offers terms in synced pulses.
+  - >-
+    It wants rare seeds and promises "fresh market nerves" in return.
+choices:
+  - id: accept_terms
+    label: Accept the broker protocol
+    description: "+Reputation, better prices"
+    effect:
+      tradingReputation: 1
+      priceModifier: 0.92
+  - id: maintain_distance
+    label: Keep negotiations at arm's length
+    description: No effect
+    effect: {}

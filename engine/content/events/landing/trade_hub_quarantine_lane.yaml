@@ -1,0 +1,22 @@
+id: TRADE_HUB_QUARANTINE_LANE
+title: QUARANTINE LANE
+requires:
+  - !SiteClassIs [station]
+  - !HostTypeIs [station_trade_hub]
+narrativeLines:
+  - >-
+    Traffic control vectors you into a quarantine lane crowded with freighters,
+    med skiffs, and one very impatient salvage barge.
+  - >-
+    A clerk offers to clear your vessel ahead of queue if you file an official
+    historical hazard report.
+choices:
+  - id: file_report
+    label: File the report and take priority docking
+    description: "+Reputation"
+    effect:
+      tradingReputation: 1
+  - id: hold_lane
+    label: Wait your turn in the lane
+    description: No effect
+    effect: {}

@@ -1,0 +1,24 @@
+id: ALIEN_GRAVELOOM_TITHE
+title: GRAVELOOM TITHE
+requires:
+  - !SiteClassIs [station]
+  - !HostTypeIs [station_alien_graveloom]
+narrativeLines:
+  - >-
+    The station's geometry folds around your ship as if measuring your mass in
+    syllables. A translator drone emits one phrase: "Anchor your history."
+  - >-
+    The dockmaster asks for a tithe in recorded memory before they permit market
+    access.
+choices:
+  - id: pay_memory
+    label: Contribute archived flight logs
+    description: "+Reputation"
+    effect:
+      tradingReputation: 1
+      setsFlags: [alien_graveloom_tithe_paid]
+  - id: refuse_memory
+    label: Refuse and keep your records sealed
+    description: "-Reputation"
+    effect:
+      tradingReputation: -1

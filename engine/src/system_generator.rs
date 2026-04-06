@@ -300,6 +300,38 @@ fn generate_great_spot(rng: &mut PRNG, gas_type: GasGiantType) -> (bool, f64, f6
     (has, lat, size)
 }
 
+fn pick_station_archetype(star: &StarSystemData, rng: &mut PRNG) -> StationArchetype {
+    let is_outer_system = star.id >= 20;
+    let is_weird_star = matches!(
+        star.star_type,
+        StarType::PU | StarType::XB | StarType::XBB | StarType::MQ | StarType::SGR | StarType::Iron
+    );
+    let mut alien_weight = 0.12 + f64::max(0.0, (star.tech_level - 4) as f64 * 0.05);
+    if is_outer_system {
+        alien_weight += 0.10;
+    }
+    if is_weird_star {
+        alien_weight += 0.16;
+    }
+    alien_weight = alien_weight.clamp(0.08, 0.62);
+
+    if rng.next() < alien_weight {
+        if star.tech_level >= 7 && rng.next() < 0.34 {
+            StationArchetype::AlienGraveloom
+        } else if rng.next() < 0.5 {
+            StationArchetype::AlienLatticeHive
+        } else {
+            StationArchetype::AlienOrreryReliquary
+        }
+    } else if star.tech_level >= 6 && rng.next() < 0.34 {
+        StationArchetype::CitadelBastion
+    } else if rng.next() < 0.45 {
+        StationArchetype::RefinerySpindle
+    } else {
+        StationArchetype::TradeHub
+    }
+}
+
 fn generate_origin_debug_planets(star: &StarSystemData, rng: &mut PRNG) -> Vec<PlanetData> {
     const DEBUG_ROCKY_SURFACES: &[SurfaceType] = &[
         SurfaceType::Continental,
@@ -338,6 +370,7 @@ fn generate_origin_debug_planets(star: &StarSystemData, rng: &mut PRNG) -> Vec<P
             GasGiantType::Jovian,
         );
 
+        let has_station = i == 0;
         planets.push(PlanetData {
             id: format!("{}-debug-r{}", star.id, i),
             name: planet_name(&star.name, i),
@@ -358,7 +391,12 @@ fn generate_origin_debug_planets(star: &StarSystemData, rng: &mut PRNG) -> Vec<P
             great_spot_lat: 0.0,
             great_spot_size: 0.0,
             moons: Vec::new(),
-            has_station: i == 0,
+            has_station,
+            station_archetype: if has_station {
+                Some(StationArchetype::TradeHub)
+            } else {
+                None
+            },
             interaction_field,
         });
     }
@@ -401,6 +439,7 @@ fn generate_origin_debug_planets(star: &StarSystemData, rng: &mut PRNG) -> Vec<P
             great_spot_size,
             moons: Vec::new(),
             has_station: false,
+            station_archetype: None,
             interaction_field,
         });
     }
@@ -656,6 +695,7 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             rocky_surface,
             GasGiantType::Jovian,
         );
+        let has_station = star.tech_level >= 3 || i == 0;
         planets.push(PlanetData {
             id: format!("{}-p{}", star.id, i),
             name: planet_name(&star.name, i as usize),
@@ -676,7 +716,12 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             great_spot_lat: 0.0,
             great_spot_size: 0.0,
             moons,
-            has_station: star.tech_level >= 3 || i == 0,
+            has_station,
+            station_archetype: if has_station {
+                Some(pick_station_archetype(star, &mut rng))
+            } else {
+                None
+            },
             interaction_field,
         });
     }
@@ -758,6 +803,7 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             great_spot_size,
             moons,
             has_station: false,
+            station_archetype: None,
             interaction_field,
         });
     }

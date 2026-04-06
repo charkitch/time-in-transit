@@ -13,6 +13,7 @@ import type {
 } from './engine';
 import { STARTING_CREDITS, STARTING_FUEL, HYPERSPACE, GALAXY_YEAR_START, type GoodName } from './constants';
 import type { NPCCargoEntry } from './mechanics/NPCSystem';
+import type { NPCShipArchetype } from './archetypes';
 
 export type UIMode = 'flight' | 'cluster_map' | 'system_map' | 'docked' | 'hyperspace' | 'landing' | 'comms' | 'dead' | 'menu';
 
@@ -20,6 +21,7 @@ export interface PendingCommContext {
   npcId: string;
   npcName: string;
   originSystemName: string;
+  npcArchetype: NPCShipArchetype;
   commLines: [string, string];
   cargo: NPCCargoEntry[];
   factionTag: string | null;

@@ -41,6 +41,7 @@ import {
   applySystemArrival,
 } from './systems/jumpFlow';
 import type { RuntimeProfile } from '../runtime/runtimeProfile';
+import { stationHostTypeToken } from './archetypes';
 
 const COMBAT_INTEL_INTERVAL = 8;
 const INFINITE_FUEL_DEV = import.meta.env.DEV;
@@ -458,6 +459,11 @@ export class Game {
     // Get landing event from Rust engine
     const wasmState = buildWasmPlayerState(state);
     const secretBase = state.currentSystem?.secretBases.find(b => b.id === stationId);
+    const stationPlanetId = stationId?.startsWith('station-') ? stationId.slice('station-'.length) : null;
+    const stationPlanet = stationPlanetId
+      ? state.currentSystem?.planets.find((planet) => planet.id === stationPlanetId)
+      : null;
+    const hostType = stationPlanet?.stationArchetype ? stationHostTypeToken(stationPlanet.stationArchetype) : '';
     const event = systemId === FIRST_SYSTEM_ID
       ? null
       : engineGetGameEvent(
@@ -466,6 +472,8 @@ export class Game {
         {
           context: 'landing',
           secretBaseId: secretBase ? stationId : undefined,
+          siteClass: secretBase ? 'secret_base' : 'station',
+          hostType: secretBase ? secretBase.type : hostType,
         },
       );
 
@@ -984,16 +992,15 @@ export class Game {
 
     const entity = this.sceneRenderer.getAllEntities().get(targetId)!;
     const dist = this.sceneRenderer.shipGroup.position.distanceTo(entity.worldPos);
-    const TRADE_RANGE = 500;
-
     state.setPendingCommContext({
       npcId: npcState.id,
       npcName: npcState.name,
       originSystemName: npcState.originSystemName,
+      npcArchetype: npcState.archetype,
       commLines: npcState.commLines,
       cargo: npcState.cargo,
       factionTag: npcState.factionTag,
-      inTradeRange: dist <= TRADE_RANGE,
+      inTradeRange: dist <= npcState.tradeRange,
     });
     state.setUIMode('comms');
   }

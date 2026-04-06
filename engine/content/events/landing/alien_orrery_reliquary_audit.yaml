@@ -1,0 +1,22 @@
+id: ALIEN_ORRERY_RELIQUARY_AUDIT
+title: ORRERY RELIQUARY AUDIT
+requires:
+  - !SiteClassIs [station]
+  - !HostTypeIs [station_alien_orrery_reliquary]
+narrativeLines:
+  - >-
+    Rings of crystal data nodes pivot around the berth and align on your cockpit.
+    The reliquary caretaker requests your trajectory lineage for cataloging.
+  - >-
+    In return, it offers legal clearances recognized by nearby ports.
+choices:
+  - id: share_lineage
+    label: Share your navigation lineage
+    description: "+Reputation, mark of trust"
+    effect:
+      tradingReputation: 1
+      factionTag: alien_reliquary_trusted
+  - id: keep_private
+    label: Keep your routes private
+    description: No effect
+    effect: {}

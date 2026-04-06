@@ -1,5 +1,6 @@
 import { useGameState } from '../../game/GameState';
 import type { GoodName } from '../../game/constants';
+import { NPC_ARCHETYPE_LABEL } from '../../game/archetypes';
 import styles from './CommDialog.module.css';
 
 interface CommDialogProps {
@@ -25,6 +26,8 @@ export function CommDialog({ onTrade, onDismiss }: CommDialogProps) {
             <span className={styles.vesselName}>{ctx.npcName}</span>
             <span className={styles.dimLabel}>  ORIGIN: </span>
             <span className={styles.originName}>{ctx.originSystemName}</span>
+            <span className={styles.dimLabel}>  CLASS: </span>
+            <span className={styles.originName}>{NPC_ARCHETYPE_LABEL[ctx.npcArchetype]}</span>
           </div>
           {ctx.factionTag && (
             <div className={styles.faction}>FACTION: {ctx.factionTag}</div>

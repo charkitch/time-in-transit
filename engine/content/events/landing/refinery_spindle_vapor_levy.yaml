@@ -1,0 +1,23 @@
+id: REFINERY_SPINDLE_VAPOR_LEVY
+title: VAPOR LEVY
+requires:
+  - !SiteClassIs [station]
+  - !HostTypeIs [station_refinery_spindle]
+narrativeLines:
+  - >-
+    Refinery supervisors route your ship through a haze of charged coolant and
+    hand you a contamination worksheet before the clamps finish locking.
+  - >-
+    They call it a vapor levy: pay now, or accept slower cargo handling.
+choices:
+  - id: pay_levy
+    label: Pay the levy
+    description: "Pay CR 140, +Reputation"
+    effect:
+      creditsReward: -140
+      tradingReputation: 1
+    requiresCredits: 140
+  - id: skip_levy
+    label: Refuse and queue with everyone else
+    description: No effect
+    effect: {}

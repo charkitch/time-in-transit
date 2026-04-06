@@ -383,6 +383,7 @@ export function createStarfield(seed: number, yaw = 0, pitch = 0): THREE.Points 
     color: 0xFFFFFF,
     size: 2,
     sizeAttenuation: false,
+    fog: false,
   });
 
   return new THREE.Points(geo, mat);

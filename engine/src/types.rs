@@ -230,6 +230,17 @@ pub enum SecretBaseType {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum StationArchetype {
+    TradeHub,
+    RefinerySpindle,
+    CitadelBastion,
+    AlienLatticeHive,
+    AlienOrreryReliquary,
+    AlienGraveloom,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum InteractionTopology {
     Sphere,
     ShellPatch,
@@ -306,6 +317,7 @@ pub struct PlanetData {
     pub great_spot_size: f64,
     pub moons: Vec<MoonData>,
     pub has_station: bool,
+    pub station_archetype: Option<StationArchetype>,
     pub interaction_field: InteractionFieldData,
 }
 

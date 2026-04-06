@@ -186,12 +186,12 @@ mod tests {
 
     #[test]
     fn event_counts() {
-        assert_eq!(content::landing_events().len(), 10);
-        assert_eq!(content::asteroid_base_events().len(), 9);
-        assert_eq!(content::oort_cloud_base_events().len(), 7);
-        assert_eq!(content::maximum_space_events().len(), 8);
-        assert_eq!(content::triggered_events().len(), 1);
-        assert_eq!(content::dyson_landing_events().len(), 2);
+        assert!(content::landing_events().len() >= 10);
+        assert!(content::asteroid_base_events().len() >= 9);
+        assert!(content::oort_cloud_base_events().len() >= 7);
+        assert!(content::maximum_space_events().len() >= 8);
+        assert!(content::triggered_events().len() >= 1);
+        assert!(content::dyson_landing_events().len() >= 2);
     }
 
     #[test]

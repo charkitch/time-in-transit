@@ -1,0 +1,24 @@
+id: CITADEL_BASTION_WRIT
+title: BASTION ENTRY WRIT
+requires:
+  - !SiteClassIs [station]
+  - !HostTypeIs [station_citadel_bastion]
+narrativeLines:
+  - >-
+    Armored docking towers rotate to track your hull while inspectors project a
+    hard-light warrant over your canopy.
+  - >-
+    The bastion marshal offers expedited clearance for a steep administrative fee.
+choices:
+  - id: buy_clearance
+    label: Pay for expedited clearance
+    description: "Pay CR 220, safer market access"
+    effect:
+      creditsReward: -220
+      tradingReputation: 1
+    requiresCredits: 220
+  - id: wait_audit
+    label: Endure a full security audit
+    description: "-Reputation"
+    effect:
+      tradingReputation: -1

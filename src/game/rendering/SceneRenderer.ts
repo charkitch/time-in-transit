@@ -426,23 +426,15 @@ export class SceneRenderer {
       });
       starGroup.add(new THREE.Mesh(starGeo, starMat));
 
+      // Inner glow to fill the center so the star looks uniformly luminous
+      const innerGlow = makeGlowSprite(0xFFFFFF, data.starRadius * 2.5);
+      starGroup.add(innerGlow);
+
       // Glow sprite — size and presence driven by star attributes
       const starAttrs = STAR_ATTRIBUTES[data.starType];
       if (starAttrs?.glow) {
-        // Use a spherical glow shell instead of a billboard sprite to avoid
-        // depth-intersection banding when the star fills the screen.
-        const glowRadius = data.starRadius * Math.max(1.4, starAttrs.glowMul * 0.5);
-        const glowGeo = new THREE.SphereGeometry(glowRadius, 24, 24);
-        const glowMat = new THREE.MeshBasicMaterial({
-          color: starColor,
-          transparent: true,
-          opacity: 0.14,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-          fog: false,
-        });
-        const glowShell = new THREE.Mesh(glowGeo, glowMat);
-        starGroup.add(glowShell);
+        const glow = makeGlowSprite(starColor, data.starRadius * starAttrs.glowMul);
+        starGroup.add(glow);
       }
 
       // Pulsar beam jets — tapered cones anchored at the star surface
@@ -598,7 +590,13 @@ export class SceneRenderer {
 
       // Station
       if (planet.hasStation) {
-        const stationGroup = makeStation(60);
+        const stationSeed = hashString32(`${systemId}:${planet.id}:station`);
+        const stationScale = planet.stationArchetype === 'alien_graveloom' ? 1.35 : planet.stationArchetype?.startsWith('alien_') ? 1.15 : 1.0;
+        const stationGroup = makeStation({
+          size: 60 * stationScale,
+          archetype: planet.stationArchetype ?? 'trade_hub',
+          seed: stationSeed,
+        });
         const stationId = `station-${planet.id}`;
         this.scene.add(stationGroup);
         this.systemObjects.push(stationGroup);
@@ -829,7 +827,11 @@ export class SceneRenderer {
 
     const npcData = generateNPCShips(data, systemId, galaxyYear, systemName, planetPositions, planetIds, data.mainStationPlanetId);
     for (const shipData of npcData) {
-      const mesh = makeNPCShipMesh(shipData.color);
+      const mesh = makeNPCShipMesh({
+        archetype: shipData.archetype,
+        sizeClass: shipData.sizeClass,
+        seed: shipData.visualSeed,
+      });
       const startPos = shipData.waypointA.clone().lerp(shipData.waypointB, shipData.t);
       mesh.position.copy(startPos);
       this.scene.add(mesh);
@@ -857,9 +859,13 @@ export class SceneRenderer {
         t: shipData.t,
         direction: shipData.direction,
         speed: shipData.speed,
+        tradeRange: shipData.tradeRange,
         cargo: shipData.cargo,
         commLines: shipData.commLines,
         factionTag: shipData.factionTag,
+        archetype: shipData.archetype,
+        sizeClass: shipData.sizeClass,
+        visualSeed: shipData.visualSeed,
       });
     }
 

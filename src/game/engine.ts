@@ -14,6 +14,7 @@ import initWasm, {
   get_landing_event,
   get_cluster_summary,
 } from '../../engine/pkg/time_in_transit_engine';
+import type { StationArchetype } from './archetypes';
 
 import type { GoodName, EconomyType, PoliticalType } from './constants';
 
@@ -91,6 +92,7 @@ export interface PlanetData {
   greatSpotSize: number;
   moons: MoonData[];
   hasStation: boolean;
+  stationArchetype: StationArchetype | null;
   interactionField: InteractionFieldData;
 }
 
