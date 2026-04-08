@@ -60,77 +60,81 @@ const appBuild = {
   commitCount,
 }
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     wasm(),
     glsl(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      injectRegister: 'auto',
-      manifest: {
-        name: 'Time in Transit',
-        short_name: 'Transit',
-        start_url: '/',
-        scope: '/',
-        display: 'fullscreen',
-        orientation: 'landscape',
-        theme_color: '#05070d',
-        background_color: '#05070d',
-        icons: [
-          {
-            src: '/icons/icon-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: '/icons/icon-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
-          {
-            src: '/icons/app-icon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable',
-          },
-        ],
-      },
-      includeAssets: ['icons/app-icon.svg', 'icons/apple-touch-icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'],
-      workbox: {
-        cleanupOutdatedCaches: true,
-        navigateFallback: '/index.html',
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,wasm}'],
-        runtimeCaching: [
-          {
-            urlPattern: ({ sameOrigin, url }) =>
-              sameOrigin && url.pathname.startsWith('/assets/'),
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'app-assets',
-              expiration: {
-                maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-              },
+    ...(command === 'build'
+      ? [
+          VitePWA({
+            registerType: 'autoUpdate',
+            injectRegister: 'auto',
+            manifest: {
+              name: 'Time in Transit',
+              short_name: 'Transit',
+              start_url: '/',
+              scope: '/',
+              display: 'fullscreen',
+              orientation: 'landscape',
+              theme_color: '#05070d',
+              background_color: '#05070d',
+              icons: [
+                {
+                  src: '/icons/icon-192.png',
+                  sizes: '192x192',
+                  type: 'image/png',
+                },
+                {
+                  src: '/icons/icon-512.png',
+                  sizes: '512x512',
+                  type: 'image/png',
+                },
+                {
+                  src: '/icons/app-icon.svg',
+                  sizes: 'any',
+                  type: 'image/svg+xml',
+                  purpose: 'any maskable',
+                },
+              ],
             },
-          },
-          {
-            urlPattern: ({ sameOrigin, url }) =>
-              sameOrigin && url.pathname.startsWith('/icons/'),
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'app-icons',
-              expiration: {
-                maxEntries: 20,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-              },
+            includeAssets: ['icons/app-icon.svg', 'icons/apple-touch-icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'],
+            workbox: {
+              cleanupOutdatedCaches: true,
+              navigateFallback: '/index.html',
+              globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,wasm}'],
+              runtimeCaching: [
+                {
+                  urlPattern: ({ sameOrigin, url }) =>
+                    sameOrigin && url.pathname.startsWith('/assets/'),
+                  handler: 'CacheFirst',
+                  options: {
+                    cacheName: 'app-assets',
+                    expiration: {
+                      maxEntries: 200,
+                      maxAgeSeconds: 60 * 60 * 24 * 365,
+                    },
+                  },
+                },
+                {
+                  urlPattern: ({ sameOrigin, url }) =>
+                    sameOrigin && url.pathname.startsWith('/icons/'),
+                  handler: 'CacheFirst',
+                  options: {
+                    cacheName: 'app-icons',
+                    expiration: {
+                      maxEntries: 20,
+                      maxAgeSeconds: 60 * 60 * 24 * 365,
+                    },
+                  },
+                },
+              ],
             },
-          },
-        ],
-      },
-    }),
+          }),
+        ]
+      : []),
   ],
   define: {
     __APP_BUILD__: JSON.stringify(appBuild),
   },
-})
+}))
