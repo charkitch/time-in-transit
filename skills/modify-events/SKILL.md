@@ -1,6 +1,6 @@
 ---
 name: modify-events
-description: Guide for finding and modifying landing events, narrative events, or system entry text in The Years Between the Stars. Use this skill whenever the user wants to add, change, or fix any kind of game event — landing encounters, event choices, event outcomes, faction-specific events, era-gated events, or the system entry narration text. Always invoke this when the user says things like "add a new event", "change what happens when you land", "add a choice to an event", "the event text is wrong", or any mention of events/encounters/narrative.
+description: Guide for finding and modifying landing events, narrative events, or system entry text in The Years Between the Stars. Use this skill whenever the user wants to add, change, or fix any kind of game event — landing encounters, event choices, event outcomes, faction-specific events, era-gated events, or the system entry narration text. Also covers lore integration — reading tone and canon files from story/ to keep events consistent with the game's world. Always invoke this when the user says things like "add a new event", "change what happens when you land", "add a choice to an event", "the event text is wrong", or any mention of events/encounters/narrative/lore/story/tone.
 ---
 
 ## What "events" means in this codebase
@@ -16,21 +16,28 @@ There are two types of narrative events:
 
 ### Where events are defined
 
-**`engine/src/events.rs`** — the primary file. This is where all event scenarios live. Each event is a struct with:
-- A narrative description
-- A list of choices (each with text and effects)
-- Conditions (era, faction alignment, player stats)
+**`engine/content/events/**/*.yaml`** — the primary source of truth. Event narrative, choices, effects, and conditions are authored in YAML files grouped by pool:
+- `landing/`
+- `asteroid_base/`
+- `oort_cloud/`
+- `maximum_space/`
+- `triggered/`
+- `system_entry/`
+- `proximity_star/`
+- `proximity_base/`
+- `planet_landing/`
 
-Common things to do here:
-- Add a new event: create a new function returning a `LandingEvent`
-- Change event text: edit the `description` or choice `text` fields
-- Change effects: modify the `effect` on a choice (credits, reputation, cargo)
-- Add conditions: gate events on `faction`, `era`, `prosperity`, or `political_type`
+**`engine/src/content.rs`** — registers YAML files with `include_str!` for each pool. Edit this when:
+- Adding a new event file to an existing pool
+- Creating a new event pool loader
 
-**`engine/src/lib.rs`** — event selection logic. The functions `select_event()` and `select_secret_base_event()` decide which event to show based on civilization state. Edit here to:
-- Change how often an event appears (weight adjustments)
-- Gate events on new conditions
-- Add a new event type to the selection pool
+**`engine/src/events.rs`** — selection/filtering only. Edit this when:
+- Changing availability logic (`EventCondition` behavior, trigger rules)
+- Changing cross-pool behavior (for example how triggered events are included)
+
+**`engine/src/lib.rs`** — maps runtime context to an `EventPool` in `get_game_event()`. Edit this when:
+- Adding a new event context string
+- Changing how landing context maps to secret base pools
 
 ### Where events are displayed
 
@@ -39,7 +46,7 @@ Common things to do here:
 - Add new UI elements (icons, portraits, extra info)
 - Handle new choice effect types
 
-**`src/game/GameState.ts`** — holds `pendingLandingEvent` and processes player choices. Touch this when:
+**`src/game/GameState.ts`** — holds `pendingGameEvent` and processes player choices. Touch this when:
 - Adding new effect types that need new state fields
 - Changing how choices are stored or cleared
 
@@ -47,34 +54,82 @@ Common things to do here:
 - Changing when events trigger (docking conditions)
 - Passing new context to the event selector
 
+### Event schema
+
+**`engine/src/types.rs`** defines the YAML schema:
+- `GameEvent`
+- `EventChoice`
+- `EventMoment`
+- `ChoiceEffect`
+- `EventCondition`
+- `Trigger` / `TriggerFile`
+
+Touch this file (plus TS bridge/state handling) only when adding new fields or effect/condition types.
+
 ---
 
 ## System Entry Text
 
 **`src/ui/HUD/SystemEntryText.tsx`** — renders the staggered lines that appear on system entry. This is also where era-transition narration is displayed ("Centuries have passed...").
 
-**`src/game/Game.ts`** — the function `buildSystemEntryText()` assembles the lines shown on entry. Edit here to:
+**`engine/src/lib.rs`** — `build_system_payload()` assembles system entry lines. Edit here to:
 - Add new entry text categories
 - Change era-crossing narration
 - Include new info in the entry summary
+
+**`engine/content/events/system_entry/*.yaml`** — optional event-driven system-entry encounters selected via `EventPool::SystemEntry`.
+
+---
+
+## Lore Integration
+
+The `story/` directory contains the game's tone and canonical lore. Use it whenever writing or editing event text.
+
+### Always: Read the tone document
+
+Before writing any event text, read `story/universal_vibes.md`. This is a mandatory first step — it defines the emotional register, vocabulary, and worldview that all narrative text must match.
+
+### When relevant: Search for specific lore
+
+When the event references a specific topic (e.g., "quasar war", a faction's history, a technology):
+
+1. List files in `story/universal_truths/` and scan filenames for keyword matches.
+2. If a relevant file exists, read it and use it as source material — these are canon.
+3. If no relevant file exists, keep specific details vague and tell the user that no lore file was found for that topic, in case they want to provide details or create one.
+
+### How lore influences event writing
+
+- **Tone consistency** — `universal_vibes.md` is the authority. The galaxy is alive and evolving, not a fallen world. Match the tone.
+- **Factual accuracy** — Treat `universal_truths/` files as canon. Use specific names, dates, and details from them rather than inventing alternatives.
+- **Weave naturally** — No info-dumps. A trader mentioning the Quasar War in passing beats a paragraph of exposition. Events should feel like lived experience, not a lore entry.
+- **Respect WIP nature** — Lore files may contain placeholders like `{come up with X}` or rough notes. Extract the intent behind them. Skip placeholders in event text, or ask the user what to fill in.
 
 ---
 
 ## Typical workflows
 
 **Add a new landing event:**
-1. Open `engine/src/events.rs` — write a new function returning a `LandingEvent`
-2. Open `engine/src/lib.rs` — add it to the selection pool in `select_event()`
-3. Rebuild WASM: `cd engine && wasm-pack build --target web --out-dir ../src/wasm`
+0. Read `story/universal_vibes.md` for tone; check `story/universal_truths/` for relevant lore
+1. Add a new YAML file under `engine/content/events/landing/`
+2. Register it in `engine/src/content.rs` inside `landing_events()`
+3. Rebuild WASM: `npm run wasm:build` (or `cd engine && wasm-pack build --target web --out-dir pkg`)
+4. Validate selection logic with `cd engine && cargo test events`
+
+**Add a new non-landing event (proximity/system entry/planet/triggered):**
+1. Add YAML under the matching `engine/content/events/<pool>/` directory
+2. Register it in the corresponding loader in `engine/src/content.rs`
+3. Ensure caller uses the right context (`landing`, `system_entry`, `proximity_star`, `proximity_base`, `planet_landing`, `triggered`) via `get_game_event()`
+4. Rebuild WASM and run `cargo test events`
 
 **Change event display layout:**
 1. Only need `src/ui/LandingDialog/LandingDialog.tsx`
 
 **Change era-transition narration:**
-1. Only need `src/game/Game.ts` — find `buildSystemEntryText()`
+1. Only need `engine/src/lib.rs` — find `build_system_payload()`
 
 **Add a new choice effect type:**
-1. `engine/src/types.rs` — add to `ChoiceEffect` enum
-2. `engine/src/events.rs` — use the new effect in events
-3. `src/game/Game.ts` or `GameState.ts` — handle the new effect client-side
-4. Rebuild WASM
+1. `engine/src/types.rs` — add field(s) on `ChoiceEffect` and serde defaults
+2. Event YAMLs — use the new field in `effect`
+3. `src/game/engine.ts` — update TS type definitions if needed
+4. `src/game/Game.ts` and/or `src/game/GameState.ts` — apply the new effect in client state
+5. Rebuild WASM and test event flow

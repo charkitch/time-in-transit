@@ -69,7 +69,7 @@ description: Guide for finding and modifying planets — planet types, surface t
 2. `engine/src/system_generator.rs` — add color palette and generation weight
 3. `src/game/rendering/meshFactory.ts` — handle the new type in `makePlanet()`
 4. `src/ui/SystemMap/SystemMap.tsx` — add color for map display
-5. Rebuild WASM: `cd engine && wasm-pack build --target web --out-dir ../src/wasm`
+5. Rebuild WASM: `npm run wasm:build` (or `cd engine && wasm-pack build --target web --out-dir pkg`)
 
 **Add/change ring systems:**
 1. `engine/src/system_generator.rs` — control which planet types get rings

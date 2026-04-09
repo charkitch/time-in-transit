@@ -60,7 +60,7 @@ Economy types: defined in `engine/src/types.rs` as `EconomyType`.
 
 **Change a good's price or availability:**
 1. `engine/src/trading.rs`
-2. Rebuild WASM: `cd engine && wasm-pack build --target web --out-dir ../src/wasm`
+2. Rebuild WASM: `npm run wasm:build` (or `cd engine && wasm-pack build --target web --out-dir pkg`)
 
 **Add a new trade good:**
 1. `engine/src/types.rs` — add to `GoodName`

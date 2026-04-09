@@ -66,7 +66,7 @@ Each has an `id`, display name, and color.
 **Add a new faction:**
 1. `src/game/data/factions.ts` — add entry
 2. `engine/src/factions.rs` — include in generation logic
-3. Rebuild WASM: `cd engine && wasm-pack build --target web --out-dir ../src/wasm`
+3. Rebuild WASM: `npm run wasm:build` (or `cd engine && wasm-pack build --target web --out-dir pkg`)
 
 **Add a new political type:**
 1. `engine/src/types.rs` — add to `PoliticalType`

@@ -5,7 +5,7 @@ description: Guide for finding and modifying star visuals, star types, star colo
 
 ## Star type reference
 
-Current star types (defined as string literals): `G`, `K`, `M`, `F`, `A`, `WD` (white dwarf), `HE` (helium star), `NS` (neutron star), `PU` (pulsar), `XB` (X-ray binary), `MG` (magnetar), `BH` (black hole), `XBB` (X-ray burster), `SGR` (soft gamma repeater)
+Current star types (defined as string literals): `G`, `K`, `M`, `F`, `A`, `WD` (white dwarf), `NS` (neutron star), `PU` (pulsar), `XB` (X-ray binary), `MG` (magnetar), `BH` (black hole), `XBB` (X-ray burster), `SGR` (soft gamma repeater), `IRON` (iron star)
 
 ---
 
@@ -58,7 +58,7 @@ If the Rust colors diverge from `constants.ts`, the Rust values control what get
 **Change a star's color:**
 1. `src/game/constants.ts` — update `STAR_COLORS[type]`
 2. `engine/src/system_generator.rs` — update `star_color()` to match (keep in sync)
-3. Rebuild WASM: `cd engine && wasm-pack build --target web --out-dir ../src/wasm`
+3. Rebuild WASM: `npm run wasm:build` (or `cd engine && wasm-pack build --target web --out-dir pkg`)
 
 **Change star glow appearance:**
 1. Only `src/game/rendering/meshFactory.ts` — find `makeGlowSprite()`

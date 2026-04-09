@@ -72,7 +72,7 @@ Station work spans four areas:
 **Change how stations are distributed across planets/systems:**
 1. `engine/src/system_generator.rs`
 2. `engine/src/types.rs` (only if adding/changing station-related data shape)
-3. Rebuild WASM: `cd engine && wasm-pack build --target web --out-dir ../src/wasm`
+3. Rebuild WASM: `npm run wasm:build` (or `cd engine && wasm-pack build --target web --out-dir pkg`)
 
 **Change station look/shape:**
 1. `src/game/rendering/meshFactory.ts` (`makeStation`)
