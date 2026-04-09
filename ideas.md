@@ -75,3 +75,33 @@ It has, against the odds, become inhabited.
 "We were born on a world forged in the light of a burning corpse. We know there were others, who came before. They did not see what we see now."
 
 ---
+
+
+Quotes on star system jumps 
+
+The general conclusion of the analysis is that an open universe need not evolve into a state of
+permanent quiescence. Life and communication can continue for ever, utilizing a finite store of energy, if
+the assumed scaling laws are valid.
+
+.... 
+
+Professional. phys icists who investigate the
+first three minutes or the first microsecond no longer
+need to feel shy when they talk about their work. But
+the end of the universe is another matter. I have
+searched the literature for papers about the end of the
+universe and found very f'ew
+
+"The more the universe seems comprehensible, the
+more it also seems pointless. " - Weinberg
+
+
+https://suli.pppl.gov/2019/course/RevModPhys.51.447.pdf
+---
+our pulsars should rotate but human slowly, sadly
+multiple events per even station? It doesn't seem like too much a lift
+pulsar beams should go off screen
+pulsar beams should rotate
+traveling through pulsar beams should be very close to fatal, adn actually fatal closer in
+zoomable system map, clicking makes something a target
+start angled away from planet

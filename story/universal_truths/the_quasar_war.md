@@ -10,7 +10,7 @@ While the Quasar War barely touched the population of Qasars (well over thirty m
 * It appeared that those someone(s) were acting across our light cone without regard for distance
 * These activites must have, absoluelty must have, must must must fact of the universe must, have taken place across a period of billions of years in the distat pasts and yet they appeared coupled to our particular 
 
-Interests were peaqued. Why did it happen? What did it mean? Was it an attack? Who was being attacked? Who was attacking?
+Interests were piqued. Why did it happen? What did it mean? Was it an attack? Who was being attacked? Who was attacking?
 
 Was it science? Fun? A message? Could be anything but the name Quasar War stuck.
 

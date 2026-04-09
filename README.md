@@ -43,6 +43,19 @@ npm run build         # builds WASM + TypeScript + Vite
 npm run preview
 ```
 
+## Testing
+
+E2E tests use [Playwright](https://playwright.dev/) with headless Chromium (SwiftShader for WebGL).
+
+```bash
+npx playwright install chromium   # first time only
+npm run test:e2e                  # headless
+npm run test:e2e:headed           # watch in a browser window
+npm run test:e2e:ui               # Playwright interactive UI
+```
+
+Tests live in `tests/specs/`. The framework exposes a dev-only bridge (`__GAME__`, `__STORE__`) so tests can inspect game state and trigger actions like hyperspace jumps without UI interaction.
+
 ## Architecture
 
 ```
