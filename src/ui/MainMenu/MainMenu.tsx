@@ -188,7 +188,7 @@ export function MainMenu({ onNewGame, onResume, invertControls, onToggleInvertCo
     <div className={styles.overlay}>
       <div className={styles.panel}>
         <div className={styles.header}>
-          <div className={styles.title}>THE YEARS BETWEEN THE STARS</div>
+          <div className={styles.title}>TIME IN TRANSIT</div>
           <div className={styles.buildTag} aria-hidden="true">{buildLabel}</div>
         </div>
         <div className={styles.menuOptions}>
