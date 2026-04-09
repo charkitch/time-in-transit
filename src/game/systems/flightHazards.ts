@@ -10,8 +10,19 @@ function proximityAlertLabel(entity: SceneEntity): string {
       return 'LANDING SITE IN RANGE';
     case 'dyson_shell':
       return 'PROXIMITY ALERT: DYSON SHELL';
+    case 'station':
+      return 'PROXIMITY ALERT: STATION';
+    case 'npc_ship':
+    case 'fleet_ship':
+      return 'PROXIMITY ALERT: VESSEL';
+    case 'planet':
+      return 'PROXIMITY ALERT: PLANETARY BODY';
+    case 'moon':
+      return 'PROXIMITY ALERT: LUNAR BODY';
+    case 'star':
+      return 'PROXIMITY ALERT: STELLAR BODY';
     default:
-      return `WARNING: ${entity.type.split('_').join(' ').toUpperCase()} PROXIMITY`;
+      return 'PROXIMITY ALERT';
   }
 }
 

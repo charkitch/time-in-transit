@@ -147,7 +147,7 @@ export class FlightModel {
       } else {
         const diff = _collisionVec.copy(shipPos).sub(body.worldPos);
         const dist = diff.length();
-        const minDist = body.collisionRadius + SHIP_RADIUS;
+        const minDist = body.collisionRadius;
         if (dist < minDist && dist > 0.001) {
           const normal = diff.normalize();
           shipPos.copy(body.worldPos).addScaledVector(normal, minDist);

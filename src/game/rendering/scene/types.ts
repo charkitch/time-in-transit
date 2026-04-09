@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 export interface SceneEntity {
   id: string;
+  name: string;
   group: THREE.Object3D;
   orbitRadius: number;
   orbitSpeed: number;

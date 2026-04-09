@@ -589,7 +589,7 @@ export class SceneRenderer {
         orbitPhase: planet.orbitPhase,
         type: 'planet',
         worldPos: new THREE.Vector3(),
-        collisionRadius: planet.radius,
+        collisionRadius: planet.radius * 1.04,
       });
       const siteClasses = this.addPlanetLandingSites({
         hostId: planet.id,
