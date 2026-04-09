@@ -58,6 +58,8 @@ pub enum GoodName {
     RelativisticAsh,
     #[serde(rename = "Pulsar Silk")]
     PulsarSilk,
+    #[serde(rename = "Combat Intelligence")]
+    CombatIntelligence,
 }
 
 impl GoodName {
@@ -84,6 +86,7 @@ impl GoodName {
         GoodName::ImpossibleSeeds,
         GoodName::RelativisticAsh,
         GoodName::PulsarSilk,
+        GoodName::CombatIntelligence,
     ];
 }
 
