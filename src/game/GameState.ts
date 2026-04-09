@@ -100,6 +100,7 @@ export interface GameStateData {
     canDockNow: boolean;
     canLandNow: boolean;
     canScanNow: boolean;
+    canHailNow: boolean;
   };
   time: number; // game time in seconds
 
@@ -146,6 +147,7 @@ export interface GameActions {
   setCanDockNow: (canDockNow: boolean) => void;
   setCanLandNow: (canLandNow: boolean) => void;
   setCanScanNow: (canScanNow: boolean) => void;
+  setCanHailNow: (canHailNow: boolean) => void;
   addCredits: (delta: number) => void;
   addCargo: (good: GoodName, qty: number, purchasePrice?: number) => void;
   removeCargo: (good: GoodName, qty: number) => void;
@@ -294,6 +296,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
     canDockNow: false,
     canLandNow: false,
     canScanNow: false,
+    canHailNow: false,
   },
   time: 0,
 
@@ -360,6 +363,9 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   )),
   setCanScanNow: (canScanNow) => set((s) => (
     s.ui.canScanNow === canScanNow ? {} : { ui: { ...s.ui, canScanNow } }
+  )),
+  setCanHailNow: (canHailNow) => set((s) => (
+    s.ui.canHailNow === canHailNow ? {} : { ui: { ...s.ui, canHailNow } }
   )),
   addCredits: (delta) => set(s => ({ player: { ...s.player, credits: s.player.credits + delta } })),
   addCargo: (good, qty, purchasePrice) => set(s => {
@@ -496,6 +502,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
         canDockNow: false,
         canLandNow: false,
         canScanNow: false,
+        canHailNow: false,
       },
     });
   },

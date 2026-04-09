@@ -60,6 +60,7 @@ export function HUD({
   const canDockNow = useGameState(s => s.ui.canDockNow);
   const canLandNow = useGameState(s => s.ui.canLandNow);
   const canScanNow = useGameState(s => s.ui.canScanNow);
+  const canHailNow = useGameState(s => s.ui.canHailNow);
   const galaxyYear = useGameState(s => s.galaxyYear);
   const knownFactions = useGameState(s => s.knownFactions);
   const currentSystemPayload = useGameState(s => s.currentSystemPayload);
@@ -307,7 +308,7 @@ export function HUD({
                 <div>
                   {targetEntity.type === 'landing_site'
                     ? (targetEntity.siteLabel ?? 'INTERACTION SITE')
-                    : (targetDyson ? targetDyson.name.toUpperCase() : targetEntity.id.replace(`${currentSystemId}-`, ''))}
+                    : (targetDyson ? targetDyson.name.toUpperCase() : targetEntity.id.replace(`${currentSystemId}-`, '').replace(/(\d+)$/, (_, n) => String(Number(n) + 1)))}
                 </div>
                 <div style={{ color: 'var(--color-hud-dim)', fontSize: '11px' }}>
                   DIST: {targetDist} wu
@@ -337,11 +338,6 @@ export function HUD({
                 )}
               </>
             )}
-            {targetEntity.type === 'npc_ship' && (
-              <div style={{ color: 'var(--color-station)', fontSize: '10px', marginTop: '4px', letterSpacing: '1px' }}>
-                H TO HAIL
-              </div>
-            )}
           </div>
         ) : (
           <div className={styles.targetInfo}>
@@ -359,7 +355,7 @@ export function HUD({
           <StatusBars />
         </div>
       )}
-      {!isMobileHUD && uiMode === 'flight' && (canDockNow || canLandNow || canScanNow) && (
+      {!isMobileHUD && uiMode === 'flight' && (canDockNow || canLandNow || canScanNow || canHailNow) && (
         <div className={styles.desktopActionStack}>
           {canDockNow && (
             <button type="button" className={`${styles.desktopActionButton} ${styles.desktopDockButton}`} onClick={onDock}>
@@ -374,6 +370,11 @@ export function HUD({
           {canScanNow && (
             <button type="button" className={`${styles.desktopActionButton} ${styles.desktopScanButton}`} onClick={onScan}>
               SCAN
+            </button>
+          )}
+          {canHailNow && (
+            <button type="button" className={`${styles.desktopActionButton} ${styles.desktopHailButton}`} onClick={onHail}>
+              HAIL
             </button>
           )}
         </div>

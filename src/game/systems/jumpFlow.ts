@@ -90,7 +90,7 @@ export function applySystemArrival(params: {
   const battle = sceneRenderer.getFleetBattle();
   if (battle) {
     const battlePlanet = systemData.planets.find(p => p.id === battle.planetId);
-    const planetName = battlePlanet ? battlePlanet.id.replace(`${targetId}-`, '') : 'UNKNOWN';
+    const planetName = battlePlanet ? battlePlanet.id.replace(`${targetId}-`, '').replace(/(\d+)$/, (_, n) => String(Number(n) + 1)) : 'UNKNOWN';
     lines.push(`FLEET ENGAGEMENT DETECTED NEAR ${planetName.toUpperCase()}`);
   }
   state.setSystemEntryLines(lines);
