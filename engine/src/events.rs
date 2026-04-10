@@ -83,16 +83,32 @@ fn check_condition(cond: &EventCondition, ctx: &EventContext) -> bool {
                 ct.chain_id == *chain_id && ct.target_system_id == ctx.current_system_id
             })
         }
+        EventCondition::GalacticFlag(flag) => ctx.player_state.player_history.galactic_flags.contains(flag),
+        EventCondition::GalacticFlagNotSet(flag) => !ctx.player_state.player_history.galactic_flags.contains(flag),
     }
 }
 
-fn event_available(event: &GameEvent, ctx: &EventContext) -> bool {
-    let choices = system_choices_or_default(ctx);
+/// Returns the selection weight for this event (0.0 = unavailable).
+fn event_weight(event: &GameEvent, ctx: &EventContext) -> f64 {
+    let prior = ctx.player_state.player_history.completed_events.get(&event.id);
 
-    if choices.completed_event_ids.iter().any(|id| id == &event.id) {
-        return false;
+    if let Some(completed) = prior {
+        let w = event.repeatability.repeat_weight();
+        if w == 0.0 { return 0.0; }
+        // Never repeat in the same system
+        if completed.system_id == ctx.current_system_id { return 0.0; }
+        // Suppress repeats within 20 galaxy years
+        if ctx.player_state.galaxy_year.saturating_sub(completed.galaxy_year) < 20 { return 0.0; }
+        if !conditions_met(event, ctx) { return 0.0; }
+        return w;
     }
 
+    if !conditions_met(event, ctx) { return 0.0; }
+    1.0
+}
+
+fn conditions_met(event: &GameEvent, ctx: &EventContext) -> bool {
+    let choices = system_choices_or_default(ctx);
     let inline_ok = event.requires.iter().all(|c| check_condition(c, ctx));
 
     let trigger_ok = match &event.triggered_by {
@@ -126,23 +142,33 @@ fn pool_events(pool: EventPool) -> Vec<GameEvent> {
 }
 
 pub fn select_game_event(pool: EventPool, ctx: &EventContext, seed: u32) -> Option<GameEvent> {
-    let mut candidates = pool_events(pool);
+    let mut all = pool_events(pool);
     if !matches!(pool, EventPool::Triggered) {
-        candidates.extend(pool_events(EventPool::Triggered));
+        all.extend(pool_events(EventPool::Triggered));
     }
 
-    let candidates: Vec<GameEvent> = candidates
+    let weighted: Vec<(GameEvent, f64)> = all
         .into_iter()
-        .filter(|event| event_available(event, ctx))
+        .filter_map(|event| {
+            let w = event_weight(&event, ctx);
+            if w > 0.0 { Some((event, w)) } else { None }
+        })
         .collect();
 
-    if candidates.is_empty() {
+    if weighted.is_empty() {
         return None;
     }
 
+    let total: f64 = weighted.iter().map(|(_, w)| w).sum();
     let mut rng = PRNG::new(seed);
-    let idx = (rng.next() * candidates.len() as f64).floor() as usize;
-    Some(candidates[idx].clone())
+    let mut roll = rng.next() * total;
+    for (event, w) in &weighted {
+        roll -= w;
+        if roll <= 0.0 {
+            return Some(event.clone());
+        }
+    }
+    Some(weighted.last().unwrap().0.clone())
 }
 
 #[cfg(test)]
@@ -181,6 +207,7 @@ mod tests {
             faction_memory: HashMap::new(),
             seen_system_dialog_ids: vec![],
             chain_targets: vec![],
+            player_history: crate::types::PlayerHistory::default(),
         }
     }
 

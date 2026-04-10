@@ -495,6 +495,22 @@ pub struct MarketEntry {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CompletedEvent {
+    pub system_id: u32,
+    pub galaxy_year: u32,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerHistory {
+    #[serde(default)]
+    pub completed_events: HashMap<String, CompletedEvent>,
+    #[serde(default)]
+    pub galactic_flags: HashSet<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SystemChoices {
     pub trading_reputation: i32,
     pub banned_goods: Vec<GoodName>,
@@ -540,6 +556,8 @@ pub struct PlayerState {
     pub seen_system_dialog_ids: Vec<String>,
     #[serde(default)]
     pub chain_targets: Vec<ChainTarget>,
+    #[serde(default)]
+    pub player_history: PlayerHistory,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -581,6 +599,8 @@ pub struct ChoiceEffect {
     pub sets_flags: Vec<String>,
     #[serde(default)]
     pub fires: Vec<String>,
+    #[serde(default)]
+    pub sets_galactic_flags: Vec<String>,
 }
 
 fn default_price_mod() -> f64 { 1.0 }
@@ -625,6 +645,32 @@ pub enum EventCondition {
     HostTypeIs(Vec<String>),
     TriggerFired(String),
     ChainTargetHere(String),
+    GalacticFlag(String),
+    GalacticFlagNotSet(String),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Repeatability {
+    Unique,
+    Rare,
+    Uncommon,
+    Common,
+}
+
+impl Default for Repeatability {
+    fn default() -> Self { Repeatability::Unique }
+}
+
+impl Repeatability {
+    pub fn repeat_weight(self) -> f64 {
+        match self {
+            Repeatability::Unique => 0.0,
+            Repeatability::Rare => 0.25,
+            Repeatability::Uncommon => 0.5,
+            Repeatability::Common => 1.0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -640,6 +686,8 @@ pub struct GameEvent {
     pub triggered_by: Option<String>,
     #[serde(default)]
     pub triggered_only: bool,
+    #[serde(default)]
+    pub repeatability: Repeatability,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

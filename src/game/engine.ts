@@ -203,6 +203,7 @@ export interface ChoiceEffect {
   fuelReward: number;
   setsFlags: string[];
   fires: string[];
+  setsGalacticFlags: string[];
 }
 
 export interface EventMoment {
@@ -323,6 +324,10 @@ export interface WasmPlayerState {
   }>;
   seenSystemDialogIds: string[];
   chainTargets: ChainTarget[];
+  playerHistory: {
+    completedEvents: Record<string, { systemId: number; galaxyYear: number }>;
+    galacticFlags: string[];
+  };
 }
 
 // ─── Engine API ─────────────────────────────────────────────────────────────

@@ -52,6 +52,7 @@ export function buildWasmPlayerState(
     factionMemory,
     seenSystemDialogIds: [...state.seenSystemDialogIds],
     chainTargets: state.chainTargets,
+    playerHistory: state.playerHistory,
   };
 }
 

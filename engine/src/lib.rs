@@ -64,6 +64,7 @@ pub fn init_game(player_state_json: &str) -> Result<String, JsValue> {
             faction_memory: std::collections::HashMap::new(),
             seen_system_dialog_ids: vec![],
             chain_targets: vec![],
+            player_history: crate::types::PlayerHistory::default(),
         }
     } else {
         serde_json::from_str(player_state_json)
@@ -315,6 +316,7 @@ mod tests {
             faction_memory: HashMap::new(),
             seen_system_dialog_ids: vec![],
             chain_targets: vec![],
+            player_history: crate::types::PlayerHistory::default(),
         }
     }
 

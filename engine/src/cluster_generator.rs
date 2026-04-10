@@ -78,7 +78,7 @@ pub fn generate_cluster() -> Vec<StarSystemData> {
 
     // Keep the home system visually distinctive
     if !systems.is_empty() {
-        systems[0].star_type = StarType::A;
+        systems[0].star_type = StarType::G;
     }
 
     // Hand-place the iron star near origin so it's reachable early.

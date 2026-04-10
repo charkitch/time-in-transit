@@ -174,6 +174,8 @@ export class InteractionSystem {
           firedTriggers: fx.fires ?? [],
         };
         state.recordPlayerChoice(systemId, rootEventId ?? event.id, partial);
+        state.recordGlobalEventCompletion(rootEventId ?? event.id, systemId, state.galaxyYear);
+        (fx.setsGalacticFlags ?? []).forEach(flag => state.addGalacticFlag(flag));
 
         if (fx.creditsReward) state.addCredits(fx.creditsReward);
         if (fx.fuelReward) state.setFuel(state.player.fuel + fx.fuelReward);

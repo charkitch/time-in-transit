@@ -125,6 +125,12 @@ export interface GameStateData {
   // ── Story chain targets ────────────────────────────────────────────────
   chainTargets: ChainTarget[];
   scannedHosts: Record<number, Record<string, number>>; // systemId -> hostId -> galaxyYear scanned
+
+  // ── Global player history (cross-system) ──────────────────────────────
+  playerHistory: {
+    completedEvents: Record<string, { systemId: number; galaxyYear: number }>;
+    galacticFlags: string[];
+  };
 }
 
 export interface GameActions {
@@ -178,6 +184,8 @@ export interface GameActions {
   setGalaxySimState: (simState: SystemSimState[] | null) => void;
   setChainTargets: (targets: ChainTarget[]) => void;
   markHostScanned: (systemId: number, hostId: string, galaxyYear: number) => void;
+  recordGlobalEventCompletion: (eventId: string, systemId: number, galaxyYear: number) => void;
+  addGalacticFlag: (flag: string) => void;
 }
 
 // Cluster is set from Rust engine init — starts empty, populated by Game.constructor
@@ -214,6 +222,10 @@ interface SaveData {
   seenSystemDialogIds: string[];
   chainTargets: ChainTarget[];
   scannedHosts?: Record<number, Record<string, number>>;
+  playerHistory?: {
+    completedEvents?: Record<string, { systemId: number; galaxyYear: number }>;
+    galacticFlags?: string[];
+  };
 }
 
 function migrateLegacyGoodKeys<T>(record: Partial<Record<GoodName, T>> | undefined): Partial<Record<GoodName, T>> | undefined {
@@ -321,6 +333,9 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   // Story chain targets
   chainTargets: [],
   scannedHosts: {},
+
+  // Global player history
+  playerHistory: { completedEvents: {}, galacticFlags: [] },
 
   setInvertControls: (invert) => {
     set({ invertControls: invert });
@@ -430,6 +445,20 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   recordVisitYear: (systemId, year) => set(s => ({
     lastVisitYear: { ...s.lastVisitYear, [systemId]: year },
   })),
+  recordGlobalEventCompletion: (eventId, systemId, galaxyYear) => set(s => ({
+    playerHistory: {
+      ...s.playerHistory,
+      completedEvents: { ...s.playerHistory.completedEvents, [eventId]: { systemId, galaxyYear } },
+    },
+  })),
+  addGalacticFlag: (flag) => set(s => ({
+    playerHistory: {
+      ...s.playerHistory,
+      galacticFlags: s.playerHistory.galacticFlags.includes(flag)
+        ? s.playerHistory.galacticFlags
+        : [...s.playerHistory.galacticFlags, flag],
+    },
+  })),
 
   addKnownFaction: (id) => set(s => {
     const known = new Set(s.knownFactions);
@@ -491,6 +520,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       galaxySimState: null,
       chainTargets: [],
       scannedHosts: {},
+      playerHistory: { completedEvents: {}, galacticFlags: [] },
       ui: {
         mode: 'flight',
         alertMessage: null,
@@ -531,6 +561,10 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       seenSystemDialogIds: saved.seenSystemDialogIds ?? [],
       chainTargets: saved.chainTargets ?? [],
       scannedHosts: saved.scannedHosts ?? {},
+      playerHistory: {
+        completedEvents: saved.playerHistory?.completedEvents ?? {},
+        galacticFlags: saved.playerHistory?.galacticFlags ?? [],
+      },
     }));
   },
 
@@ -554,6 +588,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       seenSystemDialogIds: s.seenSystemDialogIds,
       chainTargets: s.chainTargets,
       scannedHosts: s.scannedHosts,
+      playerHistory: s.playerHistory,
     };
     localStorage.setItem('space-game-save', JSON.stringify(data));
   },
