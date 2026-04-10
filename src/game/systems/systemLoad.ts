@@ -44,6 +44,7 @@ export function buildWasmPlayerState(
     cargoCostBasis,
     fuel: state.player.fuel,
     shields: state.player.shields,
+    heat: state.player.heat,
     currentSystemId: state.currentSystemId,
     visitedSystems: Array.from(state.visitedSystems),
     galaxyYear: state.galaxyYear,
@@ -55,14 +56,6 @@ export function buildWasmPlayerState(
     chainTargets: state.chainTargets,
     playerHistory: state.playerHistory,
   };
-}
-
-export function discoverFactionsFromSystem(
-  state: ReturnType<typeof useGameState.getState>,
-  factionState: { controllingFactionId: string | null; contestingFactionId: string | null },
-): void {
-  if (factionState.controllingFactionId) state.addKnownFaction(factionState.controllingFactionId);
-  if (factionState.contestingFactionId) state.addKnownFaction(factionState.contestingFactionId);
 }
 
 export function placeShipNearMainStation(sceneRenderer: SceneRenderer, systemData: SolarSystemData): void {

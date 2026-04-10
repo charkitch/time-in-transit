@@ -9,6 +9,12 @@ pub const GALAXY_YEAR_START: u32 = 3200;
 pub const ERA_LENGTH: u32 = 250;
 pub const STARTING_CREDITS: i32 = 1000;
 pub const STARTING_FUEL: f64 = 7.0;
+pub const MAX_CARGO: u32 = 20;
+pub const HEAT_MAX: f64 = 100.0;
+pub const COOLING_RATE: f64 = 10.0;
+pub const OVERHEAT_SHIELD_DMG: f64 = 20.0;
+pub const SHIELD_REGEN_RATE: f64 = 5.0;
+pub const REGEN_HEAT_CEIL: f64 = 50.0;
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
@@ -558,6 +564,8 @@ pub struct PlayerState {
     pub chain_targets: Vec<ChainTarget>,
     #[serde(default)]
     pub player_history: PlayerHistory,
+    #[serde(default)]
+    pub heat: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -747,6 +755,15 @@ pub struct SystemPayload {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct JumpLogEntry {
+    pub from_system_id: u32,
+    pub to_system_id: u32,
+    pub years_elapsed: u32,
+    pub galaxy_year_after: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct JumpResult {
     pub system_payload: SystemPayload,
     pub cluster_summary: Vec<ClusterSystemSummary>,
@@ -754,6 +771,8 @@ pub struct JumpResult {
     pub new_galaxy_year: u32,
     pub galaxy_sim_state: Vec<SystemSimState>,
     pub chain_targets: Vec<ChainTarget>,
+    pub jump_log_entry: JumpLogEntry,
+    pub player_state: PlayerState,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -783,4 +802,56 @@ pub struct SystemSimState {
     pub prosperity: f64,       // 0.0 = collapse, 1.0 = boom
     pub faction_strength: HashMap<String, f64>,
     pub recent_events: Vec<String>,
+}
+
+// ─── Flight Tick Types ──────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum HazardType {
+    None,
+    Overheat,
+    StarCollision,
+    PlanetCollision,
+    MoonCollision,
+    StationCollision,
+    DysonShellCollision,
+    MicroquasarJet,
+    PulsarBeam,
+    BlackHole,
+    TidalDisruption,
+    BattleZone,
+    XRayStream,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CargoHarvest {
+    pub good: GoodName,
+    pub qty: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlightTickContext {
+    pub dt: f64,
+    pub fuel_rate: f64,
+    pub heat_rate: f64,
+    pub cooling_active: bool,
+    pub shield_damage_rate: f64,
+    pub active_hazard: HazardType,
+    pub is_dead: bool,
+    #[serde(default)]
+    pub cargo_harvests: Vec<CargoHarvest>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlightTickResult {
+    pub fuel: f64,
+    pub heat: f64,
+    pub shields: f64,
+    pub cargo: HashMap<GoodName, u32>,
+    pub dead: bool,
+    pub death_cause: Option<HazardType>,
+    pub cargo_full: bool,
 }

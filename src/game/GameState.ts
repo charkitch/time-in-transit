@@ -10,6 +10,8 @@ import type {
   MarketEntry,
   SystemEntryDialog,
   ChainTarget,
+  WasmPlayerState,
+  JumpLogEntry,
 } from './engine';
 import { STARTING_CREDITS, STARTING_FUEL, STARTING_SYSTEM_ID, HYPERSPACE, GALAXY_YEAR_START, type GoodName } from './constants';
 import type { NPCCargoEntry } from './mechanics/NPCSystem';
@@ -47,12 +49,7 @@ export interface PlayerState {
   targetId: string | null;
 }
 
-export interface JumpLogEntry {
-  fromSystemId: SystemId;
-  toSystemId: SystemId;
-  yearsElapsed: number;
-  galaxyYearAfter: GalaxyYear;
-}
+export type { JumpLogEntry } from './engine';
 
 export interface SystemChoices {
   tradingReputation: number;    // accumulated; affects sell price
@@ -158,6 +155,7 @@ export interface GameActions {
   addCredits: (delta: number) => void;
   addCargo: (good: GoodName, qty: number, purchasePrice?: number) => void;
   removeCargo: (good: GoodName, qty: number) => void;
+  setCargoFromEngine: (cargo: Partial<Record<GoodName, number>>) => void;
   markVisited: (id: SystemId) => void;
   tickTime: (dt: number) => void;
   loadSave: () => void;
@@ -180,6 +178,7 @@ export interface GameActions {
   markSystemDialogSeen: (id: string) => void;
 
   // ── Engine integration actions ────────────────────────────────────────
+  syncPlayerStateFromEngine: (ps: WasmPlayerState) => void;
   setCluster: (cluster: StarSystemData[]) => void;
   setClusterSummary: (summary: ClusterSystemSummary[]) => void;
   setGalaxySimState: (simState: SystemSimState[] | null) => void;
@@ -406,6 +405,12 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
     }
     return { player: { ...s.player, cargo, cargoCostBasis: basis } };
   }),
+  setCargoFromEngine: (cargo) => set(s => ({
+    player: {
+      ...s.player,
+      cargo,
+    },
+  })),
   markVisited: (id) => set(s => {
     const v = new Set(s.visitedSystems);
     v.add(id);
@@ -475,6 +480,30 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
     seenSystemDialogIds: s.seenSystemDialogIds.includes(id)
       ? s.seenSystemDialogIds
       : [...s.seenSystemDialogIds, id],
+  })),
+  syncPlayerStateFromEngine: (ps) => set(s => ({
+    player: {
+      ...s.player,
+      credits: ps.credits,
+      cargo: ps.cargo as Partial<Record<GoodName, number>>,
+      cargoCostBasis: ps.cargoCostBasis as Partial<Record<GoodName, number>>,
+      fuel: ps.fuel,
+      shields: ps.shields,
+      heat: ps.heat,
+    },
+    currentSystemId: ps.currentSystemId,
+    visitedSystems: new Set(ps.visitedSystems),
+    galaxyYear: ps.galaxyYear,
+    playerChoices: normalizeSystemChoicesMap(ps.playerChoices as Record<SystemId, SystemChoices>),
+    lastVisitYear: ps.lastVisitYear,
+    knownFactions: new Set(ps.knownFactions),
+    factionMemory: ps.factionMemory as Record<SystemId, FactionMemoryEntry>,
+    seenSystemDialogIds: [...new Set([...s.seenSystemDialogIds, ...ps.seenSystemDialogIds])],
+    chainTargets: ps.chainTargets,
+    playerHistory: {
+      completedEvents: ps.playerHistory.completedEvents,
+      galacticFlags: ps.playerHistory.galacticFlags,
+    },
   })),
   setCluster: (cluster) => {
     CLUSTER = cluster;

@@ -2,7 +2,25 @@ import * as THREE from 'three';
 import type { FleetBattle } from '../mechanics/FleetBattleSystem';
 import type { SceneEntity } from '../rendering/SceneRenderer';
 import { useGameState } from '../GameState';
-import type { GoodName } from '../constants';
+import type { HazardType } from '../engine';
+
+export interface HazardEffect {
+  heatRate: number;
+  shieldDamageRate: number;
+  fuelRate: number;
+  alert: string | null;
+  hazardType: HazardType;
+  zone: 'scooping' | 'harvesting' | 'lethal' | null;
+}
+
+const EMPTY_EFFECT: HazardEffect = {
+  heatRate: 0,
+  shieldDamageRate: 0,
+  fuelRate: 0,
+  alert: null,
+  hazardType: 'None',
+  zone: null,
+};
 
 function proximityAlertLabel(entity: SceneEntity): string {
   switch (entity.type) {
@@ -64,13 +82,11 @@ export function checkProximityAlerts(params: {
 
 export function checkXRayStreamHazard(params: {
   pos: THREE.Vector3;
-  dt: number;
-  state: ReturnType<typeof useGameState.getState>;
   curve: Float32Array | null;
   hazardRadius: number;
-}): void {
-  const { pos, dt, state, curve, hazardRadius } = params;
-  if (!curve) return;
+}): HazardEffect {
+  const { pos, curve, hazardRadius } = params;
+  if (!curve) return EMPTY_EFFECT;
 
   const pointCount = curve.length / 3;
   let minDistSq = Infinity;
@@ -99,11 +115,18 @@ export function checkXRayStreamHazard(params: {
   const minDist = Math.sqrt(minDistSq);
 
   if (minDist < hazardRadius) {
-    state.setHeat(state.player.heat + 30 * dt);
-    state.setAlert('WARNING: X-RAY TRANSFER STREAM');
+    return {
+      heatRate: 30,
+      shieldDamageRate: 0,
+      fuelRate: 0,
+      alert: 'WARNING: X-RAY TRANSFER STREAM',
+      hazardType: 'XRayStream',
+      zone: 'lethal',
+    };
   } else if (minDist < warningRadius) {
-    state.setAlert('CAUTION: X-RAY STREAM NEARBY');
+    return { ...EMPTY_EFFECT, alert: 'CAUTION: X-RAY STREAM NEARBY' };
   }
+  return EMPTY_EFFECT;
 }
 
 type ConeBeamZone = 'inside' | 'warning' | null;
@@ -132,83 +155,81 @@ function checkConeBeamZone(params: {
 
 export function checkMicroquasarJetHazard(params: {
   pos: THREE.Vector3;
-  dt: number;
-  state: ReturnType<typeof useGameState.getState>;
   jetParams: { axis: THREE.Vector3; halfAngle: number; length: number } | null;
   starWorldPos: THREE.Vector3 | null;
-  isDead: boolean;
-  onDeath: (message: string[]) => void;
-}): 'lethal' | 'scooping' | null {
-  const { pos, dt, state, jetParams, starWorldPos, isDead, onDeath } = params;
-  if (!jetParams || !starWorldPos) return null;
+}): HazardEffect {
+  const { pos, jetParams, starWorldPos } = params;
+  if (!jetParams || !starWorldPos) return EMPTY_EFFECT;
 
   const { zone } = checkConeBeamZone({ pos, beamParams: jetParams, origin: starWorldPos, warningMul: 2.5 });
 
   if (zone === 'inside') {
-    state.setShields(state.player.shields - 60 * dt);
-    state.setHeat(state.player.heat + 80 * dt);
-    state.setAlert('RELATIVISTIC JET — HULL CRITICAL');
-    if (state.player.shields <= 0 && !isDead) {
-      onDeath(['RELATIVISTIC JET', 'Ship vaporized by relativistic plasma outflow.', 'No wreckage recovered.']);
-    }
-    return 'lethal';
+    return {
+      heatRate: 80,
+      shieldDamageRate: 60,
+      fuelRate: 0,
+      alert: 'RELATIVISTIC JET — HULL CRITICAL',
+      hazardType: 'MicroquasarJet',
+      zone: 'lethal',
+    };
   } else if (zone === 'warning') {
-    state.setHeat(state.player.heat + 10 * dt);
-    state.setAlert('WARNING: RELATIVISTIC JET PROXIMITY');
-    return 'scooping';
+    return {
+      heatRate: 10,
+      shieldDamageRate: 0,
+      fuelRate: 1.5,
+      alert: 'WARNING: RELATIVISTIC JET PROXIMITY',
+      hazardType: 'MicroquasarJet',
+      zone: 'scooping',
+    };
   }
-  return null;
+  return EMPTY_EFFECT;
 }
 
 export function checkPulsarBeamHazard(params: {
   pos: THREE.Vector3;
-  dt: number;
-  state: ReturnType<typeof useGameState.getState>;
   beamParams: { axis: THREE.Vector3; halfAngle: number; length: number };
   starWorldPos: THREE.Vector3 | null;
   starRadius: number;
-  isDead: boolean;
-  onDeath: (message: string[]) => void;
-}): 'lethal' | 'harvesting' | null {
-  const { pos, dt, state, beamParams, starWorldPos, starRadius, isDead, onDeath } = params;
-  if (!starWorldPos) return null;
+}): HazardEffect {
+  const { pos, beamParams, starWorldPos, starRadius } = params;
+  if (!starWorldPos) return EMPTY_EFFECT;
 
   const { zone, dist } = checkConeBeamZone({ pos, beamParams, origin: starWorldPos, warningMul: 3.0 });
 
   if (zone === 'inside') {
     const proximityFactor = 1 - Math.max(0, Math.min(1, dist / (starRadius * 40)));
-    const shieldDmg = 40 + 110 * proximityFactor; // 40–150 /s
-    const heatDmg = 50 + 70 * proximityFactor;    // 50–120 /s
-    state.setShields(state.player.shields - shieldDmg * dt);
-    state.setHeat(state.player.heat + heatDmg * dt);
-    state.setAlert(proximityFactor > 0.5
-      ? 'PULSAR BEAM — LETHAL RADIATION'
-      : 'PULSAR BEAM — HULL CRITICAL');
-    if (state.player.shields <= 0 && !isDead) {
-      onDeath(proximityFactor > 0.5
-        ? ['LETHAL RADIATION', 'Pulsar beam stripped hull at close range.', 'Reactor containment failed instantly.']
-        : ['RADIATION EXPOSURE', 'Sustained pulsar radiation overwhelmed shields.', 'Hull breach across all decks.']);
-    }
-    return 'lethal';
+    const shieldDmg = 40 + 110 * proximityFactor;
+    const heatDmg = 50 + 70 * proximityFactor;
+    return {
+      heatRate: heatDmg,
+      shieldDamageRate: shieldDmg,
+      fuelRate: 0,
+      alert: proximityFactor > 0.5
+        ? 'PULSAR BEAM — LETHAL RADIATION'
+        : 'PULSAR BEAM — HULL CRITICAL',
+      hazardType: 'PulsarBeam',
+      zone: 'lethal',
+    };
   } else if (zone === 'warning') {
-    state.setHeat(state.player.heat + 15 * dt);
-    state.setAlert('WARNING: PULSAR BEAM PROXIMITY');
-    return 'harvesting';
+    return {
+      heatRate: 15,
+      shieldDamageRate: 0,
+      fuelRate: 0,
+      alert: 'WARNING: PULSAR BEAM PROXIMITY',
+      hazardType: 'PulsarBeam',
+      zone: 'harvesting',
+    };
   }
-  return null;
+  return EMPTY_EFFECT;
 }
 
 export function checkBlackHoleHazard(params: {
   pos: THREE.Vector3;
-  dt: number;
-  state: ReturnType<typeof useGameState.getState>;
   starWorldPos: THREE.Vector3 | null;
   starRadius: number;
-  isDead: boolean;
-  onDeath: (message: string[]) => void;
-}): void {
-  const { pos, dt, state, starWorldPos, starRadius, isDead, onDeath } = params;
-  if (!starWorldPos) return;
+}): HazardEffect {
+  const { pos, starWorldPos, starRadius } = params;
+  if (!starWorldPos) return EMPTY_EFFECT;
 
   const dist = pos.distanceTo(starWorldPos);
   const killZone = starRadius * 1.5;
@@ -216,89 +237,58 @@ export function checkBlackHoleHazard(params: {
   const warningZone = starRadius * 5;
 
   if (dist < killZone) {
-    state.setShields(state.player.shields - 200 * dt);
-    state.setHeat(state.player.heat + 100 * dt);
-    state.setAlert('EVENT HORIZON — NO ESCAPE');
-    if (state.player.shields <= 0 && !isDead) {
-      onDeath(['EVENT HORIZON', 'Crossed the point of no return.', 'Ship crushed by tidal forces.']);
-    }
+    return {
+      heatRate: 100,
+      shieldDamageRate: 200,
+      fuelRate: 0,
+      alert: 'EVENT HORIZON — NO ESCAPE',
+      hazardType: 'BlackHole',
+      zone: 'lethal',
+    };
   } else if (dist < damageZone) {
-    state.setShields(state.player.shields - 40 * dt);
-    state.setHeat(state.player.heat + 50 * dt);
-    state.setAlert('TIDAL FORCES — HULL STRESS CRITICAL');
-    if (state.player.shields <= 0 && !isDead) {
-      onDeath(['TIDAL DISRUPTION', 'Gravitational shear exceeded structural limits.', 'Hull torn apart.']);
-    }
+    return {
+      heatRate: 50,
+      shieldDamageRate: 40,
+      fuelRate: 0,
+      alert: 'TIDAL FORCES — HULL STRESS CRITICAL',
+      hazardType: 'TidalDisruption',
+      zone: 'lethal',
+    };
   } else if (dist < warningZone) {
-    state.setAlert('WARNING: GRAVITATIONAL ANOMALY');
+    return { ...EMPTY_EFFECT, alert: 'WARNING: GRAVITATIONAL ANOMALY' };
   }
+  return EMPTY_EFFECT;
 }
 
-export function applyBattleZoneEffects(params: {
+export function checkBattleZoneHazard(params: {
   pos: THREE.Vector3;
-  dt: number;
-  state: ReturnType<typeof useGameState.getState>;
   battle: FleetBattle | null;
   battleDangerRange: number;
-  combatIntelTimer: number;
-  combatIntelInterval: number;
+  cargoUsed: number;
   maxCargo: number;
-  combatIntelGood: GoodName;
-  isDead: boolean;
-  onDeath: (message: string[]) => void;
-}): number {
-  const {
-    pos,
-    dt,
-    state,
-    battle,
-    battleDangerRange,
-    combatIntelTimer,
-    combatIntelInterval,
-    maxCargo,
-    combatIntelGood,
-    isDead,
-    onDeath,
-  } = params;
-
-  if (!battle) {
-    return 0;
-  }
+}): HazardEffect {
+  const { pos, battle, battleDangerRange, cargoUsed, maxCargo } = params;
+  if (!battle) return EMPTY_EFFECT;
 
   const dist = pos.distanceTo(battle.position);
-  if (dist >= battle.noGoRadius) {
-    return 0;
-  }
+  if (dist >= battle.noGoRadius) return EMPTY_EFFECT;
 
-  let nextTimer = combatIntelTimer;
-  let cargoUsed = Object.values(state.player.cargo).reduce((sum, qty) => sum + (qty ?? 0), 0);
-
-  let gatheringIntel = false;
-  if (cargoUsed < maxCargo) {
-    nextTimer += dt;
-    while (nextTimer >= combatIntelInterval && cargoUsed < maxCargo) {
-      state.addCargo(combatIntelGood, 1, 0);
-      nextTimer -= combatIntelInterval;
-      cargoUsed++;
-    }
-    gatheringIntel = cargoUsed < maxCargo;
-  } else {
-    nextTimer = 0;
-  }
+  const gatheringIntel = cargoUsed < maxCargo;
 
   if (dist < battleDangerRange) {
-    state.setShields(state.player.shields - 20 * dt);
-    state.setHeat(state.player.heat + 25 * dt);
-    state.setAlert('TAKING FIRE — COMBAT ZONE');
-    if (state.player.shields <= 0 && !isDead) {
-      onDeath(['COMBAT CASUALTY', 'Destroyed by crossfire in active battle zone.', 'Escape pods deployed.']);
-    }
-  } else {
-    state.setAlert(gatheringIntel ? 'COLLECTING COMBAT INTELLIGENCE' : 'WARNING: ACTIVE COMBAT ZONE');
+    return {
+      heatRate: 25,
+      shieldDamageRate: 20,
+      fuelRate: 0,
+      alert: 'TAKING FIRE — COMBAT ZONE',
+      hazardType: 'BattleZone',
+      zone: 'lethal',
+    };
   }
-
-  if (cargoUsed >= maxCargo) {
-    return 0;
-  }
-  return nextTimer;
+  return {
+    ...EMPTY_EFFECT,
+    alert: gatheringIntel ? 'COLLECTING COMBAT INTELLIGENCE' : 'WARNING: ACTIVE COMBAT ZONE',
+    hazardType: 'BattleZone',
+    zone: gatheringIntel ? 'harvesting' : null,
+  };
 }

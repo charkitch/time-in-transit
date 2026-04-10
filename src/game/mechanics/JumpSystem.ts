@@ -5,8 +5,7 @@ import type { ScanningSystem } from './ScanningSystem';
 import type { FlightHazardSystem } from './FlightHazardSystem';
 import { useGameState } from '../GameState';
 import { HYPERSPACE } from '../constants';
-import { engineJumpToSystem, type SystemPayload } from '../engine';
-import { buildWasmPlayerState, discoverFactionsFromSystem } from '../systems/systemLoad';
+import { engineJumpToSystem, type SystemPayload, type WasmPlayerState } from '../engine';
 import { canJump, jumpCost } from './hyperspaceCalc';
 
 const INFINITE_FUEL_DEV = import.meta.env.DEV;
@@ -21,6 +20,7 @@ export class JumpSystem {
   private hyperspaceActive = false;
   private hyperspaceStartTime = 0;
   private pendingSystemPayload: SystemPayload | null = null;
+  private pendingPlayerSnapshot: WasmPlayerState | null = null;
 
   constructor(
     private sceneRenderer: SceneRenderer,
@@ -63,34 +63,27 @@ export class JumpSystem {
 
   executeJump(): void {
     const state = useGameState.getState();
+    if (this.hyperspaceActive) return;
     const targetId = state.ui.hyperspaceTarget;
     if (targetId === null) return;
 
     const currentSys = state.cluster[state.currentSystemId];
     const targetSys = state.cluster[targetId];
-    const cost = jumpCost(currentSys, targetSys);
+    const cost = INFINITE_FUEL_DEV ? 0 : jumpCost(currentSys, targetSys);
 
-    const jumpResult = engineJumpToSystem(targetId, buildWasmPlayerState(state));
+    const jumpResult = engineJumpToSystem(targetId, cost);
 
-    // Apply jump execution inline (absorbed from jumpFlow.ts)
-    if (!INFINITE_FUEL_DEV) {
-      state.setFuel(state.player.fuel - cost);
-    } else if (state.player.fuel < HYPERSPACE.tankSize) {
+    // Sync all player state from Rust snapshot
+    state.syncPlayerStateFromEngine(jumpResult.playerState);
+    if (INFINITE_FUEL_DEV) {
       state.setFuel(HYPERSPACE.tankSize);
     }
-
     state.setClusterSummary(jumpResult.clusterSummary);
     state.setGalaxySimState(jumpResult.galaxySimState);
-    state.setChainTargets(jumpResult.chainTargets);
-    state.advanceGalaxyYear(jumpResult.yearsElapsed);
-    state.addJumpLogEntry({
-      fromSystemId: state.currentSystemId,
-      toSystemId: targetId,
-      yearsElapsed: jumpResult.yearsElapsed,
-      galaxyYearAfter: jumpResult.newGalaxyYear,
-    });
+    state.addJumpLogEntry(jumpResult.jumpLogEntry);
 
     this.pendingSystemPayload = jumpResult.systemPayload;
+    this.pendingPlayerSnapshot = jumpResult.playerState;
 
     this.hyperspaceActive = true;
     this.hyperspaceTimer = HYPERSPACE.duration;
@@ -138,6 +131,7 @@ export class JumpSystem {
     this.hyperspaceTimer = 0;
     this.hyperspaceStartTime = 0;
     this.pendingSystemPayload = null;
+    this.pendingPlayerSnapshot = null;
   }
 
   private arriveInSystem(targetId: SystemId): void {
@@ -163,7 +157,6 @@ export class JumpSystem {
       const starData = state.cluster[targetId];
 
       state.setCurrentSystemPayload(targetId, payload);
-      state.markVisited(targetId);
 
       this.sceneRenderer.loadSystem(
         systemData,
@@ -192,14 +185,6 @@ export class JumpSystem {
       }
       state.setSystemEntryLines(lines);
 
-      const factionState = payload.factionState;
-      discoverFactionsFromSystem(state, factionState);
-      state.setFactionMemory(targetId, {
-        factionId: factionState.controllingFactionId,
-        contestingFactionId: factionState.contestingFactionId,
-        galaxyYear: state.galaxyYear,
-      });
-
       state.setUIMode('flight');
 
       this.scanning.syncFromState(state);
@@ -209,6 +194,7 @@ export class JumpSystem {
       if (
         targetId !== FIRST_SYSTEM_ID
         && !refreshed.pendingGameEvent
+        && !refreshed.pendingSystemEntryDialog
         && payload.gameEvent
         && this.callbacks.shouldTriggerEvent(SYSTEM_ENTRY_EVENT_CHANCE)
       ) {

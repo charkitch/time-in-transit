@@ -6,6 +6,10 @@ export function canJump(
   targetSystem: StarSystemData,
   fuel: number,
 ): { ok: boolean; reason?: string } {
+  if (!import.meta.env.DEV && targetSystem.starType === 'IRON') {
+    return { ok: false, reason: 'Unknown region — navigation unavailable' };
+  }
+
   const dx = targetSystem.x - currentSystem.x;
   const dy = targetSystem.y - currentSystem.y;
   const dist = Math.sqrt(dx * dx + dy * dy);

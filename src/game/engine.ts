@@ -13,6 +13,13 @@ import initWasm, {
   get_game_event,
   get_landing_event,
   get_cluster_summary,
+  get_player_state,
+  set_player_state,
+  apply_choice_effect,
+  trade_buy,
+  trade_sell,
+  tick_flight,
+  respawn as wasm_respawn,
 } from '../../engine/pkg/time_in_transit_engine';
 import type { StationArchetype } from './archetypes';
 
@@ -269,6 +276,13 @@ export interface SystemPayload {
   systemEntryDialog: SystemEntryDialog | null;
 }
 
+export interface JumpLogEntry {
+  fromSystemId: SystemId;
+  toSystemId: SystemId;
+  yearsElapsed: number;
+  galaxyYearAfter: GalaxyYear;
+}
+
 export interface JumpResult {
   systemPayload: SystemPayload;
   clusterSummary: ClusterSystemSummary[];
@@ -276,6 +290,51 @@ export interface JumpResult {
   newGalaxyYear: GalaxyYear;
   galaxySimState: SystemSimState[];
   chainTargets: ChainTarget[];
+  jumpLogEntry: JumpLogEntry;
+  playerState: WasmPlayerState;
+}
+
+// ─── Flight tick types ──────────────────────────────────────────────────────
+
+export type HazardType =
+  | 'None'
+  | 'Overheat'
+  | 'StarCollision'
+  | 'PlanetCollision'
+  | 'MoonCollision'
+  | 'StationCollision'
+  | 'DysonShellCollision'
+  | 'MicroquasarJet'
+  | 'PulsarBeam'
+  | 'BlackHole'
+  | 'TidalDisruption'
+  | 'BattleZone'
+  | 'XRayStream';
+
+export interface CargoHarvest {
+  good: string;
+  qty: number;
+}
+
+export interface FlightTickContext {
+  dt: number;
+  fuelRate: number;
+  heatRate: number;
+  coolingActive: boolean;
+  shieldDamageRate: number;
+  activeHazard: HazardType;
+  isDead: boolean;
+  cargoHarvests: CargoHarvest[];
+}
+
+export interface FlightTickResult {
+  fuel: number;
+  heat: number;
+  shields: number;
+  cargo: Record<string, number>;
+  dead: boolean;
+  deathCause: HazardType | null;
+  cargoFull: boolean;
 }
 
 export interface InitResult {
@@ -304,6 +363,7 @@ export interface WasmPlayerState {
   cargoCostBasis: Record<string, number>;
   fuel: number;
   shields: number;
+  heat: number;
   currentSystemId: SystemId;
   visitedSystems: SystemId[];
   galaxyYear: GalaxyYear;
@@ -348,24 +408,20 @@ export function engineInitGame(playerState?: WasmPlayerState): InitResult {
 }
 
 export function engineJumpToSystem(
-  targetSystemId: number,
-  playerState: WasmPlayerState,
+  targetSystemId: SystemId,
+  fuelCost: number,
 ): JumpResult {
-  const result = jump_to_system(targetSystemId, JSON.stringify(playerState));
+  const result = jump_to_system(targetSystemId as number, fuelCost);
   return JSON.parse(result);
 }
 
-export function engineGetMarket(
-  systemId: SystemId,
-  playerState: WasmPlayerState,
-): MarketEntry[] {
-  const result = get_system_market(systemId, JSON.stringify(playerState));
+export function engineGetMarket(systemId: SystemId): MarketEntry[] {
+  const result = get_system_market(systemId as number);
   return JSON.parse(result);
 }
 
 export function engineGetGameEvent(
   systemId: SystemId,
-  playerState: WasmPlayerState,
   options?: {
     context?: 'landing' | 'system_entry' | 'proximity_star' | 'proximity_base' | 'planet_landing' | 'dyson_landing' | 'triggered';
     secretBaseId?: string;
@@ -375,8 +431,7 @@ export function engineGetGameEvent(
   },
 ): GameEvent | null {
   const result = get_game_event(
-    systemId,
-    JSON.stringify(playerState),
+    systemId as number,
     options?.context ?? 'landing',
     options?.secretBaseId ?? '',
     options?.surface ?? '',
@@ -388,18 +443,54 @@ export function engineGetGameEvent(
 
 export function engineGetLandingEvent(
   systemId: SystemId,
-  playerState: WasmPlayerState,
   secretBaseId?: string,
 ): GameEvent | null {
-  const result = get_landing_event(
-    systemId,
-    JSON.stringify(playerState),
-    secretBaseId ?? '',
-  );
+  const result = get_landing_event(systemId as number, secretBaseId ?? '');
   return JSON.parse(result);
 }
 
 export function engineGetClusterSummary(galaxyYear: GalaxyYear): ClusterSystemSummary[] {
-  const result = get_cluster_summary(galaxyYear);
+  const result = get_cluster_summary(galaxyYear as number);
   return JSON.parse(result);
+}
+
+export function engineGetPlayerState(): WasmPlayerState {
+  return JSON.parse(get_player_state());
+}
+
+export function engineSetPlayerState(playerState: WasmPlayerState): void {
+  set_player_state(JSON.stringify(playerState));
+}
+
+export function engineApplyChoiceEffect(
+  systemId: SystemId,
+  eventId: string,
+  rootEventId: string,
+  effect: ChoiceEffect,
+): WasmPlayerState {
+  const result = apply_choice_effect(
+    systemId as number,
+    eventId,
+    rootEventId,
+    JSON.stringify(effect),
+  );
+  return JSON.parse(result);
+}
+
+export function engineTradeBuy(good: GoodName, qty: number, price: number): WasmPlayerState {
+  const result = trade_buy(JSON.stringify(good), qty, price);
+  return JSON.parse(result);
+}
+
+export function engineTradeSell(good: GoodName, qty: number, price: number): WasmPlayerState {
+  const result = trade_sell(JSON.stringify(good), qty, price);
+  return JSON.parse(result);
+}
+
+export function engineTickFlight(context: FlightTickContext): FlightTickResult {
+  return JSON.parse(tick_flight(JSON.stringify(context)));
+}
+
+export function engineRespawn(): WasmPlayerState {
+  return JSON.parse(wasm_respawn());
 }

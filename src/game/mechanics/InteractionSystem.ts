@@ -4,14 +4,13 @@ import type { FlightModel } from '../flight/FlightModel';
 import type { DockingSystem } from './DockingSystem';
 import type { TargetingSystem } from './TargetingSystem';
 import { useGameState } from '../GameState';
-import type { SystemChoices } from '../GameState';
-import { MARKET_GOODS, MAX_CARGO } from '../constants';
+import { MARKET_GOODS } from '../constants';
 import type { GoodName } from '../constants';
 import {
-  engineGetGameEvent, engineGetMarket,
-  type ChoiceEffect, type GameEvent,
+  engineGetGameEvent, engineGetMarket, engineApplyChoiceEffect,
+  engineTradeBuy, engineTradeSell,
+  type GameEvent,
 } from '../engine';
-import { buildWasmPlayerState } from '../systems/systemLoad';
 import { stationHostTypeToken } from '../archetypes';
 import { STARTING_SYSTEM_ID } from '../constants';
 import type { SystemId } from '../types';
@@ -85,6 +84,7 @@ export class InteractionSystem {
   tryLandAtTarget(): void {
     const state = useGameState.getState();
     if (state.ui.mode !== 'flight') return;
+    if (state.pendingGameEvent) return;
 
     const targetId = state.player.targetId;
     if (!targetId) {
@@ -120,20 +120,19 @@ export class InteractionSystem {
       return;
     }
 
-    const wasmState = buildWasmPlayerState(state);
     const currentPayload = state.currentSystemPayload;
     if (!currentPayload) return;
     let event: GameEvent | null = null;
     if (host.type === 'planet') {
       const planet = currentPayload.system.planets.find((p) => p.id === host.id);
-      event = engineGetGameEvent(state.currentSystemId, wasmState, {
+      event = engineGetGameEvent(state.currentSystemId, {
         context: 'planet_landing',
         surface: planet?.surfaceType,
         siteClass: site.siteClassification,
         hostType: 'planet',
       });
     } else {
-      event = engineGetGameEvent(state.currentSystemId, wasmState, {
+      event = engineGetGameEvent(state.currentSystemId, {
         context: 'dyson_landing',
         siteClass: site.siteClassification,
         hostType: 'dyson_shell',
@@ -161,26 +160,17 @@ export class InteractionSystem {
 
     const { systemId, event, rootEventId, returnMode } = ctx;
 
-    // Apply choice effect
+    // Apply choice effect via Rust engine
     if (event) {
       const choice = event.choices.find(c => c.id === choiceId);
       if (choice) {
-        const fx: ChoiceEffect = choice.effect;
-        const partial: SystemChoices = {
-          tradingReputation: fx.tradingReputation ?? 0,
-          bannedGoods: (fx.bannedGoods ?? []) as GoodName[],
-          priceModifier: fx.priceModifier ?? 1.0,
-          factionTag: fx.factionTag ?? null,
-          completedEventIds: [],
-          flags: fx.setsFlags ?? [],
-          firedTriggers: fx.fires ?? [],
-        };
-        state.recordPlayerChoice(systemId, rootEventId ?? event.id, partial);
-        state.recordGlobalEventCompletion(rootEventId ?? event.id, systemId, state.galaxyYear);
-        (fx.setsGalacticFlags ?? []).forEach(flag => state.addGalacticFlag(flag));
-
-        if (fx.creditsReward) state.addCredits(fx.creditsReward);
-        if (fx.fuelReward) state.setFuel(state.player.fuel + fx.fuelReward);
+        const snapshot = engineApplyChoiceEffect(
+          systemId,
+          event.id,
+          rootEventId ?? event.id,
+          choice.effect,
+        );
+        state.syncPlayerStateFromEngine(snapshot);
 
         if (choice.nextMoment) {
           const followUp: GameEvent = {
@@ -202,12 +192,8 @@ export class InteractionSystem {
       }
     }
 
-    // Record this visit year
-    state.recordVisitYear(systemId, state.galaxyYear);
-    const refreshedState = useGameState.getState();
-    refreshedState.setCurrentSystemMarket(
-      engineGetMarket(systemId, buildWasmPlayerState(refreshedState)),
-    );
+    // Refresh market from engine (player state already synced)
+    state.setCurrentSystemMarket(engineGetMarket(systemId));
     // Remove landing site after planet/dyson landing (returnMode 'flight')
     if (returnMode === 'flight' && this.lastLandedSiteId) {
       this.sceneRenderer.removeLandingSite(this.lastLandedSiteId);
@@ -288,25 +274,25 @@ export class InteractionSystem {
     if (!ctx || !ctx.inTradeRange) return;
     const entry = ctx.cargo.find(c => c.good === good);
 
-    if (action === 'buy') {
-      if (!entry) return;
-      const totalCargo = Object.values(state.player.cargo).reduce((a, b) => a + (b ?? 0), 0);
-      if (state.player.credits >= entry.buyPrice && totalCargo < MAX_CARGO) {
-        state.addCredits(-entry.buyPrice);
-        state.addCargo(good, 1, entry.buyPrice);
+    try {
+      if (action === 'buy') {
+        if (!entry) return;
+        const snapshot = engineTradeBuy(good, 1, entry.buyPrice);
+        state.syncPlayerStateFromEngine(snapshot);
+        state.saveGame();
+      } else {
+        const sellPrice =
+          ctx.bonusDemand?.good === good
+            ? ctx.bonusDemand.sellPrice
+            : entry?.sellPrice;
+        if (!sellPrice) return;
+        if ((state.player.cargo[good] ?? 0) <= 0) return;
+        const snapshot = engineTradeSell(good, 1, sellPrice);
+        state.syncPlayerStateFromEngine(snapshot);
         state.saveGame();
       }
-    } else {
-      const sellPrice =
-        ctx.bonusDemand?.good === good
-          ? ctx.bonusDemand.sellPrice
-          : entry?.sellPrice;
-      if (!sellPrice) return;
-      if ((state.player.cargo[good] ?? 0) > 0) {
-        state.addCredits(sellPrice);
-        state.removeCargo(good, 1);
-        state.saveGame();
-      }
+    } catch {
+      // Insufficient credits or cargo hold full — silently ignore
     }
   }
 
@@ -356,11 +342,11 @@ export class InteractionSystem {
 
   private prepareLanding(systemId: SystemId, stationId?: string): void {
     const state = useGameState.getState();
+    if (state.pendingGameEvent) return;
     const lastYear = state.lastVisitYear[systemId] ?? null;
     const yearsSinceLastVisit = lastYear !== null ? state.galaxyYear - lastYear : null;
 
-    // Get landing event from Rust engine
-    const wasmState = buildWasmPlayerState(state);
+    // Get landing event from Rust engine (reads player state from ENGINE_STATE)
     const secretBase = state.currentSystem?.secretBases.find(b => b.id === stationId);
     const stationPlanetId = stationId?.startsWith('station-') ? stationId.slice('station-'.length) : null;
     const stationPlanet = stationPlanetId
@@ -371,7 +357,6 @@ export class InteractionSystem {
       ? null
       : engineGetGameEvent(
         systemId,
-        wasmState,
         {
           context: 'landing',
           secretBaseId: secretBase ? stationId : undefined,

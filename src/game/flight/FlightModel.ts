@@ -62,8 +62,7 @@ export class FlightModel {
     input: InputState,
     shipGroup: THREE.Group,
     fuel: number,
-    onFuelDrain: (amount: number) => void,
-  ): { speed: number; fuel: number } {
+  ): { speed: number; fuelConsumed: number } {
     const isBoosting = input.boost && fuel > 0;
 
     // Angular motion applied to shipGroup
@@ -82,12 +81,6 @@ export class FlightModel {
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(shipGroup.quaternion);
       const thrustMag = (isBoosting ? FLIGHT.boostMultiplier : 1) * 400 * input.thrust * dt;
       this.velocity.addScaledVector(fwd, thrustMag);
-
-      if (isBoosting) {
-        const drained = FLIGHT.boostFuelRate * dt;
-        onFuelDrain(drained);
-        fuel = Math.max(0, fuel - drained);
-      }
     }
 
     // Drag
@@ -102,7 +95,8 @@ export class FlightModel {
     // Move
     shipGroup.position.addScaledVector(this.velocity, dt);
 
-    return { speed: this.velocity.length(), fuel };
+    const fuelConsumed = isBoosting ? FLIGHT.boostFuelRate * dt : 0;
+    return { speed: this.velocity.length(), fuelConsumed };
   }
 
   /** Fuel cost to jump between two galaxy positions */

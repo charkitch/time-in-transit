@@ -220,6 +220,7 @@ mod tests {
             seen_system_dialog_ids: vec![],
             chain_targets: vec![],
             player_history: crate::types::PlayerHistory::default(),
+            heat: 0.0,
         }
     }
 

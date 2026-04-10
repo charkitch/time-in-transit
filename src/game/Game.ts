@@ -10,17 +10,12 @@ import { InteractionSystem } from './mechanics/InteractionSystem';
 import { JumpSystem } from './mechanics/JumpSystem';
 
 import { useGameState } from './GameState';
-import { HYPERSPACE } from './constants';
 import type { GoodName } from './constants';
 import {
-  initEngine, engineInitGame, engineGetGameEvent,
+  initEngine, engineInitGame, engineGetGameEvent, engineRespawn,
   type GameEvent,
 } from './engine';
-import {
-  buildWasmPlayerState,
-  discoverFactionsFromSystem,
-  placeShipNearMainStation,
-} from './systems/systemLoad';
+import { buildWasmPlayerState, placeShipNearMainStation } from './systems/systemLoad';
 import type { RuntimeProfile } from '../runtime/runtimeProfile';
 
 const INFINITE_FUEL_DEV = import.meta.env.DEV;
@@ -123,8 +118,6 @@ export class Game {
     state.markVisited(state.currentSystemId);
     state.setSystemEntryLines(result.systemPayload.systemEntryLines);
 
-    discoverFactionsFromSystem(state, result.systemPayload.factionState);
-
     const starData = result.cluster[state.currentSystemId];
     this.sceneRenderer.loadSystem(
       systemData,
@@ -210,10 +203,6 @@ export class Game {
       return;
     }
 
-    if (INFINITE_FUEL_DEV && state.player.fuel < HYPERSPACE.tankSize) {
-      state.setFuel(HYPERSPACE.tankSize);
-    }
-
     if (uiMode === 'flight') {
       this.updateFlight(dt, state);
     } else if (uiMode === 'hyperspace') {
@@ -246,16 +235,11 @@ export class Game {
     }
 
     const inp = this.input.read(state.invertControls);
-    const { speed } = this.flightModel.update(
+    const { speed, fuelConsumed } = this.flightModel.update(
       dt,
       inp,
       this.sceneRenderer.shipGroup,
       state.player.fuel,
-      (amount) => {
-        if (!INFINITE_FUEL_DEV) {
-          state.setFuel(state.player.fuel - amount);
-        }
-      },
     );
 
     // Collision avoidance — push ship out of celestial bodies
@@ -275,8 +259,8 @@ export class Game {
     state.setCanHailNow(this.interaction.canHailNow());
     this.scanning.tick(dt, state, pos);
 
-    const overheatDeath = this.hazards.tick(dt, state, pos, this.isDead, (msg) => this.triggerDeath(msg));
-    if (overheatDeath) return;
+    const boostFuelConsumed = INFINITE_FUEL_DEV ? 0 : fuelConsumed;
+    this.hazards.tick(dt, state, pos, this.isDead, (msg) => this.triggerDeath(msg), boostFuelConsumed);
 
     this.tryProximityGameEvent(state, pos);
 
@@ -310,7 +294,7 @@ export class Game {
     state: ReturnType<typeof useGameState.getState>,
     pos: THREE.Vector3,
   ): void {
-    if (state.ui.mode !== 'flight' || this.proximityEventCooldown > 0) return;
+    if (state.ui.mode !== 'flight' || this.proximityEventCooldown > 0 || state.pendingGameEvent) return;
     if (state.currentSystemId === FIRST_SYSTEM_ID) return;
     if (!state.currentSystemPayload) return;
     if (!this.shouldTriggerEvent(PROXIMITY_EVENT_CHANCE)) {
@@ -318,14 +302,13 @@ export class Game {
       return;
     }
 
-    const wasmState = buildWasmPlayerState(state);
     let event: GameEvent | null = null;
 
     const star = this.sceneRenderer.getAllEntities().get('star');
     if (star) {
       const distanceToStar = pos.distanceTo(star.worldPos);
       if (distanceToStar <= star.collisionRadius + 140) {
-        event = engineGetGameEvent(state.currentSystemId, wasmState, {
+        event = engineGetGameEvent(state.currentSystemId, {
           context: 'proximity_star',
         });
       }
@@ -337,7 +320,7 @@ export class Game {
         if (!entity) continue;
         const dist = pos.distanceTo(entity.worldPos);
         if (dist <= entity.collisionRadius + 180) {
-          event = engineGetGameEvent(state.currentSystemId, wasmState, {
+          event = engineGetGameEvent(state.currentSystemId, {
             context: 'proximity_base',
           });
           if (event) break;
@@ -386,11 +369,8 @@ export class Game {
 
   respawn(): void {
     const state = useGameState.getState();
-    // Insurance: lose 10% of credits (min 100 CR)
-    const penalty = Math.max(100, Math.floor(state.player.credits * 0.1));
-    state.addCredits(-penalty);
-    state.setShields(100);
-    state.setHeat(0);
+    const snapshot = engineRespawn();
+    state.syncPlayerStateFromEngine(snapshot);
     state.setDeathMessage(null);
     this.isDead = false;
     this.hazards.resetTimers();
