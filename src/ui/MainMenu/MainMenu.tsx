@@ -26,6 +26,7 @@ export function MainMenu({ onNewGame, onResume, invertControls, onToggleInvertCo
   const isAndroid = /android/.test(ua);
   const isSafari = /safari/.test(ua) && !/crios|fxios|edgios/.test(ua);
   const isChromium = /chrome|chromium|crios|edg|edgios/.test(ua);
+  const isMobile = isIOS || isAndroid;
 
   useEffect(() => {
     const onBeforeInstallPrompt = (event: Event) => {
@@ -198,9 +199,11 @@ export function MainMenu({ onNewGame, onResume, invertControls, onToggleInvertCo
           <button className={styles.menuBtn} onClick={() => setView('controls')}>
             CONTROLS
           </button>
-          <button className={styles.menuBtn} onClick={() => setView('fullscreen')}>
-            FIND OUT ABOUT FULL SCREEN
-          </button>
+          {isMobile && (
+            <button className={styles.menuBtn} onClick={() => setView('fullscreen')}>
+              FIND OUT ABOUT FULL SCREEN
+            </button>
+          )}
           <button className={styles.menuBtn} onClick={onNewGame}>
             NEW GAME
           </button>
