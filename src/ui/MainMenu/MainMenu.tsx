@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { TRAVEL_TERMS } from '../../game/constants';
+import type { SlotMeta } from './saveSlots';
+import { readAllSlotMetas } from './saveSlots';
+import { SaveSlotGrid } from './SaveSlotGrid';
 import styles from './MainMenu.module.css';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -10,15 +13,18 @@ interface BeforeInstallPromptEvent extends Event {
 interface MainMenuProps {
   onNewGame: () => void;
   onResume: () => void;
+  onSaveToSlot: (index: number) => Promise<void>;
+  onLoadFromSlot: (index: number) => Promise<void>;
   invertControls: boolean;
   onToggleInvertControls: () => void;
   buildLabel: string;
 }
 
-export function MainMenu({ onNewGame, onResume, invertControls, onToggleInvertControls, buildLabel }: MainMenuProps) {
-  const [view, setView] = useState<'main' | 'controls' | 'fullscreen'>('main');
+export function MainMenu({ onNewGame, onResume, onSaveToSlot, onLoadFromSlot, invertControls, onToggleInvertControls, buildLabel }: MainMenuProps) {
+  const [view, setView] = useState<'main' | 'controls' | 'fullscreen' | 'save' | 'load'>('main');
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installMessage, setInstallMessage] = useState<string>('');
+  const [slots, setSlots] = useState<(SlotMeta | null)[]>(Array(5).fill(null));
 
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
   const ua = window.navigator.userAgent.toLowerCase();
@@ -27,6 +33,10 @@ export function MainMenu({ onNewGame, onResume, invertControls, onToggleInvertCo
   const isSafari = /safari/.test(ua) && !/crios|fxios|edgios/.test(ua);
   const isChromium = /chrome|chromium|crios|edg|edgios/.test(ua);
   const isMobile = isIOS || isAndroid;
+
+  const refreshSlots = useCallback(async () => {
+    setSlots(await readAllSlotMetas());
+  }, []);
 
   useEffect(() => {
     const onBeforeInstallPrompt = (event: Event) => {
@@ -46,6 +56,12 @@ export function MainMenu({ onNewGame, onResume, invertControls, onToggleInvertCo
     };
   }, []);
 
+  useEffect(() => {
+    if (view === 'save' || view === 'load') {
+      refreshSlots();
+    }
+  }, [view, refreshSlots]);
+
   const handleInstallPrompt = async () => {
     if (!deferredPrompt) return;
     await deferredPrompt.prompt();
@@ -57,6 +73,47 @@ export function MainMenu({ onNewGame, onResume, invertControls, onToggleInvertCo
     }
     setDeferredPrompt(null);
   };
+
+  const handleSaveSlotClick = async (index: number) => {
+    await onSaveToSlot(index);
+    await refreshSlots();
+  };
+
+  const handleLoadSlotClick = async (index: number) => {
+    await onLoadFromSlot(index);
+  };
+
+  if (view === 'save') {
+    return (
+      <div className={styles.overlay}>
+        <div className={styles.panel}>
+          <SaveSlotGrid
+            mode="save"
+            slots={slots}
+            isSafari={isSafari}
+            onSlotClick={handleSaveSlotClick}
+            onBack={() => setView('main')}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'load') {
+    return (
+      <div className={styles.overlay}>
+        <div className={styles.panel}>
+          <SaveSlotGrid
+            mode="load"
+            slots={slots}
+            isSafari={isSafari}
+            onSlotClick={handleLoadSlotClick}
+            onBack={() => setView('main')}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (view === 'controls') {
     return (
@@ -199,6 +256,12 @@ export function MainMenu({ onNewGame, onResume, invertControls, onToggleInvertCo
           <button className={styles.menuBtn} onClick={() => setView('controls')}>
             CONTROLS
           </button>
+          <button className={styles.menuBtn} onClick={() => setView('save')}>
+            SAVE GAME
+          </button>
+          <button className={styles.menuBtn} onClick={() => setView('load')}>
+            LOAD GAME
+          </button>
           {isMobile && (
             <button className={styles.menuBtn} onClick={() => setView('fullscreen')}>
               FIND OUT ABOUT FULL SCREEN
@@ -207,6 +270,11 @@ export function MainMenu({ onNewGame, onResume, invertControls, onToggleInvertCo
           <button className={styles.menuBtn} onClick={onNewGame}>
             NEW GAME
           </button>
+          {isStandalone && (
+            <button className={styles.menuBtn} onClick={() => window.location.reload()}>
+              CHECK FOR UPDATES
+            </button>
+          )}
         </div>
       </div>
     </div>

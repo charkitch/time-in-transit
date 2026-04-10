@@ -1,0 +1,151 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.title {
+  font-family: 'Courier New', monospace;
+  font-size: 24px;
+  letter-spacing: 12px;
+  color: #fff;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+}
+
+.slotList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.slot {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.slot:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.06);
+}
+
+.slotDisabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.slotConfirm {
+  border-color: rgba(255, 170, 0, 0.5);
+  background: rgba(255, 170, 0, 0.06);
+}
+
+.slotIndex {
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+}
+
+.slotEmpty {
+  color: rgba(255, 255, 255, 0.25);
+  letter-spacing: 3px;
+  font-size: 12px;
+}
+
+.slotOverwrite {
+  color: #ffaa00;
+  letter-spacing: 3px;
+  font-size: 12px;
+}
+
+.slotInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.slotSystem {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slotDetails {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+  letter-spacing: 0.8px;
+}
+
+.disclaimer {
+  font-family: 'Courier New', monospace;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: 0.6px;
+  text-align: center;
+  margin: 0 0 24px;
+  max-width: 400px;
+}
+
+.backBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 12px 32px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  letter-spacing: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 240px;
+  text-transform: uppercase;
+}
+
+.backBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 640px), (max-height: 740px) {
+  .title {
+    font-size: 16px;
+    letter-spacing: 4px;
+  }
+
+  .slot {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .backBtn {
+    width: 100%;
+    max-width: 320px;
+    letter-spacing: 2px;
+    font-size: 13px;
+  }
+}

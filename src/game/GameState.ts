@@ -159,6 +159,7 @@ export interface GameActions {
   markVisited: (id: SystemId) => void;
   tickTime: (dt: number) => void;
   loadSave: () => void;
+  applySaveData: (data: Partial<SaveData>) => void;
   saveGame: () => void;
   resetGame: () => void;
 
@@ -204,7 +205,7 @@ const DEFAULT_PLAYER: PlayerState = {
   targetId: null,
 };
 
-interface SaveData {
+export interface SaveData {
   invertControls?: boolean;
   credits: number;
   cargo: Partial<Record<GoodName, number>>;
@@ -226,6 +227,10 @@ interface SaveData {
     completedEvents?: Record<string, { systemId: SystemId; galaxyYear: GalaxyYear }>;
     galacticFlags?: string[];
   };
+  // Ship spatial state (slot saves only — auto-save respawns at station)
+  shipPosition?: { x: number; y: number; z: number };
+  shipQuaternion?: { x: number; y: number; z: number; w: number };
+  shipVelocity?: { x: number; y: number; z: number };
 }
 
 function migrateLegacyGoodKeys<T>(record: Partial<Record<GoodName, T>> | undefined): Partial<Record<GoodName, T>> | undefined {
@@ -278,6 +283,66 @@ function normalizeSystemChoicesMap(
     };
   }
   return out;
+}
+
+export function buildSaveData(s: GameStateData): SaveData {
+  return {
+    invertControls: s.invertControls,
+    credits: s.player.credits,
+    cargo: s.player.cargo,
+    cargoCostBasis: s.player.cargoCostBasis,
+    fuel: s.player.fuel,
+    shields: s.player.shields,
+    currentSystemId: s.currentSystemId,
+    visitedSystems: Array.from(s.visitedSystems),
+    galaxyYear: s.galaxyYear,
+    jumpLog: s.jumpLog,
+    playerChoices: s.playerChoices,
+    lastVisitYear: s.lastVisitYear,
+    knownFactions: Array.from(s.knownFactions),
+    factionMemory: s.factionMemory,
+    seenSystemDialogIds: s.seenSystemDialogIds,
+    chainTargets: s.chainTargets,
+    scannedBodies: s.scannedBodies,
+    playerHistory: s.playerHistory,
+  };
+}
+
+function applySaveFields(saved: Partial<SaveData>): Partial<GameStateData> {
+  return {
+    player: {
+      ...DEFAULT_PLAYER,
+      credits: saved.credits ?? DEFAULT_PLAYER.credits,
+      cargo: migrateLegacyGoodKeys(saved.cargo) ?? DEFAULT_PLAYER.cargo,
+      cargoCostBasis: migrateLegacyGoodKeys(saved.cargoCostBasis) ?? DEFAULT_PLAYER.cargoCostBasis,
+      fuel: saved.fuel ?? DEFAULT_PLAYER.fuel,
+      shields: saved.shields ?? DEFAULT_PLAYER.shields,
+    },
+    invertControls: saved.invertControls ?? false,
+    currentSystemId: saved.currentSystemId ?? STARTING_SYSTEM_ID,
+    currentSystem: null,
+    currentSystemPayload: null,
+    visitedSystems: new Set(saved.visitedSystems ?? []),
+    galaxyYear: saved.galaxyYear ?? GALAXY_YEAR_START,
+    jumpLog: saved.jumpLog ?? [],
+    playerChoices: normalizeSystemChoicesMap(saved.playerChoices),
+    lastVisitYear: saved.lastVisitYear ?? {},
+    knownFactions: new Set(saved.knownFactions ?? []),
+    factionMemory: saved.factionMemory ?? {},
+    seenSystemDialogIds: saved.seenSystemDialogIds ?? [],
+    chainTargets: saved.chainTargets ?? [],
+    scannedBodies: saved.scannedBodies ?? {},
+    playerHistory: {
+      completedEvents: saved.playerHistory?.completedEvents ?? {},
+      galacticFlags: saved.playerHistory?.galacticFlags ?? [],
+    },
+    // Clear transient state so nothing leaks from the previous session
+    pendingGameEvent: null,
+    pendingCommContext: null,
+    systemEntryLines: null,
+    pendingSystemEntryDialog: null,
+    time: 0,
+  };
 }
 
 function loadFromStorage(): Partial<SaveData> {
@@ -570,56 +635,15 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   loadSave: () => {
     const saved = loadFromStorage();
     if (Object.keys(saved).length === 0) return;
-    set(s => ({
-      player: {
-        ...s.player,
-        credits: saved.credits ?? s.player.credits,
-        cargo: migrateLegacyGoodKeys(saved.cargo) ?? s.player.cargo,
-        cargoCostBasis: migrateLegacyGoodKeys(saved.cargoCostBasis) ?? s.player.cargoCostBasis,
-        fuel: saved.fuel ?? s.player.fuel,
-        shields: saved.shields ?? s.player.shields,
-      },
-      invertControls: saved.invertControls ?? false,
-      currentSystemId: saved.currentSystemId ?? STARTING_SYSTEM_ID,
-      visitedSystems: new Set(saved.visitedSystems ?? []),
-      galaxyYear: saved.galaxyYear ?? GALAXY_YEAR_START,
-      jumpLog: saved.jumpLog ?? [],
-      playerChoices: normalizeSystemChoicesMap(saved.playerChoices),
-      lastVisitYear: saved.lastVisitYear ?? {},
-      knownFactions: new Set(saved.knownFactions ?? []),
-      factionMemory: saved.factionMemory ?? {},
-      seenSystemDialogIds: saved.seenSystemDialogIds ?? [],
-      chainTargets: saved.chainTargets ?? [],
-      scannedBodies: saved.scannedBodies ?? {},
-      playerHistory: {
-        completedEvents: saved.playerHistory?.completedEvents ?? {},
-        galacticFlags: saved.playerHistory?.galacticFlags ?? [],
-      },
-    }));
+    set(() => applySaveFields(saved));
+  },
+
+  applySaveData: (data) => {
+    set(() => applySaveFields(data));
   },
 
   saveGame: () => {
-    const s = get();
-    const data: SaveData = {
-      invertControls: s.invertControls,
-      credits: s.player.credits,
-      cargo: s.player.cargo,
-      cargoCostBasis: s.player.cargoCostBasis,
-      fuel: s.player.fuel,
-      shields: s.player.shields,
-      currentSystemId: s.currentSystemId,
-      visitedSystems: Array.from(s.visitedSystems),
-      galaxyYear: s.galaxyYear,
-      jumpLog: s.jumpLog,
-      playerChoices: s.playerChoices,
-      lastVisitYear: s.lastVisitYear,
-      knownFactions: Array.from(s.knownFactions),
-      factionMemory: s.factionMemory,
-      seenSystemDialogIds: s.seenSystemDialogIds,
-      chainTargets: s.chainTargets,
-      scannedBodies: s.scannedBodies,
-      playerHistory: s.playerHistory,
-    };
+    const data = buildSaveData(get());
     localStorage.setItem('space-game-save', JSON.stringify(data));
   },
 }));

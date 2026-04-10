@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useMemo, useState } from 'react';
-import { useGameState } from '../game/GameState';
+import { useGameState, buildSaveData } from '../game/GameState';
 import type { UIMode } from '../game/GameState';
 import { Game } from '../game/Game';
 import { HUD } from './HUD/HUD';
@@ -13,6 +13,7 @@ import { SystemEntryDialog } from './SystemEntryDialog/SystemEntryDialog';
 import { CommDialog } from './CommDialog/CommDialog';
 import type { SceneEntity } from '../game/rendering/SceneRenderer';
 import { TRAVEL_TERMS, type GoodName } from '../game/constants';
+import { saveToSlot, loadFromSlot, buildSlotMeta } from './MainMenu/saveSlots';
 import { detectRuntimeProfile, type RuntimeProfile } from '../runtime/runtimeProfile';
 import * as THREE from 'three';
 
@@ -42,7 +43,8 @@ export function App() {
   const pendingSystemEntryDialog = useGameState(s => s.pendingSystemEntryDialog);
 
   const prevUiModeRef = useRef<UIMode>('flight');
-  const [flashPhase, setFlashPhase] = useState<'none' | 'entry' | 'exit'>('none');
+  const [flashPhase, setFlashPhase] = useState<'none' | 'entry' | 'exit' | 'loadFade'>('none');
+  const loadingSlotRef = useRef(false);
   const [runtimeProfile, setRuntimeProfile] = useState<RuntimeProfile | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
   const [contextLossNotice, setContextLossNotice] = useState<string | null>(null);
@@ -51,6 +53,7 @@ export function App() {
   useEffect(() => {
     const updateProfile = () => setRuntimeProfile(detectRuntimeProfile());
     updateProfile();
+    navigator.storage.persist().catch(() => {});
     window.addEventListener('resize', updateProfile);
     window.visualViewport?.addEventListener('resize', updateProfile);
     return () => {
@@ -131,6 +134,9 @@ export function App() {
       setFlashPhase('entry');
     } else if (prev === 'hyperspace' && uiMode === 'landing') {
       setFlashPhase('exit');
+    } else if (prev === 'loading' && uiMode === 'flight' && loadingSlotRef.current) {
+      loadingSlotRef.current = false;
+      setFlashPhase('loadFade');
     }
     prevUiModeRef.current = uiMode;
   }, [uiMode]);
@@ -175,6 +181,26 @@ export function App() {
 
   const handleRespawn = () => {
     gameRef.current?.respawn();
+  };
+
+  const handleSaveToSlot = async (index: number) => {
+    const state = useGameState.getState();
+    const data = buildSaveData(state);
+    const spatial = gameRef.current?.getShipSpatialState();
+    if (spatial) {
+      data.shipPosition = spatial.position;
+      data.shipQuaternion = spatial.quaternion;
+      data.shipVelocity = spatial.velocity;
+    }
+    const meta = buildSlotMeta(state);
+    await saveToSlot(index, data, meta);
+  };
+
+  const handleLoadFromSlot = async (index: number) => {
+    const data = await loadFromSlot(index);
+    if (!data) return;
+    loadingSlotRef.current = true;
+    gameRef.current?.loadSlotSave(data);
   };
 
   const handleNewGame = () => {
@@ -287,10 +313,14 @@ export function App() {
         <div className="hyperChargeGlow" />
       )}
 
-      {/* Entry / exit flash */}
+      {/* Entry / exit / load flash */}
       {flashPhase !== 'none' && (
         <div
-          className={flashPhase === 'entry' ? 'flashEntry' : 'flashExit'}
+          className={
+            flashPhase === 'entry' ? 'flashEntry'
+            : flashPhase === 'loadFade' ? 'fadeFromBlack'
+            : 'flashExit'
+          }
           onAnimationEnd={() => setFlashPhase('none')}
         />
       )}
@@ -310,6 +340,8 @@ export function App() {
         <MainMenu
           onNewGame={handleNewGame}
           onResume={handleResume}
+          onSaveToSlot={handleSaveToSlot}
+          onLoadFromSlot={handleLoadFromSlot}
           invertControls={invertControls}
           onToggleInvertControls={handleToggleInvertControls}
           buildLabel={BUILD_TAG_LABEL}

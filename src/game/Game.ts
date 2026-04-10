@@ -10,6 +10,7 @@ import { InteractionSystem } from './mechanics/InteractionSystem';
 import { JumpSystem } from './mechanics/JumpSystem';
 
 import { useGameState } from './GameState';
+import type { SaveData } from './GameState';
 import type { GoodName } from './constants';
 import {
   initEngine, engineInitGame, engineGetGameEvent, engineRespawn,
@@ -102,7 +103,14 @@ export class Game {
     this.initFromEngine(state);
   }
 
-  private async initFromEngine(state: ReturnType<typeof useGameState.getState>): Promise<void> {
+  private async initFromEngine(
+    state: ReturnType<typeof useGameState.getState>,
+    shipSpatial?: {
+      position: { x: number; y: number; z: number };
+      quaternion: { x: number; y: number; z: number; w: number };
+      velocity: { x: number; y: number; z: number };
+    },
+  ): Promise<void> {
     await initEngine();
     const wasmState = buildWasmPlayerState(state);
     const result = engineInitGame(wasmState.galaxyYear === 3200 && wasmState.visitedSystems.length <= 1 ? undefined : wasmState);
@@ -131,9 +139,15 @@ export class Game {
     this.scanning.syncFromState(state);
     this.scanning.restoreIntelForSystem(state);
 
-    placeShipNearMainStation(this.sceneRenderer, systemData);
-
-    this.flightModel.reset(this.sceneRenderer.shipGroup.position);
+    if (shipSpatial) {
+      const { position, quaternion, velocity } = shipSpatial;
+      this.sceneRenderer.shipGroup.position.set(position.x, position.y, position.z);
+      this.sceneRenderer.shipGroup.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+      this.flightModel.setVelocity(velocity.x, velocity.y, velocity.z);
+    } else {
+      placeShipNearMainStation(this.sceneRenderer, systemData);
+      this.flightModel.reset(this.sceneRenderer.shipGroup.position);
+    }
 
     state.setUIMode('flight');
   }
@@ -353,6 +367,40 @@ export class Game {
     state.setDeathMessage(deathMessage);
     this.flightModel.reset(this.sceneRenderer.shipGroup.position);
     state.setUIMode('dead');
+  }
+
+  getShipSpatialState(): {
+    position: { x: number; y: number; z: number };
+    quaternion: { x: number; y: number; z: number; w: number };
+    velocity: { x: number; y: number; z: number };
+  } {
+    const pos = this.sceneRenderer.shipGroup.position;
+    const quat = this.sceneRenderer.shipGroup.quaternion;
+    const vel = this.flightModel.getVelocity();
+    return {
+      position: { x: pos.x, y: pos.y, z: pos.z },
+      quaternion: { x: quat.x, y: quat.y, z: quat.z, w: quat.w },
+      velocity: { x: vel.x, y: vel.y, z: vel.z },
+    };
+  }
+
+  loadSlotSave(data: SaveData): void {
+    const state = useGameState.getState();
+    state.applySaveData(data);
+    state.setDeathMessage(null);
+    state.setUIMode('loading');
+    this.isDead = false;
+    this.hazards.resetTimers();
+    this.jump.resetOnNewGame();
+    this.sceneRenderer.stopHyperspace();
+
+    // Restore exact ship placement if the save includes spatial data
+    const shipSpatial = data.shipPosition && data.shipQuaternion && data.shipVelocity
+      ? { position: data.shipPosition, quaternion: data.shipQuaternion, velocity: data.shipVelocity }
+      : undefined;
+
+    // initFromEngine is async — sets UIMode to 'flight' when the scene is ready
+    this.initFromEngine(useGameState.getState(), shipSpatial);
   }
 
   newGame(): void {

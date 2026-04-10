@@ -160,4 +160,12 @@ export class FlightModel {
   reset(position: THREE.Vector3) {
     this.velocity.set(0, 0, 0);
   }
+
+  getVelocity(): THREE.Vector3 {
+    return this.velocity;
+  }
+
+  setVelocity(x: number, y: number, z: number) {
+    this.velocity.set(x, y, z);
+  }
 }
