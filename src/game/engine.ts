@@ -46,6 +46,7 @@ export type SurfaceType =
 export type DysonBiomeProfile = 'continental' | 'mixed' | 'desert' | 'arctic';
 
 export type GasGiantType = 'jovian' | 'saturnian' | 'neptunian' | 'inferno' | 'chromatic' | 'helium';
+export type ClimateState = 'stable' | 'ice_age' | 'warming' | 'nuclear_winter' | 'toxic_bloom';
 export type InteractionTopology = 'sphere' | 'shell_patch';
 export type InteractionProfile = 'rocky' | 'gas_giant' | 'dyson_shell';
 
@@ -78,6 +79,9 @@ export interface MoonData {
   color: number;
   hasClouds: boolean;
   cloudDensity: number;
+  polarCapSize: number;
+  climateState: ClimateState;
+  climateIntensity: number;
 }
 
 export interface PlanetData {
@@ -103,6 +107,10 @@ export interface PlanetData {
   hasStation: boolean;
   stationArchetype: StationArchetype | null;
   interactionField: InteractionFieldData;
+  polarCapSize: number;
+  climateState: ClimateState;
+  climateIntensity: number;
+  axialTilt: number;
 }
 
 export interface AsteroidBeltData {

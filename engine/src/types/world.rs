@@ -2,6 +2,18 @@ use serde::{Deserialize, Serialize};
 
 use super::EconomyType;
 
+// ─── Climate ────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ClimateState {
+    Stable,
+    IceAge,
+    Warming,
+    NuclearWinter,
+    ToxicBloom,
+}
+
 // ─── Star / Planet Enums ─────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -178,6 +190,9 @@ pub struct MoonData {
     pub color: u32,
     pub has_clouds: bool,
     pub cloud_density: f64,
+    pub polar_cap_size: f64,
+    pub climate_state: ClimateState,
+    pub climate_intensity: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -206,6 +221,10 @@ pub struct PlanetData {
     pub has_station: bool,
     pub station_archetype: Option<StationArchetype>,
     pub interaction_field: InteractionFieldData,
+    pub polar_cap_size: f64,
+    pub climate_state: ClimateState,
+    pub climate_intensity: f64,
+    pub axial_tilt: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

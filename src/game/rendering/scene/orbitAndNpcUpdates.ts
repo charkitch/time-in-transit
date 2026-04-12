@@ -69,11 +69,24 @@ export function updateOrbitalEntities(entities: Map<string, SceneEntity>, time: 
     if (entity.parentId) {
       const parent = entities.get(entity.parentId);
       if (parent) {
-        entity.group.position.set(
-          parent.worldPos.x + Math.cos(angle) * entity.orbitRadius,
-          parent.worldPos.y,
-          parent.worldPos.z + Math.sin(angle) * entity.orbitRadius,
-        );
+        const localX = Math.cos(angle) * entity.orbitRadius;
+        const localZ = Math.sin(angle) * entity.orbitRadius;
+        const tilt = parent.axialTilt;
+        if (tilt) {
+          const cosT = Math.cos(tilt);
+          const sinT = Math.sin(tilt);
+          entity.group.position.set(
+            parent.worldPos.x + localX * cosT,
+            parent.worldPos.y + localX * sinT,
+            parent.worldPos.z + localZ,
+          );
+        } else {
+          entity.group.position.set(
+            parent.worldPos.x + localX,
+            parent.worldPos.y,
+            parent.worldPos.z + localZ,
+          );
+        }
       }
     } else if (entity.type === 'dyson_shell' && entity.orbitInclination != null && entity.orbitNode != null) {
       const [x, y, z] = computeDysonShellPosition(

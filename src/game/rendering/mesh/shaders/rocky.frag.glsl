@@ -6,6 +6,8 @@ uniform vec3 baseColor;
 uniform int surfType;
 uniform sampler2D interactionFieldTex;
 uniform float interactionFieldBlend;
+uniform float polarCapSize;
+uniform int climateState; // 0=stable 1=ice_age 2=warming 3=nuclear 4=toxic
 
 void main() {
   vec3 toStar = normalize(-vWorldPosition);
@@ -140,6 +142,28 @@ void main() {
     // Fake self-shadowing from ridge gradients
     float shadow = 1.0 - ridge * 0.35;
     surfaceColor *= shadow;
+  }
+
+  // -- Polar caps --
+  if (polarCapSize > 0.0) {
+    float lat = abs(norm.y);
+    float capStart = 1.0 - polarCapSize * 0.7;
+    float edgeNoise = snoise(noisePos * 3.0) * 0.08;
+    float capMask = smoothstep(capStart - 0.05, capStart + 0.05, lat + edgeNoise);
+
+    vec3 capColor;
+    if (climateState == 3) {
+      capColor = vec3(0.35, 0.33, 0.30); // nuclear winter — ash
+    } else if (climateState == 4) {
+      capColor = vec3(0.45, 0.62, 0.28); // toxic bloom — sickly green
+    } else if (surfType == SURF_TYPE_DESERT || surfType == SURF_TYPE_BARREN) {
+      capColor = vec3(0.85, 0.82, 0.78); // CO2 frost
+    } else if (surfType == SURF_TYPE_VOLCANIC) {
+      capColor = vec3(0.75, 0.72, 0.30); // sulfur deposits
+    } else {
+      capColor = vec3(0.92, 0.95, 1.0);  // ice/snow
+    }
+    surfaceColor = mix(surfaceColor, capColor, capMask);
   }
 
   // Lighting: sun side brighter, dark side very dim

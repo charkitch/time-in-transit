@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PALETTE } from '../../../constants';
-import type { InteractionFieldData, SurfaceType } from '../../../engine';
+import type { ClimateState, InteractionFieldData, SurfaceType } from '../../../engine';
 
 export function makeWireframeObject(
   geo: THREE.BufferGeometry,
@@ -52,6 +52,14 @@ export const SURFACE_TYPE_SHADER_DEFINES = `
 #define SURF_TYPE_FOREST_MOON ${SURFACE_TYPE_INDEX.forest_moon}
 #define SURF_TYPE_MOUNTAIN ${SURFACE_TYPE_INDEX.mountain}
 `.trim();
+
+export const CLIMATE_STATE_INDEX: Record<ClimateState, number> = {
+  stable: 0,
+  ice_age: 1,
+  warming: 2,
+  nuclear_winter: 3,
+  toxic_bloom: 4,
+};
 
 export function withSurfaceTypeShaderDefines(fragmentShader: string): string {
   return `${SURFACE_TYPE_SHADER_DEFINES}\n\n${fragmentShader}`;

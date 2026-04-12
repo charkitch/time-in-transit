@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { PALETTE } from '../../../constants';
 import { loadTexture } from '../../textureCache';
 import type { PlanetSkin } from '../../planetSkins';
-import type { InteractionFieldData, SurfaceType } from '../../../engine';
-import { makeInteractionFieldTexture, SURFACE_TYPE_INDEX, withSurfaceTypeShaderDefines } from './shared';
+import type { ClimateState, InteractionFieldData, SurfaceType } from '../../../engine';
+import { CLIMATE_STATE_INDEX, makeInteractionFieldTexture, SURFACE_TYPE_INDEX, withSurfaceTypeShaderDefines } from './shared';
 import planetVertex from '../shaders/includes/planet_vertex.glsl';
 import rockyFrag from '../shaders/rocky.frag.glsl';
 
@@ -11,6 +11,8 @@ export function makePlanet(
   radius: number, color: number, detail: number = 1,
   seed: number = 0, surfaceType: SurfaceType = 'continental',
   interactionField?: InteractionFieldData,
+  polarCapSize: number = 0,
+  climateState: ClimateState = 'stable',
 ): THREE.Group {
   const group = new THREE.Group();
   const geo = new THREE.SphereGeometry(radius, 32, 24);
@@ -26,6 +28,8 @@ export function makePlanet(
       surfType: { value: SURFACE_TYPE_INDEX[surfaceType] },
       interactionFieldTex: { value: interactionTex },
       interactionFieldBlend: { value: interactionFieldBlend },
+      polarCapSize: { value: polarCapSize },
+      climateState: { value: CLIMATE_STATE_INDEX[climateState] },
     },
     vertexShader: planetVertex,
     fragmentShader: withSurfaceTypeShaderDefines(rockyFrag),
@@ -55,10 +59,13 @@ export function makeTexturedPlanet(
   wireOverlay: boolean,
   seed: number = 0,
   surfaceType: SurfaceType = 'continental',
+  polarCapSize: number = 0,
+  climateState: ClimateState = 'stable',
 ): THREE.Group {
   // No skin available — use the procedural surface variant for this body.
   if (!skin) {
-    return makePlanet(radius, fallbackColor, 1, seed, surfaceType);
+    return makePlanet(radius, fallbackColor, 1, seed, surfaceType,
+      undefined, polarCapSize, climateState);
   }
 
   const geo = new THREE.SphereGeometry(radius, 32, 24);

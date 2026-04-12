@@ -4,6 +4,7 @@
 
 uniform float seed;
 uniform int surfType;
+uniform float polarCapSize;
 
 void main() {
   #include includes/sun_lighting.glsl
@@ -68,7 +69,17 @@ void main() {
   }
 
   city = min(city, 1.0);
-  float alpha = darkMask * landMask * city * 0.9;
+
+  // Polar regions are rural/uninhabited — fade cities near caps
+  float polarFade = 1.0;
+  if (polarCapSize > 0.0) {
+    float lat = abs(norm.y);
+    float capStart = 1.0 - polarCapSize * 0.7;
+    // Cities thin out well before the cap edge, gone by the cap itself
+    polarFade = 1.0 - smoothstep(capStart - 0.15, capStart + 0.02, lat);
+  }
+
+  float alpha = darkMask * landMask * city * polarFade * 0.9;
   vec3 color = mix(vec3(1.0, 0.82, 0.4), vec3(1.0, 0.95, 0.7), h);
 
   gl_FragColor = vec4(color, alpha);

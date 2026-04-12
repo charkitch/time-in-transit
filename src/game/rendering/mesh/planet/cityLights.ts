@@ -7,6 +7,7 @@ import cityLightsFrag from '../shaders/city_lights.frag.glsl';
 export function addCityLights(
   group: THREE.Group, radius: number, seed: number,
   surfaceType: SurfaceType = 'continental',
+  polarCapSize: number = 0,
 ): void {
   // Atmospherically hostile or obviously barren worlds should stay dark.
   if (surfaceType === 'venus' || surfaceType === 'barren' || surfaceType === 'ice' || surfaceType === 'volcanic') return;
@@ -19,6 +20,7 @@ export function addCityLights(
     uniforms: {
       seed: { value: seed },
       surfType: { value: SURFACE_TYPE_INDEX[surfaceType] },
+      polarCapSize: { value: polarCapSize },
     },
     vertexShader: planetVertex,
     fragmentShader: withSurfaceTypeShaderDefines(cityLightsFrag),

@@ -416,12 +416,14 @@ export function buildSystemScene(params: {
     const suffix = String.fromCharCode(97 + index); // a, b, c, ...
     const { planetTexturesEnabled: textured, planetWireOverlayEnabled: wireOvl } = RENDER_CONFIG;
     const moonGroup = textured
-      ? makeTexturedPlanet(moon.radius, moon.color, selectSkin('moon', skinRng), wireOvl, moonSeed, moon.surfaceType)
-      : makePlanet(moon.radius, moon.color, 0, moonSeed, moon.surfaceType);
+      ? makeTexturedPlanet(moon.radius, moon.color, selectSkin('moon', skinRng), wireOvl, moonSeed, moon.surfaceType,
+          moon.polarCapSize, moon.climateState)
+      : makePlanet(moon.radius, moon.color, 0, moonSeed, moon.surfaceType,
+          undefined, moon.polarCapSize, moon.climateState);
     if (moon.hasClouds) {
       addCloudLayer(moonGroup, moon.radius, moonSeed, moon.cloudDensity, moon.surfaceType);
     }
-    addCityLights(moonGroup, moon.radius, moonSeed, moon.surfaceType);
+    addCityLights(moonGroup, moon.radius, moonSeed, moon.surfaceType, moon.polarCapSize);
     addSunAtmosphere(moonGroup, moon.radius);
     if (rng.next() < 0.05) {
       lightningMaterials.push(addLightning(moonGroup, moon.radius, moonSeed));
@@ -452,12 +454,14 @@ export function buildSystemScene(params: {
       const skin = selectSkin(category, skinRng);
       planetGroup = planet.type === 'gas_giant'
         ? makeTexturedGasGiant(planet.radius, planet.color, skin, wireOverlay, planetSeed, planet.gasType)
-        : makeTexturedPlanet(planet.radius, planet.color, skin, wireOverlay, planetSeed, planet.surfaceType);
+        : makeTexturedPlanet(planet.radius, planet.color, skin, wireOverlay, planetSeed, planet.surfaceType,
+            planet.polarCapSize, planet.climateState);
     } else {
       planetGroup = planet.type === 'gas_giant'
         ? makeGasGiant(planet.radius, planet.color, () => rng.next(), planetSeed, planet.gasType,
             planet.greatSpot, planet.greatSpotLat, planet.greatSpotSize, planet.interactionField)
-        : makePlanet(planet.radius, planet.color, 1, planetSeed, planet.surfaceType, planet.interactionField);
+        : makePlanet(planet.radius, planet.color, 1, planetSeed, planet.surfaceType, planet.interactionField,
+            planet.polarCapSize, planet.climateState);
     }
     // Cloud layer for rocky planets
     if (planet.hasClouds && planet.type !== 'gas_giant') {
@@ -465,11 +469,14 @@ export function buildSystemScene(params: {
     }
     // City lights + sun atmosphere for non-gas-giant planets
     if (planet.type !== 'gas_giant') {
-      addCityLights(planetGroup, planet.radius, planetSeed, planet.surfaceType);
+      addCityLights(planetGroup, planet.radius, planetSeed, planet.surfaceType, planet.polarCapSize);
       addSunAtmosphere(planetGroup, planet.radius);
     }
 
     planetGroup.position.set(planet.orbitRadius, 0, 0);
+    if (planet.axialTilt) {
+      planetGroup.rotation.z = planet.axialTilt;
+    }
     scene.add(planetGroup);
     systemObjects.push(planetGroup);
 
@@ -483,6 +490,7 @@ export function buildSystemScene(params: {
       type: 'planet',
       worldPos: new THREE.Vector3(),
       collisionRadius: planet.radius * 1.04,
+      axialTilt: planet.axialTilt || undefined,
     });
     const siteClasses = landingSites.addPlanetSites({
       hostId: planet.id,

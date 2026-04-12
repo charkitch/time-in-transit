@@ -8,7 +8,118 @@ use crate::system_profiles::{
     generate_moon_clouds, generate_rocky_clouds, generate_great_spot,
 };
 use crate::dyson_generator::generate_dyson_shells;
+use std::collections::HashSet;
 use std::f64::consts::PI;
+
+// ─── Climate Derivation ─────────────────────────────────────────────────────
+
+fn base_cap_size(rng: &mut PRNG, surface: SurfaceType) -> f64 {
+    match surface {
+        SurfaceType::Ice => rng.float(0.5, 1.0),
+        SurfaceType::Continental | SurfaceType::Mountain => rng.float(0.0, 0.6),
+        SurfaceType::Ocean => rng.float(0.0, 0.4),
+        SurfaceType::ForestMoon | SurfaceType::Marsh => rng.float(0.0, 0.3),
+        SurfaceType::Desert | SurfaceType::Barren => {
+            if rng.next() < 0.4 { rng.float(0.1, 0.4) } else { 0.0 }
+        }
+        SurfaceType::Volcanic => {
+            if rng.next() < 0.2 { rng.float(0.05, 0.2) } else { 0.0 }
+        }
+        SurfaceType::Venus => 0.0,
+    }
+}
+
+fn valid_climate_for_surface(climate: ClimateState, surface: SurfaceType) -> bool {
+    match climate {
+        ClimateState::IceAge => !matches!(surface, SurfaceType::Venus | SurfaceType::Ice),
+        ClimateState::Warming => !matches!(surface, SurfaceType::Venus | SurfaceType::Volcanic),
+        ClimateState::NuclearWinter => !matches!(surface, SurfaceType::Venus | SurfaceType::Barren),
+        ClimateState::ToxicBloom => !matches!(surface, SurfaceType::Venus | SurfaceType::Ice),
+        ClimateState::Stable => true,
+    }
+}
+
+/// Derive climate state, intensity (0–1), and polar cap size for a body.
+/// Uses a forked PRNG seeded from system/planet/year so the main RNG stream
+/// is untouched. Event flags (e.g. "p0_nuclear", "m0_1_nuclear") can override the result.
+/// `flag_prefix` controls the namespace — planets use "p{i}_", moons use "m{pi}_{mi}_".
+pub fn derive_climate(
+    system_id: u32,
+    seed_index: u32,
+    galaxy_year: u32,
+    surface: SurfaceType,
+    flags: Option<&HashSet<String>>,
+    flag_prefix: &str,
+) -> (ClimateState, f64, f64) {
+    let mut rng = PRNG::from_index(
+        CLUSTER_SEED,
+        system_id
+            .wrapping_mul(311)
+            .wrapping_add(seed_index * 31)
+            .wrapping_add(galaxy_year / 80),
+    );
+
+    // Check event flag overrides first
+    let climate = if let Some(f) = flags {
+        if f.contains(&format!("{}nuclear", flag_prefix)) {
+            ClimateState::NuclearWinter
+        } else if f.contains(&format!("{}ice_age", flag_prefix)) {
+            ClimateState::IceAge
+        } else if f.contains(&format!("{}warming", flag_prefix)) {
+            ClimateState::Warming
+        } else if f.contains(&format!("{}toxic", flag_prefix)) {
+            ClimateState::ToxicBloom
+        } else {
+            pick_climate(&mut rng, surface)
+        }
+    } else {
+        pick_climate(&mut rng, surface)
+    };
+
+    // Intensity 0–1: how far along the climate shift is.
+    // Stable planets get 0. Others get a random stage so each planet is
+    // at a different point in its transition.
+    let intensity = match climate {
+        ClimateState::Stable => 0.0,
+        _ => rng.float(0.15, 1.0),
+    };
+
+    let base = base_cap_size(&mut rng, surface);
+    let cap_size = match climate {
+        ClimateState::Stable => base,
+        // Ice age: caps grow with intensity. At 0.15 ≈ slight growth, at 1.0 ≈ full glaciation
+        ClimateState::IceAge => {
+            let scale = 1.0 + intensity * 0.8; // 1.12x – 1.8x
+            (base * scale).min(1.0).max(intensity * 0.4)
+        }
+        // Warming: caps shrink with intensity. Low intensity ≈ mild, high ≈ nearly gone
+        ClimateState::Warming => base * (1.0 - intensity * 0.8),
+        // Nuclear winter: ash caps scale with intensity
+        ClimateState::NuclearWinter => 0.15 + intensity * 0.55,
+        // Toxic bloom: haze caps scale with intensity
+        ClimateState::ToxicBloom => 0.1 + intensity * 0.4,
+    };
+
+    (climate, intensity, cap_size)
+}
+
+fn pick_climate(rng: &mut PRNG, surface: SurfaceType) -> ClimateState {
+    let roll = rng.next();
+    let candidate = if roll < 0.70 {
+        ClimateState::Stable
+    } else if roll < 0.82 {
+        ClimateState::IceAge
+    } else if roll < 0.92 {
+        ClimateState::Warming
+    } else if roll < 0.97 {
+        ClimateState::NuclearWinter
+    } else {
+        ClimateState::ToxicBloom
+    };
+    if valid_climate_for_surface(candidate, surface) { candidate } else { ClimateState::Stable }
+}
+
+// ─── Name Lists ─────────────────────────────────────────────────────────────
 
 const ASTEROID_BASE_NAMES: &[&str] = &[
     "Hollowed Rock", "Cinder Station", "Belt Refuge", "The Burrow",
@@ -107,6 +218,9 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
                 color: *rng.pick(MOON_COLORS),
                 has_clouds: moon_has_clouds,
                 cloud_density: moon_cloud_density,
+                polar_cap_size: 0.0,
+                climate_state: ClimateState::Stable,
+                climate_intensity: 0.0,
             });
         }
         let rocky_surface = if star.id == 0 && i == 0 {
@@ -164,6 +278,10 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
                 None
             },
             interaction_field,
+            polar_cap_size: 0.0,
+            climate_state: ClimateState::Stable,
+            climate_intensity: 0.0,
+            axial_tilt: 0.0,
         });
     }
 
@@ -213,9 +331,20 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
                 color: *rng.pick(MOON_COLORS),
                 has_clouds: moon_has_clouds,
                 cloud_density: moon_cloud_density,
+                polar_cap_size: 0.0,
+                climate_state: ClimateState::Stable,
+                climate_intensity: 0.0,
             });
         }
         let (great_spot, great_spot_lat, great_spot_size) = generate_great_spot(&mut rng, gas_type);
+        // Rare Uranus-style extreme tilt (~5% of gas giants), forked PRNG
+        let axial_tilt = {
+            let mut tilt_rng = PRNG::from_index(
+                CLUSTER_SEED,
+                star.id.wrapping_mul(199).wrapping_add(i as u32 * 59).wrapping_add(0xA71),
+            );
+            if tilt_rng.next() < 0.05 { tilt_rng.float(1.05, 1.71) } else { 0.0 }
+        };
         let interaction_field = build_planet_interaction_field(
             star.id,
             (inner_count + i) as u32,
@@ -246,6 +375,10 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             has_station: false,
             station_archetype: None,
             interaction_field,
+            polar_cap_size: 0.0,
+            climate_state: ClimateState::Stable,
+            climate_intensity: 0.0,
+            axial_tilt,
         });
     }
 
