@@ -72,7 +72,7 @@ export default defineConfig(({ command }) => ({
             injectRegister: 'auto',
             manifest: {
               name: 'Time in Transit',
-              short_name: 'Transit',
+              short_name: 'Time in Transit',
               start_url: '/',
               scope: '/',
               display: 'fullscreen',

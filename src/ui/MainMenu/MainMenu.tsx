@@ -262,7 +262,7 @@ export function MainMenu({ onNewGame, onResume, onSaveToSlot, onLoadFromSlot, in
           <button className={styles.menuBtn} onClick={() => setView('load')}>
             LOAD GAME
           </button>
-          {isMobile && (
+          {isMobile && !isStandalone && (
             <button className={styles.menuBtn} onClick={() => setView('fullscreen')}>
               FIND OUT ABOUT FULL SCREEN
             </button>
