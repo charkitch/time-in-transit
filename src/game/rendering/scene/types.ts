@@ -26,6 +26,8 @@ export interface SceneEntity {
   siteHostLabel?: string;
   siteHostId?: string;
   siteDiscovered?: boolean;
+  /** Set after first dock/land — revisits skip events and go straight to market. */
+  visited?: boolean;
 }
 
 export interface XRayTransferStream {

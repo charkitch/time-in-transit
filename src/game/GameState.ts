@@ -70,6 +70,7 @@ export interface PendingGameEventContext {
   returnMode: UIMode;
   landingSiteLabel?: string | null;
   landingHostLabel?: string | null;
+  visited?: boolean;
 }
 
 export interface FactionMemoryEntry {

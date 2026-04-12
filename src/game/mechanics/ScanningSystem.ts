@@ -21,8 +21,7 @@ export class ScanningSystem {
     const state = useGameState.getState();
     const targetId = state.player.targetId;
     if (!targetId) return false;
-    const entities = this.sceneRenderer.getAllEntities();
-    const entity = entities.get(targetId);
+    const entity = this.sceneRenderer.getEntity(targetId);
     if (!entity || (entity.type !== 'planet' && entity.type !== 'dyson_shell')) return false;
     if (this.currentVisitScannedHosts.has(targetId as ScannableBodyId)) return false;
     const shipPos = this.sceneRenderer.shipGroup.position;
@@ -42,7 +41,7 @@ export class ScanningSystem {
       setTimeout(() => useGameState.getState().setAlert(null), 1600);
       return;
     }
-    const entity = this.sceneRenderer.getAllEntities().get(targetId);
+    const entity = this.sceneRenderer.getEntity(targetId);
     if (!entity || (entity.type !== 'planet' && entity.type !== 'dyson_shell')) {
       state.setAlert('TARGET PLANET OR DYSON SHELL TO SCAN');
       setTimeout(() => useGameState.getState().setAlert(null), 1800);
@@ -77,7 +76,7 @@ export class ScanningSystem {
   ): void {
     const targetId = this.activeScanTargetId;
     if (!targetId) return;
-    const entity = this.sceneRenderer.getAllEntities().get(targetId);
+    const entity = this.sceneRenderer.getEntity(targetId);
     if (!entity || (entity.type !== 'planet' && entity.type !== 'dyson_shell')) {
       this.clear(state);
       return;

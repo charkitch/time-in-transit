@@ -27,6 +27,13 @@ export function LandingDialog({ onChoice }: LandingDialogProps) {
     pendingGameEvent?.event?.narrativeLines.join('|'),
   ]);
 
+  // Revisit — skip dialog and proceed straight to docked/market
+  useEffect(() => {
+    if (pendingGameEvent?.visited) {
+      onChoice('proceed');
+    }
+  }, [pendingGameEvent?.visited, onChoice]);
+
   useEffect(() => {
     if (!isPoliticsTooltipOpen) return;
     const handleClick = (e: MouseEvent) => {

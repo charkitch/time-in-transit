@@ -78,7 +78,7 @@ export function placeShipNearMainStation(sceneRenderer: SceneRenderer, systemDat
   const safeApproachYawOffset = 0.36;
   sceneRenderer.shipGroup.rotation.set(0.1, Math.atan2(radialX, radialZ) + safeApproachYawOffset, 0);
 
-  const stationEntity = sceneRenderer.getAllEntities().get(`station-${mainPlanetId}`);
+  const stationEntity = sceneRenderer.getEntity(`station-${mainPlanetId}`);
   if (stationEntity) {
     stationEntity.orbitPhase = angle + Math.PI;
   }

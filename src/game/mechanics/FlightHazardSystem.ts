@@ -73,7 +73,7 @@ export class FlightHazardSystem {
     const cargoHarvests: CargoHarvest[] = [];
 
     // ── Fuel scooping near star ──
-    const starEntity = this.sceneRenderer.getAllEntities().get('star');
+    const starEntity = this.sceneRenderer.getEntity('star');
     const starPos = starEntity?.worldPos ?? null;
     const starType = state.currentSystem?.starType;
     const starAttrs = starType ? STAR_ATTRIBUTES[starType] : null;
@@ -111,7 +111,7 @@ export class FlightHazardSystem {
       let scoopingGasGiant = false;
       for (const planet of planets) {
         if (planet.type !== 'gas_giant') continue;
-        const entity = this.sceneRenderer.getAllEntities().get(planet.id);
+        const entity = this.sceneRenderer.getEntity(planet.id);
         if (!entity) continue;
         const dist = pos.distanceTo(entity.worldPos);
         const scoopRange = entity.collisionRadius + GAS_GIANT_SCOOP.rangePadding;
@@ -143,7 +143,7 @@ export class FlightHazardSystem {
       const bases = state.currentSystem?.secretBases ?? [];
       let harvesting = false;
       for (const base of bases) {
-        const entity = this.sceneRenderer.getAllEntities().get(base.id);
+        const entity = this.sceneRenderer.getEntity(base.id);
         if (!entity) continue;
         const dist = pos.distanceTo(entity.worldPos);
         if (dist < FUEL_HARVEST.range) {
@@ -203,7 +203,7 @@ export class FlightHazardSystem {
 
     const mqJet = this.sceneRenderer.getMicroquasarJetParams();
     if (mqJet) {
-      const mqStarEntity = this.sceneRenderer.getAllEntities().get(mqJet.starEntityId);
+      const mqStarEntity = this.sceneRenderer.getEntity(mqJet.starEntityId);
       const jetEffect = checkMicroquasarJetHazard({
         pos,
         jetParams: mqJet,
@@ -225,7 +225,7 @@ export class FlightHazardSystem {
 
     const pulsarBeam = this.sceneRenderer.getPulsarBeamParams();
     if (pulsarBeam) {
-      const pulsarStarEntity = this.sceneRenderer.getAllEntities().get(pulsarBeam.starEntityId);
+      const pulsarStarEntity = this.sceneRenderer.getEntity(pulsarBeam.starEntityId);
       const pulsarEffect = checkPulsarBeamHazard({
         pos,
         beamParams: pulsarBeam,
@@ -247,7 +247,7 @@ export class FlightHazardSystem {
     }
 
     if (starType === 'BH' || starType === 'MQ') {
-      const bhStarEntity = this.sceneRenderer.getAllEntities().get('star');
+      const bhStarEntity = this.sceneRenderer.getEntity('star');
       const bhEffect = checkBlackHoleHazard({
         pos,
         starWorldPos: bhStarEntity?.worldPos ?? null,

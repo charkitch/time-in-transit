@@ -318,7 +318,7 @@ export class Game {
 
     let event: GameEvent | null = null;
 
-    const star = this.sceneRenderer.getAllEntities().get('star');
+    const star = this.sceneRenderer.getEntity('star');
     if (star) {
       const distanceToStar = pos.distanceTo(star.worldPos);
       if (distanceToStar <= star.collisionRadius + 140) {
@@ -330,7 +330,7 @@ export class Game {
 
     if (!event) {
       for (const base of state.currentSystemPayload.system.secretBases) {
-        const entity = this.sceneRenderer.getAllEntities().get(base.id);
+        const entity = this.sceneRenderer.getEntity(base.id);
         if (!entity) continue;
         const dist = pos.distanceTo(entity.worldPos);
         if (dist <= entity.collisionRadius + 180) {
@@ -427,7 +427,7 @@ export class Game {
     // Teleport to safety near the main station before going docked
     const mainPlanetId = state.currentSystem?.mainStationPlanetId;
     if (mainPlanetId) {
-      const stationEntity = this.sceneRenderer.getAllEntities().get(`station-${mainPlanetId}`);
+      const stationEntity = this.sceneRenderer.getEntity(`station-${mainPlanetId}`);
       if (stationEntity) {
         const safeOffset = 200;
         this.sceneRenderer.shipGroup.position.set(

@@ -226,6 +226,10 @@ export class SceneRenderer {
     return this.entities.get(id)?.worldPos ?? null;
   }
 
+  getEntity(id: string): SceneEntity | undefined {
+    return this.entities.get(id);
+  }
+
   getAllEntities(): Map<string, SceneEntity> {
     return this.entities;
   }

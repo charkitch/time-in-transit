@@ -47,11 +47,10 @@ export class InteractionSystem {
     const state = useGameState.getState();
     const targetId = state.player.targetId;
     if (!targetId) return false;
-    const entities = this.sceneRenderer.getAllEntities();
-    const site = entities.get(targetId);
+    const site = this.sceneRenderer.getEntity(targetId);
     if (!site || site.type !== 'landing_site' || !site.siteDiscovered) return false;
     const hostId = site.siteHostId;
-    const host = hostId ? entities.get(hostId) : null;
+    const host = hostId ? this.sceneRenderer.getEntity(hostId) : null;
     if (!host || (host.type !== 'planet' && host.type !== 'dyson_shell')) return false;
     const shipPos = this.sceneRenderer.shipGroup.position;
     const dist = shipPos.distanceTo(site.worldPos);
@@ -63,7 +62,7 @@ export class InteractionSystem {
     const state = useGameState.getState();
     const targetId = state.player.targetId;
     if (!targetId) return false;
-    const entity = this.sceneRenderer.getAllEntities().get(targetId);
+    const entity = this.sceneRenderer.getEntity(targetId);
     return entity?.type === 'npc_ship';
   }
 
@@ -72,7 +71,7 @@ export class InteractionSystem {
     if (state.ui.mode !== 'flight') return;
     const targetId = state.player.targetId;
     if (targetId) {
-      const target = this.sceneRenderer.getAllEntities().get(targetId);
+      const target = this.sceneRenderer.getEntity(targetId);
       if (target?.type === 'landing_site' && target.siteDiscovered) {
         this.tryLandAtTarget();
         return;
@@ -92,14 +91,14 @@ export class InteractionSystem {
       setTimeout(() => useGameState.getState().setAlert(null), 1400);
       return;
     }
-    const site = this.sceneRenderer.getAllEntities().get(targetId);
+    const site = this.sceneRenderer.getEntity(targetId);
     if (!site || site.type !== 'landing_site' || !site.siteDiscovered) {
       state.setAlert('TARGET A SCANNED LANDING SITE');
       setTimeout(() => useGameState.getState().setAlert(null), 1800);
       return;
     }
     const hostId = site.siteHostId;
-    const host = hostId ? this.sceneRenderer.getAllEntities().get(hostId) : null;
+    const host = hostId ? this.sceneRenderer.getEntity(hostId) : null;
     if (!host || (host.type !== 'planet' && host.type !== 'dyson_shell')) {
       state.setAlert('INVALID LANDING TARGET');
       setTimeout(() => useGameState.getState().setAlert(null), 1600);
@@ -122,22 +121,26 @@ export class InteractionSystem {
 
     const currentPayload = state.currentSystemPayload;
     if (!currentPayload) return;
+    const isVisited = !!site.visited;
     let event: GameEvent | null = null;
-    if (host.type === 'planet') {
-      const planet = currentPayload.system.planets.find((p) => p.id === host.id);
-      event = engineGetGameEvent(state.currentSystemId, {
-        context: 'planet_landing',
-        surface: planet?.surfaceType,
-        siteClass: site.siteClassification,
-        hostType: 'planet',
-      });
-    } else {
-      event = engineGetGameEvent(state.currentSystemId, {
-        context: 'dyson_landing',
-        siteClass: site.siteClassification,
-        hostType: 'dyson_shell',
-      });
+    if (!isVisited) {
+      if (host.type === 'planet') {
+        const planet = currentPayload.system.planets.find((p) => p.id === host.id);
+        event = engineGetGameEvent(state.currentSystemId, {
+          context: 'planet_landing',
+          surface: planet?.surfaceType,
+          siteClass: site.siteClassification,
+          hostType: 'planet',
+        });
+      } else {
+        event = engineGetGameEvent(state.currentSystemId, {
+          context: 'dyson_landing',
+          siteClass: site.siteClassification,
+          hostType: 'dyson_shell',
+        });
+      }
     }
+    site.visited = true;
 
     this.lastLandedSiteId = targetId;
     state.setPendingGameEvent({
@@ -149,6 +152,7 @@ export class InteractionSystem {
       returnMode: 'flight',
       landingSiteLabel: site.siteLabel ?? 'LANDING SITE',
       landingHostLabel: site.siteHostLabel ?? null,
+      visited: isVisited,
     });
     state.setUIMode('landing');
   }
@@ -208,7 +212,7 @@ export class InteractionSystem {
 
   trackDockedStation(): void {
     if (!this.dockedStationId) return;
-    const entity = this.sceneRenderer.getAllEntities().get(this.dockedStationId);
+    const entity = this.sceneRenderer.getEntity(this.dockedStationId);
     if (entity) {
       this.sceneRenderer.shipGroup.position.copy(entity.worldPos);
       this.sceneRenderer.shipGroup.quaternion.copy(this.dockedShipQuaternion);
@@ -221,9 +225,8 @@ export class InteractionSystem {
     this.hasUndocked = true;
 
     // Snap ship to the station we docked at and eject outward
-    const entities = this.sceneRenderer.getAllEntities();
     const shipPos = this.sceneRenderer.shipGroup.position;
-    const station = this.dockedStationId ? entities.get(this.dockedStationId) : null;
+    const station = this.dockedStationId ? this.sceneRenderer.getEntity(this.dockedStationId) : null;
 
     if (station) {
       shipPos.copy(station.worldPos);
@@ -240,7 +243,7 @@ export class InteractionSystem {
 
     // If current target is already an NPC ship, hail it directly
     let targetId = state.player.targetId;
-    const currentEntity = targetId ? this.sceneRenderer.getAllEntities().get(targetId) : null;
+    const currentEntity = targetId ? this.sceneRenderer.getEntity(targetId) : null;
     if (!targetId || !currentEntity || currentEntity.type !== 'npc_ship') {
       // Auto-find nearest NPC ship
       targetId = this.findNearestNPCShip();
@@ -251,7 +254,7 @@ export class InteractionSystem {
     const npcState = this.sceneRenderer.getNPCShip(targetId);
     if (!npcState) return;
 
-    const entity = this.sceneRenderer.getAllEntities().get(targetId)!;
+    const entity = this.sceneRenderer.getEntity(targetId)!;
     const dist = this.sceneRenderer.shipGroup.position.distanceTo(entity.worldPos);
     const bonusDemand = this.buildBonusDemandOffer(npcState.id);
     state.setPendingCommContext({
@@ -345,17 +348,17 @@ export class InteractionSystem {
       ? state.currentSystem?.planets.find((planet) => planet.id === stationPlanetId)
       : null;
     const hostType = stationPlanet?.stationArchetype ? stationHostTypeToken(stationPlanet.stationArchetype) : '';
-    const event = systemId === FIRST_SYSTEM_ID
+    const entity = stationId ? this.sceneRenderer.getEntity(stationId) : undefined;
+    const isVisited = !!entity?.visited;
+    const event = isVisited
       ? null
-      : engineGetGameEvent(
-        systemId,
-        {
-          context: 'landing',
-          secretBaseId: secretBase ? stationId : undefined,
-          siteClass: secretBase ? 'secret_base' : 'station',
-          hostType: secretBase ? secretBase.type : hostType,
-        },
-      );
+      : engineGetGameEvent(systemId, {
+        context: 'landing',
+        secretBaseId: secretBase ? stationId : undefined,
+        siteClass: secretBase ? 'secret_base' : 'station',
+        hostType: secretBase ? secretBase.type : hostType,
+      });
+    if (entity) entity.visited = true;
 
     // Get civ state from the pending payload or request from engine
     // For simplicity, build a minimal civState from what we have
@@ -369,6 +372,7 @@ export class InteractionSystem {
       rootEventId: event?.id ?? null,
       yearsSinceLastVisit,
       returnMode: 'docked',
+      visited: isVisited,
     });
     state.setUIMode('landing');
   }
