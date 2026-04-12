@@ -69,6 +69,10 @@ pub enum GoodName {
 }
 
 impl GoodName {
+    pub fn harvest_only(self) -> bool {
+        matches!(self, GoodName::RelativisticAsh | GoodName::PulsarSilk | GoodName::CombatIntelligence | GoodName::QuasarGlass)
+    }
+
     pub const ALL: &'static [GoodName] = &[
         GoodName::StarwindRations,
         GoodName::HullskinLace,

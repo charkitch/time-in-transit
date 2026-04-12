@@ -272,7 +272,7 @@ fn economy_modifier(economy: EconomyType, good: GoodName) -> i32 {
 }
 
 fn listing_probability(economy: EconomyType, good: GoodName) -> f64 {
-    if matches!(good, GoodName::RelativisticAsh | GoodName::PulsarSilk) {
+    if good.harvest_only() {
         return 0.0;
     }
     let rarity_discount = (1.0 - rarity(good)) * 0.38;
@@ -315,7 +315,7 @@ fn pick_missing(listed: &mut Vec<GoodName>, candidates: &[GoodName], rng: &mut P
     let mut missing: Vec<GoodName> = candidates
         .iter()
         .copied()
-        .filter(|good| !listed.contains(good))
+        .filter(|good| !listed.contains(good) && !good.harvest_only())
         .collect();
     if missing.is_empty() {
         return;
