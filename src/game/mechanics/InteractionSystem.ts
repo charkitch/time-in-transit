@@ -274,25 +274,17 @@ export class InteractionSystem {
     if (!ctx || !ctx.inTradeRange) return;
     const entry = ctx.cargo.find(c => c.good === good);
 
-    try {
-      if (action === 'buy') {
-        if (!entry) return;
-        const snapshot = engineTradeBuy(good, 1, entry.buyPrice);
-        state.syncPlayerStateFromEngine(snapshot);
-        state.saveGame();
-      } else {
-        const sellPrice =
-          ctx.bonusDemand?.good === good
-            ? ctx.bonusDemand.sellPrice
-            : entry?.sellPrice;
-        if (!sellPrice) return;
-        if ((state.player.cargo[good] ?? 0) <= 0) return;
-        const snapshot = engineTradeSell(good, 1, sellPrice);
-        state.syncPlayerStateFromEngine(snapshot);
-        state.saveGame();
-      }
-    } catch {
-      // Insufficient credits or cargo hold full — silently ignore
+    if (action === 'buy') {
+      if (!entry) return;
+      engineTradeBuy(good, 1, entry.buyPrice);
+    } else {
+      const sellPrice =
+        ctx.bonusDemand?.good === good
+          ? ctx.bonusDemand.sellPrice
+          : entry?.sellPrice;
+      if (!sellPrice) return;
+      if ((state.player.cargo[good] ?? 0) <= 0) return;
+      engineTradeSell(good, 1, sellPrice);
     }
   }
 

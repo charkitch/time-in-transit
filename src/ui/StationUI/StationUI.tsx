@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useGameState } from '../../game/GameState';
+import { engineTradeBuy, engineTradeSell } from '../../game/engine';
 import { HYPERSPACE, MAX_CARGO, POLITICAL_DESCRIPTIONS, POLITICAL_TYPE_DISPLAY, ECONOMY_DESCRIPTIONS, type GoodName } from '../../game/constants';
 import styles from './StationUI.module.css';
 
@@ -47,8 +48,6 @@ export function StationUI({ onUndock }: StationUIProps) {
   const currentSystemPayload = useGameState(s => s.currentSystemPayload);
   const player = useGameState(s => s.player);
   const addCredits = useGameState(s => s.addCredits);
-  const addCargo = useGameState(s => s.addCargo);
-  const removeCargo = useGameState(s => s.removeCargo);
   const setFuel = useGameState(s => s.setFuel);
   const setShields = useGameState(s => s.setShields);
   const saveGame = useGameState(s => s.saveGame);
@@ -66,17 +65,13 @@ export function StationUI({ onUndock }: StationUIProps) {
 
   const handleBuy = (good: GoodName, price: number, stock: number, banned: boolean) => {
     if (banned || stock <= 0 || cargoSpace === 0 || player.credits < price) return;
-    addCredits(-price);
-    addCargo(good, 1, price);
-    saveGame();
+    engineTradeBuy(good, 1, price);
   };
 
   const handleSell = (good: GoodName, price: number, banned: boolean) => {
     const qty = player.cargo[good] ?? 0;
     if (qty === 0 || banned || price <= 0) return;
-    addCredits(price);
-    removeCargo(good, 1);
-    saveGame();
+    engineTradeSell(good, 1, price);
   };
 
   const fuelNeeded = Math.max(0, HYPERSPACE.tankSize - player.fuel);
