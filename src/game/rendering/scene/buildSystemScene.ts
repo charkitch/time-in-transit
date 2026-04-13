@@ -24,7 +24,7 @@ import type { FleetBattle } from '../../mechanics/FleetBattleSystem';
 import { getFaction } from '../../data/factions';
 import { PRNG } from '../../generation/prng';
 import { CLUSTER_SEED, RENDER_CONFIG } from '../../constants';
-import { createBlackHoleGroup, createMicroquasarJetGroup, createXRayAccretorGroup, createBeamMaterial } from './blackHoleVisuals';
+import { createBlackHoleGroup, createMicroquasarJetGroup, createXRayAccretorGroup, createBeamMaterial, createPulsarSurfaceMaterial } from './blackHoleVisuals';
 import type { SceneEntity, XRayTransferStream } from './types';
 import { createXRayTransferStream, updateXRayTransferStreams } from './xrayStreams';
 import type { RuntimeProfile } from '../../../runtime/runtimeProfile';
@@ -141,6 +141,7 @@ export interface SystemSceneState {
   pulsarBeamGroup: THREE.Group | null;
   pulsarBeamAngle: number;
   pulsarBeamParams: BeamParams | null;
+  pulsarStarMat: THREE.ShaderMaterial | null;
   battleProjectiles: THREE.Points | null;
   battleExplosions: BattleExplosions | null;
   fleetBattleData: FleetBattle | null;
@@ -185,6 +186,7 @@ export function buildSystemScene(params: {
   let pulsarBeamGroup: THREE.Group | null = null;
   let pulsarBeamAngle = 0;
   let pulsarBeamParams: BeamParams | null = null;
+  let pulsarStarMat: THREE.ShaderMaterial | null = null;
   let battleProjectiles: THREE.Points | null = null;
   let battleExplosions: BattleExplosions | null = null;
   let fleetBattleData: FleetBattle | null = null;
@@ -308,9 +310,9 @@ export function buildSystemScene(params: {
   } else {
     // Normal/exotic star sphere. Keep the core opaque so bodies behind it are fully occluded.
     const starGeo = new THREE.SphereGeometry(data.starRadius, 32, 32);
-    const starMat = new THREE.MeshBasicMaterial({
-      color: starColor,
-    });
+    const isPulsar = data.starType === 'PU';
+    const starMat = isPulsar ? createPulsarSurfaceMaterial(starColor) : new THREE.MeshBasicMaterial({ color: starColor });
+    if (isPulsar) pulsarStarMat = starMat as THREE.ShaderMaterial;
     starGroup.add(new THREE.Mesh(starGeo, starMat));
 
     // Inner glow to fill the center so the star looks uniformly luminous
@@ -346,9 +348,14 @@ export function buildSystemScene(params: {
         core.position.copy(beam.position);
         if (sign < 0) core.rotation.x = Math.PI;
         beamGroup.add(core);
+        // Magnetic pole hotspot — bright glow at beam base on star surface
+        const hotspot = makeGlowSprite(0xAADDFF, data.starRadius * 1.4);
+        hotspot.position.set(0, sign * data.starRadius * 1.05, 0);
+        beamGroup.add(hotspot);
       }
       // Tilt slightly off-vertical for characteristic pulsar wobble
-      beamGroup.rotation.set(0.15, 0, 0);
+      beamGroup.rotation.order = 'YXZ';
+      beamGroup.rotation.set(0.5, 0, 0);
       starGroup.add(beamGroup);
       pulsarBeamGroup = beamGroup;
       pulsarBeamAngle = 0;
@@ -874,6 +881,7 @@ export function buildSystemScene(params: {
     pulsarBeamGroup,
     pulsarBeamAngle,
     pulsarBeamParams,
+    pulsarStarMat,
     battleProjectiles,
     battleExplosions,
     fleetBattleData,

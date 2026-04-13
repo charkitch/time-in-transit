@@ -197,6 +197,61 @@ export function createBeamMaterial(color: number, opacity: number, undulate: num
   });
 }
 
+// ── Pulsar star surface shader ─────────────────────────────────────────────
+// Subtle latitude bands + longitude asymmetry that rotate with time,
+// making the neutron star's spin visible on the surface. Low contrast
+// (brightness range ~0.78–1.08) to stay epilepsy-safe.
+
+const pulsarSurfaceVertex = /* glsl */ `
+varying vec3 vObjPos;
+void main() {
+  vObjPos = position;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const pulsarSurfaceFragment = /* glsl */ `
+uniform vec3 uColor;
+uniform float uTime;
+uniform float uRotSpeed;
+
+varying vec3 vObjPos;
+
+void main() {
+  // Rotate surface pattern around Y (the spin axis)
+  float angle = uTime * uRotSpeed;
+  float c = cos(angle), s = sin(angle);
+  vec3 rp = vec3(vObjPos.x * c + vObjPos.z * s, vObjPos.y, -vObjPos.x * s + vObjPos.z * c);
+  vec3 n = normalize(rp);
+
+  float lat = n.y;
+  float lon = atan(n.x, n.z);
+
+  // Subtle latitude bands
+  float bands = sin(lat * 10.0) * 0.07;
+  // Longitude asymmetry so rotation is perceptible
+  float streak = sin(lon * 2.0 + lat * 3.0) * 0.06 + sin(lon + 5.0) * 0.04;
+  // Brighter polar caps
+  float polar = smoothstep(0.55, 1.0, abs(lat)) * 0.12;
+
+  float brightness = 0.88 + bands + streak + polar;
+  gl_FragColor = vec4(uColor * brightness, 1.0);
+}
+`;
+
+export function createPulsarSurfaceMaterial(color: number): THREE.ShaderMaterial {
+  const c = new THREE.Color(color);
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uColor: { value: new THREE.Vector3(c.r, c.g, c.b) },
+      uRotSpeed: { value: Math.PI * 2 / 4 }, // matches beam rotation period
+    },
+    vertexShader: pulsarSurfaceVertex,
+    fragmentShader: pulsarSurfaceFragment,
+  });
+}
+
 /** Update all beam shader time uniforms in a group */
 export function updateBeamTime(group: THREE.Group, time: number): void {
   group.traverse((obj) => {

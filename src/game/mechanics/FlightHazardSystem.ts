@@ -16,7 +16,7 @@ import {
   checkBattleZoneHazard,
   checkBlackHoleHazard,
   checkMicroquasarJetHazard,
-  checkPulsarBeamHazard,
+  checkPulsarSweepZone,
   checkProximityAlerts,
   checkXRayStreamHazard,
   type HazardEffect,
@@ -27,6 +27,11 @@ import type { SecretBaseType } from '../engine';
 const XB_STREAM_HAZARD_RADIUS = 40;
 const COMBAT_INTEL_INTERVAL = 8;
 const BEAM_HARVEST_INTERVAL = 5;
+// Pulsar burst damage per sweep (flat amounts, not per-second rates)
+const PULSAR_LETHAL_SHIELD_BURST = [30, 80] as const; // [min, max] — proximity-scaled
+const PULSAR_LETHAL_HEAT_BURST = [25, 50] as const;
+const PULSAR_HARVEST_SHIELD_BURST = 3;
+const PULSAR_HARVEST_HEAT_BURST = 5;
 
 const DEATH_MESSAGES: Partial<Record<HazardType, string[]>> = {
   Overheat: ['THERMAL FAILURE', 'Reactor overheat destroyed primary systems.', 'Emergency coolant exhausted.'],
@@ -57,7 +62,8 @@ export class FlightHazardSystem {
   private harvestingFuel = false;
   combatIntelTimer = 0;
   private jetHarvestTimer = 0;
-  private pulsarHarvestTimer = 0;
+  private pulsarInZone = false;
+  private pulsarLethalHit = false;
 
   constructor(private sceneRenderer: SceneRenderer) {}
 
@@ -226,23 +232,52 @@ export class FlightHazardSystem {
     const pulsarBeam = this.sceneRenderer.getPulsarBeamParams();
     if (pulsarBeam) {
       const pulsarStarEntity = this.sceneRenderer.getEntity(pulsarBeam.starEntityId);
-      const pulsarEffect = checkPulsarBeamHazard({
-        pos,
-        beamParams: pulsarBeam,
-        starWorldPos: pulsarStarEntity?.worldPos ?? null,
-        starRadius: pulsarStarEntity?.collisionRadius ?? 0,
-      });
-      if (pulsarEffect.alert) effects.push(pulsarEffect);
-      if (pulsarEffect.zone === 'harvesting') {
-        if (cargoUsed + cargoHarvests.reduce((s, h) => s + h.qty, 0) < MAX_CARGO) {
-          this.pulsarHarvestTimer += dt;
-          if (this.pulsarHarvestTimer >= BEAM_HARVEST_INTERVAL) {
-            cargoHarvests.push({ good: PULSAR_SILK_GOOD, qty: 1 });
-            this.pulsarHarvestTimer -= BEAM_HARVEST_INTERVAL;
+      const starWorldPos = pulsarStarEntity?.worldPos;
+      const starRadius = pulsarStarEntity?.collisionRadius ?? 0;
+
+      if (starWorldPos) {
+        const sweep = checkPulsarSweepZone({ pos, beamParams: pulsarBeam, starWorldPos, starRadius });
+
+        if (sweep.zone === 'lethal') {
+          // Burst damage on entry — not continuous
+          if (!this.pulsarLethalHit) {
+            const f = sweep.proximityFactor;
+            const shieldBurst = (PULSAR_LETHAL_SHIELD_BURST[0] + (PULSAR_LETHAL_SHIELD_BURST[1] - PULSAR_LETHAL_SHIELD_BURST[0]) * f);
+            const heatBurst = (PULSAR_LETHAL_HEAT_BURST[0] + (PULSAR_LETHAL_HEAT_BURST[1] - PULSAR_LETHAL_HEAT_BURST[0]) * f);
+            effects.push({
+              heatRate: heatBurst / dt,
+              shieldDamageRate: shieldBurst / dt,
+              fuelRate: 0,
+              alert: f > 0.5 ? 'PULSAR BEAM — LETHAL RADIATION' : 'PULSAR BEAM — HULL CRITICAL',
+              hazardType: 'PulsarBeam',
+              zone: 'lethal',
+            });
+            this.pulsarLethalHit = true;
           }
+        } else {
+          this.pulsarLethalHit = false;
         }
-      } else {
-        this.pulsarHarvestTimer = 0;
+
+        if (sweep.zone === 'harvesting') {
+          // Harvest + small burst on sweep entry
+          if (!this.pulsarInZone) {
+            effects.push({
+              heatRate: PULSAR_HARVEST_HEAT_BURST / dt,
+              shieldDamageRate: PULSAR_HARVEST_SHIELD_BURST / dt,
+              fuelRate: 0,
+              alert: 'WARNING: PULSAR BEAM PROXIMITY',
+              hazardType: 'PulsarBeam',
+              zone: 'harvesting',
+            });
+            if (cargoUsed + cargoHarvests.reduce((s, h) => s + h.qty, 0) < MAX_CARGO) {
+              cargoHarvests.push({ good: PULSAR_SILK_GOOD, qty: 1 });
+            }
+          }
+          this.pulsarInZone = true;
+        } else if (sweep.zone !== 'lethal') {
+          // Reset harvest flag when fully out of both zones
+          this.pulsarInZone = false;
+        }
       }
     }
 
@@ -319,6 +354,7 @@ export class FlightHazardSystem {
   resetTimers(): void {
     this.combatIntelTimer = 0;
     this.jetHarvestTimer = 0;
-    this.pulsarHarvestTimer = 0;
+    this.pulsarInZone = false;
+    this.pulsarLethalHit = false;
   }
 }

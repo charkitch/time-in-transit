@@ -76,7 +76,7 @@ pub fn generate_cluster() -> Vec<StarSystemData> {
         });
     }
 
-    // Keep the home system visually distinctive
+    // Home system gets a familiar sun-like star
     if !systems.is_empty() {
         systems[0].star_type = StarType::G;
     }

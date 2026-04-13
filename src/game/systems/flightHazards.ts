@@ -185,42 +185,46 @@ export function checkMicroquasarJetHazard(params: {
   return EMPTY_EFFECT;
 }
 
-export function checkPulsarBeamHazard(params: {
+/** Angular half-widths for pulsar sweep zones (radians) */
+const PULSAR_LETHAL_HALF = 0.03;     // ~1.7° — direct beam hit
+const PULSAR_HARVEST_HALF = 0.15;    // ~8.6° — broader radiation field
+
+export interface PulsarSweepResult {
+  zone: 'lethal' | 'harvesting' | null;
+  dist: number;
+  proximityFactor: number;
+}
+
+/**
+ * 3D angular sweep detection for rotating pulsar beams. Compares the full 3D angle
+ * between the star→ship direction and the beam axis, so ships off the beam's sweep
+ * plane are not affected. Checks both poles of the bipolar beam.
+ */
+export function checkPulsarSweepZone(params: {
   pos: THREE.Vector3;
-  beamParams: { axis: THREE.Vector3; halfAngle: number; length: number };
-  starWorldPos: THREE.Vector3 | null;
+  beamParams: { axis: THREE.Vector3; length: number };
+  starWorldPos: THREE.Vector3;
   starRadius: number;
-}): HazardEffect {
+}): PulsarSweepResult {
   const { pos, beamParams, starWorldPos, starRadius } = params;
-  if (!starWorldPos) return EMPTY_EFFECT;
+  const toShip = pos.clone().sub(starWorldPos);
+  const dist = toShip.length();
 
-  const { zone, dist } = checkConeBeamZone({ pos, beamParams, origin: starWorldPos, warningMul: 3.0 });
-
-  if (zone === 'inside') {
-    const proximityFactor = 1 - Math.max(0, Math.min(1, dist / (starRadius * 40)));
-    const shieldDmg = 40 + 110 * proximityFactor;
-    const heatDmg = 50 + 70 * proximityFactor;
-    return {
-      heatRate: heatDmg,
-      shieldDamageRate: shieldDmg,
-      fuelRate: 0,
-      alert: proximityFactor > 0.5
-        ? 'PULSAR BEAM — LETHAL RADIATION'
-        : 'PULSAR BEAM — HULL CRITICAL',
-      hazardType: 'PulsarBeam',
-      zone: 'lethal',
-    };
-  } else if (zone === 'warning') {
-    return {
-      heatRate: 15,
-      shieldDamageRate: 0,
-      fuelRate: 0,
-      alert: 'WARNING: PULSAR BEAM PROXIMITY',
-      hazardType: 'PulsarBeam',
-      zone: 'harvesting',
-    };
+  if (dist < starRadius * 2 || dist > beamParams.length) {
+    return { zone: null, dist, proximityFactor: 0 };
   }
-  return EMPTY_EFFECT;
+
+  // Full 3D angle between ship direction and beam axis
+  const shipDir = toShip.clone().normalize();
+  const cosAngle = shipDir.dot(beamParams.axis);
+  // Check both poles — min angle to either end of the bipolar beam
+  const angle = Math.acos(Math.min(1, Math.abs(cosAngle)));
+
+  const proximityFactor = 1 - Math.max(0, Math.min(1, dist / (starRadius * 40)));
+
+  if (angle < PULSAR_LETHAL_HALF) return { zone: 'lethal', dist, proximityFactor };
+  if (angle < PULSAR_HARVEST_HALF) return { zone: 'harvesting', dist, proximityFactor };
+  return { zone: null, dist, proximityFactor: 0 };
 }
 
 export function checkBlackHoleHazard(params: {

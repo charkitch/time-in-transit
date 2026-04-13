@@ -40,6 +40,7 @@ export function tickSceneAnimations(params: {
   pulsarBeamGroup: THREE.Group | null;
   pulsarBeamAngle: number;
   pulsarBeamParams: BeamParams | null;
+  pulsarStarMat: THREE.ShaderMaterial | null;
   mqJetGroup: THREE.Group | null;
   battleProjectiles: THREE.Points | null;
   battleExplosions: BattleExplosions | null;
@@ -84,7 +85,7 @@ export function tickSceneAnimations(params: {
 
   // Rotate pulsar beam group
   if (pulsarBeamGroup && dt > 0) {
-    pulsarBeamAngle += (Math.PI * 2 / 6) * dt; // 1 revolution per 6 seconds
+    pulsarBeamAngle += (Math.PI * 2 / 4) * dt; // 1 revolution per 4 seconds
     pulsarBeamGroup.rotation.y = pulsarBeamAngle;
     if (pulsarBeamParams) {
       const axis = new THREE.Vector3(0, 1, 0);
@@ -96,8 +97,9 @@ export function tickSceneAnimations(params: {
     }
   }
 
-  // Update beam shader time uniforms
+  // Update beam + pulsar surface shader time uniforms
   if (pulsarBeamGroup) updateBeamTime(pulsarBeamGroup, time);
+  if (params.pulsarStarMat) params.pulsarStarMat.uniforms.uTime.value = time;
   if (mqJetGroup) updateBeamTime(mqJetGroup, time);
 
   // Battle projectile + explosion animation

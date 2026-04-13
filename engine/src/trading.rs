@@ -30,7 +30,7 @@ fn base_price(good: GoodName) -> i32 {
         GoodName::SurrenderCodes => 828,
         GoodName::ImpossibleSeeds => 910,
         GoodName::RelativisticAsh => 1280,
-        GoodName::PulsarSilk => 1340,
+        GoodName::PulsarSilk => 1820,
         GoodName::CombatIntelligence => 1460,
     }
 }
@@ -58,7 +58,7 @@ fn volatility(good: GoodName) -> f64 {
         GoodName::SurrenderCodes => 0.44,
         GoodName::ImpossibleSeeds => 0.46,
         GoodName::RelativisticAsh => 0.38,
-        GoodName::PulsarSilk => 0.40,
+        GoodName::PulsarSilk => 0.48,
         GoodName::CombatIntelligence => 0.42,
     }
 }
