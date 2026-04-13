@@ -44,7 +44,7 @@ export class InputSystem {
     // one-shot actions
     if (e.code === 'KeyF' && !e.repeat) this.onDock?.();
     if (e.code === 'KeyG' && !e.repeat) this.onClusterMap?.();
-    if (e.code === 'Digit1' && !e.repeat) this.onSystemMap?.();
+    if (e.code === 'KeyM' && !e.repeat) this.onSystemMap?.();
     if (e.code === 'Tab') { e.preventDefault(); if (!e.repeat) this.onCycleTarget?.(); }
     if (e.code === 'KeyJ' && !e.repeat) this.onJumpRequest?.();
     if (e.code === 'KeyH' && !e.repeat) this.onHail?.();

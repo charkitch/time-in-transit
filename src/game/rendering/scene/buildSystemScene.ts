@@ -23,6 +23,7 @@ import { generateFleetBattle } from '../../mechanics/FleetBattleSystem';
 import type { FleetBattle } from '../../mechanics/FleetBattleSystem';
 import { getFaction } from '../../data/factions';
 import { PRNG } from '../../generation/prng';
+import type { StationArchetype } from '../../archetypes';
 import { CLUSTER_SEED, RENDER_CONFIG } from '../../constants';
 import { createBlackHoleGroup, createMicroquasarJetGroup, createXRayAccretorGroup, createBeamMaterial, createPulsarSurfaceMaterial } from './blackHoleVisuals';
 import type { SceneEntity, XRayTransferStream } from './types';
@@ -112,6 +113,89 @@ function computeDysonCollisionSamples(
 
   const sampleRadius = Math.max(70, Math.max(arcWidth, arcHeight) * 0.18);
   return { local, sampleRadius };
+}
+
+function computeStationCollisionSamples(
+  archetype: StationArchetype,
+  size: number,
+): { local: THREE.Vector3[]; sampleRadius: number } | null {
+  let ringRadius = 0;
+  let tubeRadius = 0;
+  let sampleRadius = 0;
+  let rotateX = 0;
+
+  switch (archetype) {
+    case 'trade_hub':
+      ringRadius = size;
+      tubeRadius = size * 0.18;
+      sampleRadius = size * 0.08;
+      break;
+    case 'refinery_spindle':
+      ringRadius = size * 0.75;
+      tubeRadius = size * 0.08;
+      sampleRadius = size * 0.07;
+      rotateX = Math.PI * 0.5;
+      break;
+    case 'alien_orrery_reliquary':
+      ringRadius = size * 1.15;
+      tubeRadius = size * 0.06;
+      sampleRadius = size * 0.055;
+      rotateX = Math.PI * 0.5;
+      break;
+    default:
+      return null;
+  }
+
+  const sampleCount = 32;
+  const local: THREE.Vector3[] = [];
+  for (let i = 0; i < sampleCount; i++) {
+    const a = (i / sampleCount) * Math.PI * 2;
+    const p = new THREE.Vector3(Math.cos(a) * ringRadius, Math.sin(a) * ringRadius, 0);
+    if (rotateX !== 0) p.applyAxisAngle(new THREE.Vector3(1, 0, 0), rotateX);
+    local.push(p);
+  }
+
+  // Add connector arm samples so spokes/trusses are also lethal.
+  if (archetype === 'trade_hub') {
+    const armCount = 6;
+    const armLength = size * 0.74;
+    const spokeRadius = size * 0.58;
+    const rMin = Math.max(size * 0.16, spokeRadius - armLength * 0.5);
+    const rMax = Math.min(ringRadius, spokeRadius + armLength * 0.5);
+    const spokeSteps = 5;
+    for (let i = 0; i < armCount; i++) {
+      const a = (i / armCount) * Math.PI * 2;
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      for (let j = 0; j < spokeSteps; j++) {
+        const t = j / (spokeSteps - 1);
+        const r = rMin + (rMax - rMin) * t;
+        local.push(new THREE.Vector3(ca * r, sa * r, 0));
+      }
+    }
+  } else if (archetype === 'refinery_spindle') {
+    const armCount = 6;
+    const armLength = size * 0.62;
+    const armRadius = size * 0.36;
+    const rMin = Math.max(size * 0.12, armRadius - armLength * 0.5);
+    const rMax = Math.min(ringRadius, armRadius + armLength * 0.5);
+    const trussSteps = 5;
+    for (let i = 0; i < armCount; i++) {
+      const a = (i / armCount) * Math.PI * 2;
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      for (let j = 0; j < trussSteps; j++) {
+        const t = j / (trussSteps - 1);
+        const r = rMin + (rMax - rMin) * t;
+        local.push(new THREE.Vector3(ca * r, 0, sa * r));
+      }
+    }
+  }
+
+  return {
+    local,
+    sampleRadius: Math.min(tubeRadius, sampleRadius),
+  };
 }
 
 function disableFogForObject(root: THREE.Object3D): void {
@@ -529,10 +613,14 @@ export function buildSystemScene(params: {
     // Station
     if (planet.hasStation) {
       const stationSeed = hashString32(`${systemId}:${planet.id}:station`);
-      const stationScale = planet.stationArchetype === 'alien_graveloom' ? 1.35 : planet.stationArchetype?.startsWith('alien_') ? 1.15 : 1.0;
+      const stationArchetype = planet.stationArchetype ?? 'trade_hub';
+      const stationScale = stationArchetype === 'alien_graveloom' ? 1.35 : stationArchetype.startsWith('alien_') ? 1.15 : 1.0;
+      const stationSize = 60 * stationScale;
+      const stationCollisionRadius = stationSize * 0.38;
+      const ringCollision = computeStationCollisionSamples(stationArchetype, stationSize);
       const stationGroup = makeStation({
-        size: 60 * stationScale,
-        archetype: planet.stationArchetype ?? 'trade_hub',
+        size: stationSize,
+        archetype: stationArchetype,
         seed: stationSeed,
       });
       const stationId = `station-${planet.id}`;
@@ -548,8 +636,12 @@ export function buildSystemScene(params: {
         parentId: planet.id,
         type: 'station',
         worldPos: new THREE.Vector3(),
-        collisionRadius: 0,
-        stationSpinAxis: stationSpinAxisForArchetype(planet.stationArchetype),
+        collisionRadius: stationCollisionRadius,
+        interactionRadius: stationSize,
+        collisionSampleRadius: ringCollision?.sampleRadius,
+        collisionSamplesLocal: ringCollision?.local,
+        collisionSamplesWorld: ringCollision ? ringCollision.local.map(() => new THREE.Vector3()) : undefined,
+        stationSpinAxis: stationSpinAxisForArchetype(stationArchetype),
       });
     }
 
@@ -658,15 +750,23 @@ export function buildSystemScene(params: {
   // Secret bases
   for (const base of data.secretBases) {
     let baseGroup: THREE.Group;
+    let baseSize = 45;
+    let baseCollisionRadius = 30;
     switch (base.type) {
       case 'asteroid':
-        baseGroup = makeAsteroidBase(35);
+        baseSize = 35;
+        baseCollisionRadius = 24;
+        baseGroup = makeAsteroidBase(baseSize);
         break;
       case 'oort_cloud':
-        baseGroup = makeOortCloudBase(45);
+        baseSize = 45;
+        baseCollisionRadius = 30;
+        baseGroup = makeOortCloudBase(baseSize);
         break;
       case 'maximum_space':
-        baseGroup = makeMaximumSpaceBase(55);
+        baseSize = 55;
+        baseCollisionRadius = 36;
+        baseGroup = makeMaximumSpaceBase(baseSize);
         break;
     }
     baseGroup.position.set(
@@ -686,7 +786,8 @@ export function buildSystemScene(params: {
       orbitPhase: base.orbitPhase,
       type: 'station', // reuse station type so docking works
       worldPos: new THREE.Vector3(),
-      collisionRadius: 0,
+      collisionRadius: baseCollisionRadius,
+      interactionRadius: baseSize,
       stationSpinAxis: new THREE.Vector3(0, 0, 1),
     });
 

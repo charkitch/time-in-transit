@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { SolarSystemData } from '../engine';
 import type { GoodName } from '../constants';
+import { getInteractionDistance } from '../constants';
 import { PRNG } from '../generation/prng';
 import { CLUSTER_SEED, MARKET_GOODS } from '../constants';
 import type { NPCShipArchetype, NPCShipSizeClass } from '../archetypes';
@@ -158,10 +159,9 @@ function speedRange(archetype: NPCShipArchetype, size: NPCShipSizeClass): [numbe
 }
 
 function tradeRangeFor(archetype: NPCShipArchetype, size: NPCShipSizeClass): number {
-  const base = archetype === 'alien_void_weaver' ? 430 : 500;
-  if (size === 'large') return base + 110;
-  if (size === 'small') return base - 60;
-  return base;
+  void archetype;
+  void size;
+  return getInteractionDistance('npc_ship');
 }
 
 function pickCargoGood(cargoRng: PRNG, preferred: GoodName[]): GoodName {

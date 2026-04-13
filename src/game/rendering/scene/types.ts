@@ -16,6 +16,7 @@ export interface SceneEntity {
   type: 'planet' | 'station' | 'star' | 'moon' | 'npc_ship' | 'fleet_ship' | 'dyson_shell' | 'landing_site';
   worldPos: THREE.Vector3;
   collisionRadius: number;
+  interactionRadius?: number;
   collisionSampleRadius?: number;
   collisionSamplesLocal?: THREE.Vector3[];
   collisionSamplesWorld?: THREE.Vector3[];

@@ -64,7 +64,11 @@ export function checkProximityAlerts(params: {
   if (scoopingFuel || gasGiantScoopingFuel || harvestingFuel) return;
 
   for (const [, entity] of entities) {
-    if (entity.type === 'landing_site' && !entity.siteDiscovered) continue;
+    if (entity.type === 'landing_site') {
+      if (!entity.siteDiscovered || !state.ui.canLandNow) continue;
+      state.setAlert(proximityAlertLabel(entity));
+      return;
+    }
     const alertDist = entity.collisionRadius > 0
       ? entity.collisionRadius * 1.5
       : 150;

@@ -41,8 +41,7 @@ export class TargetingSystem {
     this.lastTargetActionAt = performance.now();
   }
 
-  private isTargetableEntity(id: string, entity: { type: string; siteDiscovered?: boolean }): boolean {
-    if (id === 'star') return false;
+  private isTargetableEntity(_id: string, entity: { type: string; siteDiscovered?: boolean }): boolean {
     if (entity.type === 'landing_site' && !entity.siteDiscovered) return false;
     return true;
   }

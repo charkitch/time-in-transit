@@ -6,6 +6,7 @@ import type { TargetingSystem } from './TargetingSystem';
 import { useGameState } from '../GameState';
 import { MARKET_GOODS } from '../constants';
 import type { GoodName } from '../constants';
+import { getInteractionDistance } from '../constants';
 import {
   engineGetGameEvent, engineGetMarket, engineApplyChoiceEffect,
   engineTradeBuy, engineTradeSell,
@@ -16,8 +17,6 @@ import { STARTING_SYSTEM_ID } from '../constants';
 import type { SystemId } from '../types';
 
 const FIRST_SYSTEM_ID = STARTING_SYSTEM_ID;
-const LAND_RANGE_PADDING_PLANET = 130;
-const LAND_RANGE_PADDING_DYSON = 180;
 const LAND_MAX_SPEED = 55;
 
 export class InteractionSystem {
@@ -39,7 +38,7 @@ export class InteractionSystem {
     const entities = this.sceneRenderer.getAllEntities();
     const nearest = this.docking.findNearestStation(pos, entities);
     if (!nearest) return false;
-    return this.docking.canDock(pos, nearest.pos, speed);
+    return this.docking.canDock(pos, nearest.pos, speed, nearest.interactionRadius);
   }
 
   canLandNow(speed: number): boolean {
@@ -54,7 +53,7 @@ export class InteractionSystem {
     if (!host || (host.type !== 'planet' && host.type !== 'dyson_shell')) return false;
     const shipPos = this.sceneRenderer.shipGroup.position;
     const dist = shipPos.distanceTo(site.worldPos);
-    const required = host.collisionRadius + (host.type === 'dyson_shell' ? LAND_RANGE_PADDING_DYSON : LAND_RANGE_PADDING_PLANET);
+    const required = getInteractionDistance(host.type, host.collisionRadius);
     return dist <= required;
   }
 
@@ -107,7 +106,7 @@ export class InteractionSystem {
 
     const shipPos = this.sceneRenderer.shipGroup.position;
     const dist = shipPos.distanceTo(site.worldPos);
-    const required = host.collisionRadius + (host.type === 'dyson_shell' ? LAND_RANGE_PADDING_DYSON : LAND_RANGE_PADDING_PLANET);
+    const required = getInteractionDistance(host.type, host.collisionRadius);
     if (dist > required) {
       state.setAlert('TOO FAR TO LAND');
       setTimeout(() => useGameState.getState().setAlert(null), 1600);
@@ -317,7 +316,7 @@ export class InteractionSystem {
       return;
     }
 
-    const canDock = this.docking.canDock(pos, nearest.pos, state.player.speed);
+    const canDock = this.docking.canDock(pos, nearest.pos, state.player.speed, nearest.interactionRadius);
     if (canDock) {
       // Move ship to station and remember which station we docked at
       this.dockedStationId = nearest.id;
@@ -329,7 +328,8 @@ export class InteractionSystem {
       // Set up landing event then switch to landing mode
       this.prepareLanding(state.currentSystemId, nearest.id);
     } else {
-      const reason = nearest.dist > 80 ? 'TOO FAR FROM STATION' : 'SPEED TOO HIGH';
+      const dockingDistance = this.docking.getDockingDistance(nearest.interactionRadius);
+      const reason = nearest.dist > dockingDistance ? 'TOO FAR FROM STATION' : 'SPEED TOO HIGH';
       state.setAlert(reason);
       setTimeout(() => useGameState.getState().setAlert(null), 2000);
     }

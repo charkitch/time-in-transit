@@ -104,7 +104,9 @@ export function updateOrbitalEntities(entities: Map<string, SceneEntity>, time: 
     entity.worldPos.copy(entity.group.position);
     if (entity.type === 'dyson_shell') {
       orientDysonShell(entity);
+      continue;
     }
+    updateCollisionSamples(entity);
   }
 
   // Second pass so all world positions are current before tidal orientation.
@@ -155,7 +157,7 @@ function orientDysonShell(entity: SceneEntity): void {
   // worldPos = patch surface center (SphereGeometry panel centered at local +X for phi=PI)
   entity.worldPos.set(entity.shellCurveRadius ?? 0, 0, 0);
   entity.group.localToWorld(entity.worldPos);
-  updateDysonCollisionSamples(entity);
+  updateCollisionSamples(entity);
 }
 
 export function updateFleetShipWorldPositions(entities: Map<string, SceneEntity>): void {
@@ -170,6 +172,7 @@ export function rotateStations(entities: Map<string, SceneEntity>): void {
     if (entity.type === 'station') {
       const axis = entity.stationSpinAxis ?? _stationSpinZ;
       entity.group.rotateOnAxis(axis, 0.001);
+      updateCollisionSamples(entity);
     }
   }
 }
@@ -254,7 +257,7 @@ export function updateNPCShips(params: {
   }
 }
 
-function updateDysonCollisionSamples(entity: SceneEntity): void {
+function updateCollisionSamples(entity: SceneEntity): void {
   if (!entity.collisionSamplesLocal || !entity.collisionSamplesWorld) return;
   const count = Math.min(entity.collisionSamplesLocal.length, entity.collisionSamplesWorld.length);
   for (let i = 0; i < count; i++) {

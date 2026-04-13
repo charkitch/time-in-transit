@@ -20,6 +20,14 @@ interface MapViewport {
   zoom: number;
 }
 
+interface OffscreenIndicator {
+  id: string;
+  x: number;
+  y: number;
+  color: string;
+  label: string;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -66,6 +74,27 @@ function toWorld(px: number, py: number, viewport: MapViewport): [number, number
     viewport.minX + px * (viewport.maxX - viewport.minX),
     viewport.minY + py * (viewport.maxY - viewport.minY),
   ];
+}
+
+function isOnCanvas(x: number, y: number, pad = 10): boolean {
+  return x >= pad && x <= MAP_W - pad && y >= pad && y <= MAP_H - pad;
+}
+
+function edgePointForOffscreen(x: number, y: number, pad = 16): [number, number] {
+  const cx = MAP_W / 2;
+  const cy = MAP_H / 2;
+  const dx = x - cx;
+  const dy = y - cy;
+
+  if (Math.abs(dx) < 1e-6 && Math.abs(dy) < 1e-6) {
+    return [cx, cy];
+  }
+
+  const tx = dx > 0 ? (MAP_W - pad - cx) / dx : (pad - cx) / dx;
+  const ty = dy > 0 ? (MAP_H - pad - cy) / dy : (pad - cy) / dy;
+  const t = Math.min(Math.abs(tx), Math.abs(ty));
+
+  return [cx + dx * t, cy + dy * t];
 }
 
 const STAR_TYPE_COLOR: Record<string, string> = {
@@ -358,6 +387,61 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
             : 'rgba(140, 210, 190, 0.78)';
       ctx.font = '9px Courier New';
       ctx.fillText(sys.name.toUpperCase(), sx + 8, sy + 4);
+    }
+
+    // Direction indicators for off-map targets in the current viewport.
+    const indicators: OffscreenIndicator[] = [];
+    const selectedTarget = hyperspaceTarget !== null ? cluster[hyperspaceTarget] : null;
+    if (selectedTarget) {
+      const [tx, ty] = toCanvas(selectedTarget.x, selectedTarget.y, viewport);
+      if (!isOnCanvas(tx, ty)) {
+        const [ix, iy] = edgePointForOffscreen(tx, ty);
+        indicators.push({ id: `jump-${selectedTarget.id}`, x: ix, y: iy, color: '#44CCFF', label: 'TARGET' });
+      }
+    }
+
+    const chainTargetIds = new Set(chainTargets.map(ct => ct.targetSystemId));
+    for (const targetId of chainTargetIds) {
+      if (selectedTarget && selectedTarget.id === targetId) continue;
+      const sys = cluster[targetId];
+      if (!sys) continue;
+      const [tx, ty] = toCanvas(sys.x, sys.y, viewport);
+      if (!isOnCanvas(tx, ty)) {
+        const [ix, iy] = edgePointForOffscreen(tx, ty);
+        indicators.push({ id: `chain-${targetId}`, x: ix, y: iy, color: 'rgba(255, 200, 80, 0.95)', label: 'CHAIN' });
+      }
+    }
+
+    for (const indicator of indicators) {
+      const cx2 = MAP_W / 2;
+      const cy2 = MAP_H / 2;
+      const angle = Math.atan2(indicator.y - cy2, indicator.x - cx2);
+      const tipX = indicator.x;
+      const tipY = indicator.y;
+      const baseDist = 8;
+      const wing = 5;
+      const backX = tipX - Math.cos(angle) * baseDist;
+      const backY = tipY - Math.sin(angle) * baseDist;
+      const leftX = backX + Math.cos(angle + Math.PI / 2) * wing;
+      const leftY = backY + Math.sin(angle + Math.PI / 2) * wing;
+      const rightX = backX + Math.cos(angle - Math.PI / 2) * wing;
+      const rightY = backY + Math.sin(angle - Math.PI / 2) * wing;
+
+      ctx.fillStyle = indicator.color;
+      ctx.beginPath();
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(leftX, leftY);
+      ctx.lineTo(rightX, rightY);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.font = '8px Courier New';
+      ctx.fillStyle = indicator.color;
+      ctx.fillText(indicator.label, tipX + 6, tipY - 4);
     }
   }, [cluster, currentSystemId, visitedSystems, hyperspaceTarget, reachableIds, hovered, currentSys, knownFactions, lastVisitYear, galaxyYear, galaxySimState, clusterSummaryById, chainTargets, isMobile, mobileCenter.x, mobileCenter.y]);
 

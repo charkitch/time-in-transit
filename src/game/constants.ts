@@ -45,9 +45,41 @@ export const FLIGHT = {
 } as const;
 
 export const DOCKING = {
-  maxDistance: 80,
   maxSpeed:    20,
 } as const;
+
+export const INTERACTION_DISTANCE = {
+  base: 130,
+  stationCollisionScale: 1.0,
+  stationCollisionMaxBonus: 120,
+  largeBodyRadiusThreshold: 220,
+  largeBodyRadiusScale: 0.18,
+  largeBodyMaxBonus: 280,
+  dysonShellBonus: 120,
+  starBonus: 180,
+} as const;
+
+export function getInteractionDistance(entityType?: string, collisionRadius = 0): number {
+  let distance = INTERACTION_DISTANCE.base;
+  if (entityType === 'station') {
+    const stationBonus = collisionRadius * INTERACTION_DISTANCE.stationCollisionScale;
+    distance += Math.min(INTERACTION_DISTANCE.stationCollisionMaxBonus, stationBonus);
+  }
+  if (entityType === 'dyson_shell') {
+    if (collisionRadius > INTERACTION_DISTANCE.largeBodyRadiusThreshold) {
+      const radiusBonus = (collisionRadius - INTERACTION_DISTANCE.largeBodyRadiusThreshold) * INTERACTION_DISTANCE.largeBodyRadiusScale;
+      distance += Math.min(INTERACTION_DISTANCE.largeBodyMaxBonus, radiusBonus);
+    }
+    distance += INTERACTION_DISTANCE.dysonShellBonus;
+  } else if (entityType === 'star') {
+    if (collisionRadius > INTERACTION_DISTANCE.largeBodyRadiusThreshold) {
+      const radiusBonus = (collisionRadius - INTERACTION_DISTANCE.largeBodyRadiusThreshold) * INTERACTION_DISTANCE.largeBodyRadiusScale;
+      distance += Math.min(INTERACTION_DISTANCE.largeBodyMaxBonus, radiusBonus);
+    }
+    distance += INTERACTION_DISTANCE.starBonus;
+  }
+  return distance;
+}
 
 export const HYPERSPACE = {
   maxRange:   25,  // galaxy units — MIN_DIST is 8, so this gives ~5-8 reachable neighbours

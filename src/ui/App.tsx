@@ -163,6 +163,10 @@ export function App() {
 
   const handleCloseClusterMap = () => setUIMode('flight');
   const handleCloseSystemMap = () => setUIMode('flight');
+  const handleGetFleetBattle = useCallback(() => gameRef.current?.['sceneRenderer']?.getFleetBattle() ?? null, []);
+  const handleSystemMapTarget = useCallback((id: string) => {
+    useGameState.getState().setTarget(id);
+  }, []);
   const handleClusterMapJump = () => {
     gameRef.current?.requestJump();
   };
@@ -332,7 +336,14 @@ export function App() {
       {uiMode === 'cluster_map' && (
         <ClusterMap onClose={handleCloseClusterMap} onJump={handleClusterMapJump} />
       )}
-      {uiMode === 'system_map' && <SystemMap onClose={handleCloseSystemMap} />}
+      {uiMode === 'system_map' && (
+        <SystemMap
+          onClose={handleCloseSystemMap}
+          getEntities={getEntities}
+          getFleetBattle={handleGetFleetBattle}
+          onTarget={handleSystemMapTarget}
+        />
+      )}
       {uiMode === 'landing' && <LandingDialog onChoice={handleLandingChoice} />}
       {uiMode === 'docked' && <StationUI onUndock={handleUndock} />}
 

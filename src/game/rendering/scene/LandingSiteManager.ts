@@ -7,7 +7,8 @@ import { PRNG } from '../../generation/prng';
 import { CLUSTER_SEED } from '../../constants';
 
 const LANDING_SITE_OFFSET_PLANET = 4;
-const LANDING_SITE_OFFSET_DYSON = 8;
+const LANDING_SITE_OFFSET_DYSON_INTERIOR = -8;
+const LANDING_SITE_OFFSET_DYSON_EXTERIOR = 8;
 
 function hashString32(input: string): number {
   let h = 0x811c9dc5;
@@ -46,8 +47,9 @@ function dysonPatchUvToLocal(
   const theta = thetaStart + v * thetaLength;
   const r = curveRadius + offset;
   const sinTheta = Math.sin(theta);
+  // Match THREE.js SphereGeometry convention (negative cos(phi) on X axis)
   return new THREE.Vector3(
-    r * Math.cos(phi) * sinTheta,
+    -r * Math.cos(phi) * sinTheta,
     r * Math.cos(theta),
     r * Math.sin(phi) * sinTheta,
   );
@@ -139,6 +141,12 @@ export class LandingSiteManager {
     const desired = 1;
     let created = 0;
 
+    // ~85% interior (populated side facing mini-star), ~15% exterior
+    const isInterior = siteRng.next() < 0.85;
+    const sideOffset = isInterior
+      ? LANDING_SITE_OFFSET_DYSON_INTERIOR
+      : LANDING_SITE_OFFSET_DYSON_EXTERIOR;
+
     while (created < desired) {
       let attempts = 0;
       let best: {
@@ -155,7 +163,7 @@ export class LandingSiteManager {
         const cls = sampled.classification;
         if (!(cls === 'shell_accessible' || cls === 'shell_weathered')) continue;
 
-        const pos = dysonPatchUvToLocal(curveRadius, arcWidth, arcHeight, u, v, LANDING_SITE_OFFSET_DYSON);
+        const pos = dysonPatchUvToLocal(curveRadius, arcWidth, arcHeight, u, v, sideOffset);
         const centerDist = Math.hypot(u - 0.5, v - 0.5);
         const centerBias = Math.max(0, 1 - centerDist / 0.20);
         const classBase = cls === 'shell_accessible' ? 100 : 45;
@@ -173,7 +181,12 @@ export class LandingSiteManager {
 
       const marker = makeLandingSiteMarker(best.classification);
       marker.position.copy(best.position);
-      marker.lookAt(best.position.clone().multiplyScalar(1.8));
+      // Interior sites face inward (toward mini-star), exterior face outward
+      if (isInterior) {
+        marker.lookAt(0, 0, 0);
+      } else {
+        marker.lookAt(best.position.clone().multiplyScalar(1.8));
+      }
       marker.visible = false;
       hostGroup.add(marker);
 

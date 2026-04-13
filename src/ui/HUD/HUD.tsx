@@ -265,7 +265,7 @@ export function HUD({
           <div className={styles.controls}>
             W/S Pitch · A/D Roll · Q/E Yaw<br />
             SPACE Thrust · SHIFT Boost · TAB Target<br />
-            F Dock / Land · G Cluster Map · 1 System Map · J Jump · H Hail · V Scan
+            F Dock / Land · G Cluster Map · M System Map · J Jump · H Hail · V Scan
           </div>
         )}
       </div>
