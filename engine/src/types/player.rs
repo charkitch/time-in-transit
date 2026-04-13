@@ -94,7 +94,7 @@ pub struct ChainTarget {
 
 // ─── Events ──────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChoiceEffect {
     #[serde(default)]
@@ -119,7 +119,7 @@ pub struct ChoiceEffect {
 
 fn default_price_mod() -> f64 { 1.0 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EventChoice {
     pub id: String,
@@ -134,14 +134,14 @@ pub struct EventChoice {
     pub next_moment: Option<Box<EventMoment>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EventMoment {
     pub narrative_lines: Vec<String>,
     pub choices: Vec<EventChoice>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum EventCondition {
     PoliticsIs(Vec<PoliticalType>),
     MinGalaxyYear(u32),
@@ -187,7 +187,7 @@ impl Repeatability {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GameEvent {
     pub id: String,
@@ -204,14 +204,14 @@ pub struct GameEvent {
     pub repeatability: Repeatability,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Trigger {
     pub id: String,
     pub conditions: Vec<EventCondition>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TriggerFile {
     pub triggers: Vec<Trigger>,
@@ -219,7 +219,7 @@ pub struct TriggerFile {
 
 // ─── System Entry Dialog ─────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SystemEntryDialog {
     pub id: String,

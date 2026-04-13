@@ -4,7 +4,7 @@ use crate::content;
 use crate::prng::PRNG;
 use crate::types::*;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EventPool {
     Landing,
     AsteroidBase,
@@ -17,6 +17,19 @@ pub enum EventPool {
     PlanetLanding,
     DysonLanding,
 }
+
+pub const ALL_EVENT_POOLS: &[EventPool] = &[
+    EventPool::Landing,
+    EventPool::AsteroidBase,
+    EventPool::OortCloudBase,
+    EventPool::MaximumSpace,
+    EventPool::Triggered,
+    EventPool::SystemEntry,
+    EventPool::ProximityStar,
+    EventPool::ProximityBase,
+    EventPool::PlanetLanding,
+    EventPool::DysonLanding,
+];
 
 pub struct EventContext<'a> {
     pub civ_state: &'a CivilizationState,
@@ -127,18 +140,7 @@ fn conditions_met(event: &GameEvent, ctx: &EventContext) -> bool {
 }
 
 fn pool_events(pool: EventPool) -> Vec<GameEvent> {
-    match pool {
-        EventPool::Landing => content::landing_events(),
-        EventPool::AsteroidBase => content::asteroid_base_events(),
-        EventPool::OortCloudBase => content::oort_cloud_base_events(),
-        EventPool::MaximumSpace => content::maximum_space_events(),
-        EventPool::Triggered => content::triggered_events(),
-        EventPool::SystemEntry => content::system_entry_events(),
-        EventPool::ProximityStar => content::proximity_star_events(),
-        EventPool::ProximityBase => content::proximity_base_events(),
-        EventPool::PlanetLanding => content::planet_landing_events(),
-        EventPool::DysonLanding => content::dyson_landing_events(),
-    }
+    content::events_for_pool(pool)
 }
 
 pub fn select_game_event(pool: EventPool, ctx: &EventContext, seed: u32) -> Option<GameEvent> {
@@ -214,12 +216,12 @@ mod tests {
 
     #[test]
     fn event_counts() {
-        assert!(content::landing_events().len() >= 10);
-        assert!(content::asteroid_base_events().len() >= 9);
-        assert!(content::oort_cloud_base_events().len() >= 7);
-        assert!(content::maximum_space_events().len() >= 8);
-        assert!(content::triggered_events().len() >= 1);
-        assert!(content::dyson_landing_events().len() >= 2);
+        assert!(content::events_for_pool(EventPool::Landing).len() >= 10);
+        assert!(content::events_for_pool(EventPool::AsteroidBase).len() >= 9);
+        assert!(content::events_for_pool(EventPool::OortCloudBase).len() >= 7);
+        assert!(content::events_for_pool(EventPool::MaximumSpace).len() >= 8);
+        assert!(content::events_for_pool(EventPool::Triggered).len() >= 1);
+        assert!(content::events_for_pool(EventPool::DysonLanding).len() >= 2);
     }
 
     #[test]
