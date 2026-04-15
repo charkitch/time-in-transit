@@ -2,8 +2,20 @@ import type { SaveData } from '../../game/GameState';
 import type { GameStateData } from '../../game/GameState';
 
 export const SLOT_COUNT = 5;
-const AUTOSAVE_FILENAME = 'save-autosave.json';
-const SESSION_ID = crypto.randomUUID();
+const AUTOSAVE_LEGACY_FILENAME = 'save-autosave.json';
+const AUTOSAVE_INTERVAL_FILENAME = 'save-autosave-interval.json';
+const AUTOSAVE_SYSTEM_ENTRY_FILENAME = 'save-autosave-system-entry.json';
+const AUTOSAVE_LAST_SYSTEM_ENTRY_FILENAME = 'save-autosave-last-system-entry.json';
+
+function initSessionId(): string {
+  if (import.meta.hot?.data?.sessionId) return import.meta.hot.data.sessionId;
+  const id = crypto.randomUUID();
+  if (import.meta.hot) import.meta.hot.data.sessionId = id;
+  return id;
+}
+const SESSION_ID = initSessionId();
+
+export type AutosaveKind = 'interval' | 'system_entry' | 'last_system_entry';
 
 export interface SlotMeta {
   systemName: string;
@@ -33,6 +45,12 @@ async function getSlotDir(): Promise<FileSystemDirectoryHandle> {
 
 function slotFileName(index: number): string {
   return `save-slot-${index}.json`;
+}
+
+function autosaveFileName(kind: AutosaveKind): string {
+  if (kind === 'system_entry') return AUTOSAVE_SYSTEM_ENTRY_FILENAME;
+  if (kind === 'last_system_entry') return AUTOSAVE_LAST_SYSTEM_ENTRY_FILENAME;
+  return AUTOSAVE_INTERVAL_FILENAME;
 }
 
 export async function readSlotMeta(index: number): Promise<SlotMeta | null> {
@@ -94,10 +112,19 @@ export function buildSlotMeta(state: GameStateData): SlotMeta {
   };
 }
 
-export async function saveAutosave(data: SaveData, meta: SlotMeta): Promise<void> {
+export async function saveAutosave(data: SaveData, meta: SlotMeta, kind: AutosaveKind = 'interval'): Promise<void> {
   try {
     const dir = await getSlotDir();
-    const handle = await dir.getFileHandle(AUTOSAVE_FILENAME, { create: true });
+    if (kind === 'system_entry') {
+      const current = await readAutosaveEntry('system_entry');
+      if (current) {
+        const lastHandle = await dir.getFileHandle(autosaveFileName('last_system_entry'), { create: true });
+        const lastWritable = await lastHandle.createWritable();
+        await lastWritable.write(JSON.stringify(current));
+        await lastWritable.close();
+      }
+    }
+    const handle = await dir.getFileHandle(autosaveFileName(kind), { create: true });
     const writable = await handle.createWritable();
     const entry: AutosaveEntry = { meta, data, sessionId: SESSION_ID };
     await writable.write(JSON.stringify(entry));
@@ -107,10 +134,10 @@ export async function saveAutosave(data: SaveData, meta: SlotMeta): Promise<void
   }
 }
 
-async function readAutosaveEntry(): Promise<AutosaveEntry | null> {
+async function readAutosaveEntry(kind: AutosaveKind): Promise<AutosaveEntry | null> {
   try {
     const dir = await getSlotDir();
-    const handle = await dir.getFileHandle(AUTOSAVE_FILENAME);
+    const handle = await dir.getFileHandle(autosaveFileName(kind));
     const file = await handle.getFile();
     return JSON.parse(await file.text()) as AutosaveEntry;
   } catch {
@@ -118,16 +145,61 @@ async function readAutosaveEntry(): Promise<AutosaveEntry | null> {
   }
 }
 
+async function readLegacyAutosaveEntry(): Promise<AutosaveEntry | null> {
+  try {
+    const dir = await getSlotDir();
+    const handle = await dir.getFileHandle(AUTOSAVE_LEGACY_FILENAME);
+    const file = await handle.getFile();
+    return JSON.parse(await file.text()) as AutosaveEntry;
+  } catch {
+    return null;
+  }
+}
+
+async function readLatestAutosaveEntry(): Promise<AutosaveEntry | null> {
+  const [intervalEntry, systemEntry, lastSystemEntry, legacyEntry] = await Promise.all([
+    readAutosaveEntry('interval'),
+    readAutosaveEntry('system_entry'),
+    readAutosaveEntry('last_system_entry'),
+    readLegacyAutosaveEntry(),
+  ]);
+  const entries = [intervalEntry, systemEntry, lastSystemEntry, legacyEntry].filter((e): e is AutosaveEntry => !!e);
+  if (entries.length === 0) return null;
+  entries.sort((a, b) => Date.parse(b.meta.savedAt) - Date.parse(a.meta.savedAt));
+  return entries[0];
+}
+
 export async function readAutosaveMeta(): Promise<SlotMeta | null> {
-  return (await readAutosaveEntry())?.meta ?? null;
+  return (await readLatestAutosaveEntry())?.meta ?? null;
+}
+
+export async function readAutosaveMetaByKind(kind: AutosaveKind): Promise<SlotMeta | null> {
+  return (await readAutosaveEntry(kind))?.meta ?? null;
+}
+
+export async function readAutosaveMetas(): Promise<Record<AutosaveKind, SlotMeta | null>> {
+  const [interval, systemEntry, lastSystemEntry] = await Promise.all([
+    readAutosaveMetaByKind('interval'),
+    readAutosaveMetaByKind('system_entry'),
+    readAutosaveMetaByKind('last_system_entry'),
+  ]);
+  return {
+    interval,
+    system_entry: systemEntry,
+    last_system_entry: lastSystemEntry,
+  };
 }
 
 export async function loadAutosave(): Promise<SaveData | null> {
-  return (await readAutosaveEntry())?.data ?? null;
+  return (await readLatestAutosaveEntry())?.data ?? null;
+}
+
+export async function loadAutosaveByKind(kind: AutosaveKind): Promise<SaveData | null> {
+  return (await readAutosaveEntry(kind))?.data ?? null;
 }
 
 export async function isAutosaveFromCurrentSession(): Promise<boolean> {
-  return (await readAutosaveEntry())?.sessionId === SESSION_ID;
+  return (await readLatestAutosaveEntry())?.sessionId === SESSION_ID;
 }
 
 export function formatTimeAgo(iso: string): string {

@@ -174,6 +174,16 @@ export class JumpSystem {
       this.flightModel.reset(this.sceneRenderer.shipGroup.position);
       this.flightModel.velocity.set(0, 0, -150);
 
+      // Sync spatial state to store before saveGame() runs
+      state.setPlayerPosition({ x: 0, y: 0, z: 8000 });
+      state.setPlayerVelocity({ x: 0, y: 0, z: -150 });
+      state.setPlayerQuaternion({ x: 0, y: 0, z: 0, w: 1 });
+
+      // Save before queuing transient dialogs/events — those aren't serialized
+      // in SaveData, so an autosave taken after they're set would silently drop them.
+      state.saveGame();
+      state.saveAutosave('system_entry');
+
       if (payload.systemEntryDialog) {
         state.setPendingSystemEntryDialog(payload.systemEntryDialog);
       }
@@ -209,7 +219,6 @@ export class JumpSystem {
         });
         state.setUIMode('landing');
       }
-      state.saveGame();
     } catch (err) {
       console.error('arriveInSystem failed, recovering to flight mode:', err);
       state.setUIMode('flight');

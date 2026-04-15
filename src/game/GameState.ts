@@ -14,7 +14,7 @@ import type {
   JumpLogEntry,
 } from './engine';
 import { STARTING_CREDITS, STARTING_FUEL, STARTING_SYSTEM_ID, HYPERSPACE, GALAXY_YEAR_START, type GoodName } from './constants';
-import { saveAutosave, buildSlotMeta } from '../ui/MainMenu/saveSlots';
+import { saveAutosave, buildSlotMeta, type AutosaveKind } from '../ui/MainMenu/saveSlots';
 import type { NPCCargoEntry } from './mechanics/NPCSystem';
 import type { NPCShipArchetype } from './archetypes';
 import type { SystemId, GalaxyYear, ScannableBodyId, FactionId } from './types';
@@ -136,9 +136,10 @@ export interface GameStateData {
 
 export interface GameActions {
   setInvertControls: (invert: boolean) => void;
-  setPlayerPosition: (pos: { x: number; y: number; z: number }) => void;
-  setPlayerVelocity: (vel: { x: number; y: number; z: number }) => void;
-  setPlayerQuaternion: (q: { x: number; y: number; z: number; w: number }) => void;
+  setPlayerPosition: (pos: Vec3) => void;
+  setPlayerVelocity: (vel: Vec3) => void;
+  setPlayerQuaternion: (q: Quat) => void;
+  setPlayerSpatial: (pos: Vec3, vel: Vec3, q: Quat) => void;
   setPlayerSpeed: (speed: number) => void;
   setShields: (v: number) => void;
   setFuel: (v: number) => void;
@@ -165,6 +166,7 @@ export interface GameActions {
   loadSave: () => Partial<SaveData>;
   applySaveData: (data: Partial<SaveData>) => void;
   saveGame: () => void;
+  saveAutosave: (kind: AutosaveKind) => void;
   resetGame: () => void;
 
   // ── New relativistic time actions ────────────────────────────────────────
@@ -197,7 +199,7 @@ export interface GameActions {
 let CLUSTER: StarSystemData[] = [];
 
 const DEFAULT_PLAYER: PlayerState = {
-  position: { x: 0, y: 0, z: 2000 },
+  position: { x: 0, y: 0, z: 8000 },
   velocity: { x: 0, y: 0, z: 0 },
   quaternion: { x: 0, y: 0, z: 0, w: 1 },
   shields: 100,
@@ -289,7 +291,14 @@ function normalizeSystemChoicesMap(
   return out;
 }
 
+import { isFiniteVec3, isFiniteQuat, isOriginVec3, type Vec3, type Quat } from './spatialValidation';
+
 export function buildSaveData(s: GameStateData): SaveData {
+  const hasValidSpatial = isFiniteVec3(s.player.position)
+    && !isOriginVec3(s.player.position)
+    && isFiniteQuat(s.player.quaternion)
+    && isFiniteVec3(s.player.velocity);
+
   return {
     invertControls: s.invertControls,
     credits: s.player.credits,
@@ -309,9 +318,9 @@ export function buildSaveData(s: GameStateData): SaveData {
     chainTargets: s.chainTargets,
     scannedBodies: s.scannedBodies,
     playerHistory: s.playerHistory,
-    shipPosition: s.player.position,
-    shipQuaternion: s.player.quaternion,
-    shipVelocity: s.player.velocity,
+    shipPosition: hasValidSpatial ? s.player.position : undefined,
+    shipQuaternion: hasValidSpatial ? s.player.quaternion : undefined,
+    shipVelocity: hasValidSpatial ? s.player.velocity : undefined,
   };
 }
 
@@ -419,6 +428,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   setPlayerPosition: (pos) => set(s => ({ player: { ...s.player, position: pos } })),
   setPlayerVelocity: (vel) => set(s => ({ player: { ...s.player, velocity: vel } })),
   setPlayerQuaternion: (q) => set(s => ({ player: { ...s.player, quaternion: q } })),
+  setPlayerSpatial: (pos, vel, q) => set(s => ({ player: { ...s.player, position: pos, velocity: vel, quaternion: q } })),
   setPlayerSpeed: (speed) => set(s => ({ player: { ...s.player, speed } })),
   setShields: (v) => set(s => ({ player: { ...s.player, shields: Math.max(0, Math.min(100, v)) } })),
   setFuel: (v) => set(s => ({ player: { ...s.player, fuel: Math.max(0, Math.min(HYPERSPACE.tankSize, v)) } })),
@@ -658,7 +668,12 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
     const s = get();
     const data = buildSaveData(s);
     localStorage.setItem('space-game-save', JSON.stringify(data));
+  },
+
+  saveAutosave: (kind) => {
+    const s = get();
+    const data = buildSaveData(s);
     const meta = buildSlotMeta(s);
-    saveAutosave(data, meta);
+    saveAutosave(data, meta, kind);
   },
 }));

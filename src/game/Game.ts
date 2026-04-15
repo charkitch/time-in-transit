@@ -13,11 +13,12 @@ import { useGameState } from './GameState';
 import type { SaveData } from './GameState';
 import type { GoodName } from './constants';
 import {
-  initEngine, engineInitGame, engineGetGameEvent, engineRespawn,
+  initEngine, engineInitGame, engineGetGameEvent,
   type GameEvent,
 } from './engine';
 import { buildWasmPlayerState, placeShipNearMainStation } from './systems/systemLoad';
 import { isAutosaveFromCurrentSession, loadAutosave } from '../ui/MainMenu/saveSlots';
+import { isFiniteVec3, isFiniteQuat, isOriginVec3 } from './spatialValidation';
 import type { RuntimeProfile } from '../runtime/runtimeProfile';
 
 const INFINITE_FUEL_DEV = import.meta.env.DEV;
@@ -33,9 +34,15 @@ type ShipSpatial = {
 };
 
 function shipSpatialFromSave(data: SaveData): ShipSpatial | undefined {
-  return data.shipPosition && data.shipQuaternion && data.shipVelocity
-    ? { position: data.shipPosition, quaternion: data.shipQuaternion, velocity: data.shipVelocity }
-    : undefined;
+  if (!isFiniteVec3(data.shipPosition)) return undefined;
+  if (!isFiniteQuat(data.shipQuaternion)) return undefined;
+  if (!isFiniteVec3(data.shipVelocity)) return undefined;
+  if (isOriginVec3(data.shipPosition)) return undefined;
+  return {
+    position: data.shipPosition,
+    quaternion: data.shipQuaternion,
+    velocity: data.shipVelocity,
+  };
 }
 
 function collisionDeathMessage(type: SceneEntity['type']): string[] {
@@ -171,11 +178,11 @@ export class Game {
     if (autosave && await isAutosaveFromCurrentSession()) {
       const state = useGameState.getState();
       state.applySaveData(autosave);
-      this.initFromEngine(useGameState.getState(), shipSpatialFromSave(autosave));
+      await this.initFromEngine(useGameState.getState(), shipSpatialFromSave(autosave));
       return;
     }
     // Fall back to localStorage save — restore spatial data if present
-    this.initFromEngine(useGameState.getState(), shipSpatialFromSave(localSave as SaveData));
+    await this.initFromEngine(useGameState.getState(), shipSpatialFromSave(localSave as SaveData));
   }
 
   // loadCurrentSystem removed — initialization now handled by initFromEngine
@@ -266,6 +273,7 @@ export class Game {
     if (now - this.lastAutosaveTime > 60_000 && uiMode === 'flight') {
       this.lastAutosaveTime = now;
       state.saveGame();
+      state.saveAutosave('interval');
     }
 
     state.tickTime(dt);
@@ -298,9 +306,13 @@ export class Game {
     const pos = this.sceneRenderer.shipGroup.position;
     const quat = this.sceneRenderer.shipGroup.quaternion;
     const vel = this.flightModel.getVelocity();
-    state.setPlayerPosition({ x: pos.x, y: pos.y, z: pos.z });
-    state.setPlayerVelocity({ x: vel.x, y: vel.y, z: vel.z });
-    state.setPlayerQuaternion({ x: quat.x, y: quat.y, z: quat.z, w: quat.w });
+    if (isFiniteVec3(pos) && isFiniteVec3(vel) && isFiniteQuat(quat)) {
+      state.setPlayerSpatial(
+        { x: pos.x, y: pos.y, z: pos.z },
+        { x: vel.x, y: vel.y, z: vel.z },
+        { x: quat.x, y: quat.y, z: quat.z, w: quat.w },
+      );
+    }
     state.setPlayerSpeed(speed);
     state.setCanDockNow(this.interaction.canDockNow(speed));
     state.setCanLandNow(this.interaction.canLandNow(speed));
@@ -415,7 +427,7 @@ export class Game {
     };
   }
 
-  loadSlotSave(data: SaveData): void {
+  async loadSlotSave(data: SaveData): Promise<void> {
     const state = useGameState.getState();
     state.applySaveData(data);
     state.setDeathMessage(null);
@@ -428,10 +440,10 @@ export class Game {
     const shipSpatial = shipSpatialFromSave(data);
 
     // initFromEngine is async — sets UIMode to 'flight' when the scene is ready
-    this.initFromEngine(useGameState.getState(), shipSpatial);
+    await this.initFromEngine(useGameState.getState(), shipSpatial);
   }
 
-  newGame(): void {
+  async newGame(): Promise<void> {
     const state = useGameState.getState();
     state.resetGame();
     state.setDeathMessage(null);
@@ -440,34 +452,7 @@ export class Game {
     this.jump.resetOnNewGame();
     this.sceneRenderer.stopHyperspace();
     // Re-initialize from Rust engine
-    this.initFromEngine(useGameState.getState());
-  }
-
-  respawn(): void {
-    const state = useGameState.getState();
-    const snapshot = engineRespawn();
-    state.syncPlayerStateFromEngine(snapshot);
-    state.setDeathMessage(null);
-    this.isDead = false;
-    this.hazards.resetTimers();
-    this.interaction.resetOnRespawn();
-
-    // Teleport to safety near the main station before going docked
-    const mainPlanetId = state.currentSystem?.mainStationPlanetId;
-    if (mainPlanetId) {
-      const stationEntity = this.sceneRenderer.getEntity(`station-${mainPlanetId}`);
-      if (stationEntity) {
-        const safeOffset = 200;
-        this.sceneRenderer.shipGroup.position.set(
-          stationEntity.worldPos.x + safeOffset,
-          0,
-          stationEntity.worldPos.z,
-        );
-        this.flightModel.reset(this.sceneRenderer.shipGroup.position);
-      }
-    }
-
-    state.setUIMode('docked');
+    await this.initFromEngine(useGameState.getState());
   }
 
   tradeWithNPC(action: 'buy' | 'sell', good: GoodName): void {

@@ -19,7 +19,6 @@ import initWasm, {
   trade_buy,
   trade_sell,
   tick_flight,
-  respawn as wasm_respawn,
 } from '../../engine/pkg/time_in_transit_engine';
 import type { StationArchetype } from './archetypes';
 import { useGameState } from './GameState';
@@ -526,6 +525,3 @@ export function engineTickFlight(context: FlightTickContext): FlightTickResult {
   return JSON.parse(tick_flight(JSON.stringify(context)));
 }
 
-export function engineRespawn(): WasmPlayerState {
-  return JSON.parse(wasm_respawn());
-}

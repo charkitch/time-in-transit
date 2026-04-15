@@ -308,12 +308,6 @@ export class InteractionSystem {
     state.setUIMode('flight');
   }
 
-  resetOnRespawn(): void {
-    this.hasUndocked = false;
-    this.lastLandedSiteId = null;
-    this.dockedStationId = null;
-  }
-
   private tryDock(): void {
     const state = useGameState.getState();
     if (state.ui.mode !== 'flight') return;

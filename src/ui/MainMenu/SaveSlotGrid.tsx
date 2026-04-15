@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SlotMeta } from './saveSlots';
+import type { AutosaveKind, SlotMeta } from './saveSlots';
 import { formatTimeAgo } from './saveSlots';
 import styles from './SaveSlotGrid.module.css';
 
 interface SaveSlotGridProps {
   mode: 'save' | 'load';
   slots: (SlotMeta | null)[];
-  autosave: SlotMeta | null;
+  autosaves?: Record<AutosaveKind, SlotMeta | null>;
   isSafari: boolean;
   onSlotClick: (index: number) => void;
-  onLoadAutosave: () => void;
+  onLoadAutosave?: (kind: AutosaveKind) => void;
   onBack: () => void;
 }
 
-export function SaveSlotGrid({ mode, slots, autosave, isSafari, onSlotClick, onLoadAutosave, onBack }: SaveSlotGridProps) {
+export function SaveSlotGrid({ mode, slots, autosaves, isSafari, onSlotClick, onLoadAutosave, onBack }: SaveSlotGridProps) {
   const [confirmIndex, setConfirmIndex] = useState<number | null>(null);
   const confirmTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -55,24 +55,60 @@ export function SaveSlotGrid({ mode, slots, autosave, isSafari, onSlotClick, onL
       </div>
 
       <div className={styles.slotList}>
-        {mode === 'load' && (
-          <button
-            className={`${styles.slot} ${!autosave ? styles.slotDisabled : ''}`}
-            onClick={() => autosave && onLoadAutosave()}
-            disabled={!autosave}
-          >
-            <span className={styles.slotIndex}>AUTO</span>
-            {!autosave ? (
-              <span className={styles.slotEmpty}>-- NO AUTOSAVE --</span>
-            ) : (
-              <span className={styles.slotInfo}>
-                <span className={styles.slotSystem}>AUTOSAVE — {autosave.systemName}</span>
-                <span className={styles.slotDetails}>
-                  CR {autosave.credits.toLocaleString()} · GY {autosave.galaxyYear} · {autosave.systemsVisited} systems · {formatTimeAgo(autosave.savedAt)}
+        {mode === 'load' && autosaves && onLoadAutosave && (
+          <>
+            <button
+              className={`${styles.slot} ${!autosaves.system_entry ? styles.slotDisabled : ''}`}
+              onClick={() => autosaves.system_entry && onLoadAutosave('system_entry')}
+              disabled={!autosaves.system_entry}
+            >
+              <span className={styles.slotIndex}>AS</span>
+              {!autosaves.system_entry ? (
+                <span className={styles.slotEmpty}>-- NO SYSTEM ENTRY AUTOSAVE --</span>
+              ) : (
+                <span className={styles.slotInfo}>
+                  <span className={styles.slotSystem}>AUTOSAVE (SYSTEM ENTRY) — {autosaves.system_entry.systemName}</span>
+                  <span className={styles.slotDetails}>
+                    CR {autosaves.system_entry.credits.toLocaleString()} · GY {autosaves.system_entry.galaxyYear} · {autosaves.system_entry.systemsVisited} systems · {formatTimeAgo(autosaves.system_entry.savedAt)}
+                  </span>
                 </span>
-              </span>
-            )}
-          </button>
+              )}
+            </button>
+            <button
+              className={`${styles.slot} ${!autosaves.last_system_entry ? styles.slotDisabled : ''}`}
+              onClick={() => autosaves.last_system_entry && onLoadAutosave('last_system_entry')}
+              disabled={!autosaves.last_system_entry}
+            >
+              <span className={styles.slotIndex}>ALS</span>
+              {!autosaves.last_system_entry ? (
+                <span className={styles.slotEmpty}>-- NO LAST SYSTEM ENTRY AUTOSAVE --</span>
+              ) : (
+                <span className={styles.slotInfo}>
+                  <span className={styles.slotSystem}>AUTOSAVE (LAST SYSTEM ENTRY) — {autosaves.last_system_entry.systemName}</span>
+                  <span className={styles.slotDetails}>
+                    CR {autosaves.last_system_entry.credits.toLocaleString()} · GY {autosaves.last_system_entry.galaxyYear} · {autosaves.last_system_entry.systemsVisited} systems · {formatTimeAgo(autosaves.last_system_entry.savedAt)}
+                  </span>
+                </span>
+              )}
+            </button>
+            <button
+              className={`${styles.slot} ${!autosaves.interval ? styles.slotDisabled : ''}`}
+              onClick={() => autosaves.interval && onLoadAutosave('interval')}
+              disabled={!autosaves.interval}
+            >
+              <span className={styles.slotIndex}>A60</span>
+              {!autosaves.interval ? (
+                <span className={styles.slotEmpty}>-- NO 60S AUTOSAVE --</span>
+              ) : (
+                <span className={styles.slotInfo}>
+                  <span className={styles.slotSystem}>AUTOSAVE (60S) — {autosaves.interval.systemName}</span>
+                  <span className={styles.slotDetails}>
+                    CR {autosaves.interval.credits.toLocaleString()} · GY {autosaves.interval.galaxyYear} · {autosaves.interval.systemsVisited} systems · {formatTimeAgo(autosaves.interval.savedAt)}
+                  </span>
+                </span>
+              )}
+            </button>
+          </>
         )}
         {slots.map((slot, i) => {
           const isEmpty = !slot;

@@ -589,24 +589,6 @@ pub fn tick_flight(context_json: &str) -> Result<String, JsValue> {
         .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
 }
 
-/// Respawn after death. Applies insurance penalty, resets shields/heat.
-///
-/// Returns: JSON-serialized PlayerState
-#[wasm_bindgen]
-pub fn respawn() -> Result<String, JsValue> {
-    let mut engine = ENGINE_STATE.lock().map_err(|e| JsValue::from_str(&e.to_string()))?;
-    let engine = engine.as_mut()
-        .ok_or_else(|| JsValue::from_str("Engine not initialized"))?;
-
-    let ps = &mut engine.player_state;
-    let penalty = (ps.credits / 10).max(100);
-    ps.credits -= penalty;
-    ps.shields = 100.0;
-    ps.heat = 0.0;
-
-    serde_json::to_string(&*ps)
-        .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
-}
 
 #[cfg(test)]
 mod tests {

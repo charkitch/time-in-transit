@@ -13,7 +13,8 @@ import { SystemEntryDialog } from './SystemEntryDialog/SystemEntryDialog';
 import { CommDialog } from './CommDialog/CommDialog';
 import type { SceneEntity } from '../game/rendering/SceneRenderer';
 import { TRAVEL_TERMS, type GoodName } from '../game/constants';
-import { saveToSlot, loadFromSlot, loadAutosave, buildSlotMeta } from './MainMenu/saveSlots';
+import { saveToSlot, loadFromSlot, loadAutosave, buildSlotMeta, loadAutosaveByKind, type AutosaveKind } from './MainMenu/saveSlots';
+import { isFiniteVec3, isFiniteQuat, isOriginVec3 } from '../game/spatialValidation';
 import { detectRuntimeProfile, type RuntimeProfile } from '../runtime/runtimeProfile';
 import * as THREE from 'three';
 
@@ -45,6 +46,7 @@ export function App() {
   const prevUiModeRef = useRef<UIMode>('flight');
   const [flashPhase, setFlashPhase] = useState<'none' | 'entry' | 'exit' | 'loadFade'>('none');
   const loadingSlotRef = useRef(false);
+  const menuFromDeathRef = useRef(false);
   const [runtimeProfile, setRuntimeProfile] = useState<RuntimeProfile | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
   const [contextLossNotice, setContextLossNotice] = useState<string | null>(null);
@@ -83,7 +85,10 @@ export function App() {
       runtimeProfile,
       onContextLost: () => setContextLossNotice('Graphics context lost. Waiting for restore...'),
       onContextRestored: () => {
-        useGameState.getState().saveGame();
+        const state = useGameState.getState();
+        if (state.ui.mode !== 'hyperspace' && state.ui.mode !== 'loading') {
+          state.saveGame();
+        }
         setContextLossNotice('Graphics context restored. Reinitializing...');
         setGameEpoch((n) => n + 1);
       },
@@ -138,6 +143,12 @@ export function App() {
       loadingSlotRef.current = false;
       setFlashPhase('loadFade');
     }
+    if (prev === 'dead') {
+      setDeathAutosaveUnavailable(false);
+    }
+    if (prev === 'menu') {
+      menuFromDeathRef.current = false;
+    }
     prevUiModeRef.current = uiMode;
   }, [uiMode]);
 
@@ -183,15 +194,29 @@ export function App() {
     gameRef.current?.completeComm();
   };
 
-  const handleRespawn = () => {
-    gameRef.current?.respawn();
+  const [deathAutosaveUnavailable, setDeathAutosaveUnavailable] = useState(false);
+
+  const handleLoadAutosaveOnDeath = async () => {
+    const data = await loadAutosave();
+    if (!data) {
+      setDeathAutosaveUnavailable(true);
+      return;
+    }
+    loadingSlotRef.current = true;
+    gameRef.current?.loadSlotSave(data);
   };
 
   const handleSaveToSlot = async (index: number) => {
     const state = useGameState.getState();
     const data = buildSaveData(state);
     const spatial = gameRef.current?.getShipSpatialState();
-    if (spatial) {
+    if (
+      spatial
+      && isFiniteVec3(spatial.position)
+      && !isOriginVec3(spatial.position)
+      && isFiniteQuat(spatial.quaternion)
+      && isFiniteVec3(spatial.velocity)
+    ) {
       data.shipPosition = spatial.position;
       data.shipQuaternion = spatial.quaternion;
       data.shipVelocity = spatial.velocity;
@@ -207,8 +232,8 @@ export function App() {
     gameRef.current?.loadSlotSave(data);
   };
 
-  const handleLoadAutosave = async () => {
-    const data = await loadAutosave();
+  const handleLoadAutosave = async (kind?: AutosaveKind) => {
+    const data = kind ? await loadAutosaveByKind(kind) : await loadAutosave();
     if (!data) return;
     loadingSlotRef.current = true;
     gameRef.current?.loadSlotSave(data);
@@ -355,19 +380,20 @@ export function App() {
       {uiMode === 'docked' && <StationUI onUndock={handleUndock} />}
 
       {uiMode === 'menu' && (
-        <MainMenu
-          onNewGame={handleNewGame}
-          onResume={handleResume}
-          onSaveToSlot={handleSaveToSlot}
-          onLoadFromSlot={handleLoadFromSlot}
-          onLoadAutosave={handleLoadAutosave}
-          invertControls={invertControls}
-          onToggleInvertControls={handleToggleInvertControls}
-          buildLabel={BUILD_TAG_LABEL}
+          <MainMenu
+            onNewGame={handleNewGame}
+            onResume={handleResume}
+            onSaveToSlot={handleSaveToSlot}
+            onLoadFromSlot={handleLoadFromSlot}
+            onLoadAutosave={(kind) => handleLoadAutosave(kind)}
+            invertControls={invertControls}
+            onToggleInvertControls={handleToggleInvertControls}
+            buildLabel={BUILD_TAG_LABEL}
+          initialView={menuFromDeathRef.current ? 'load' : 'main'}
         />
       )}
 
-      {uiMode === 'dead' && <DeathScreen onRespawn={handleRespawn} onNewGame={handleNewGame} />}
+      {uiMode === 'dead' && <DeathScreen autosaveUnavailable={deathAutosaveUnavailable} onLoadAutosave={handleLoadAutosaveOnDeath} onLoadSave={() => { menuFromDeathRef.current = true; setUIMode('menu'); }} onNewGame={handleNewGame} />}
       </div>
 
       {runtimeProfile?.isMobile && !runtimeProfile.isLandscape && (
@@ -489,10 +515,18 @@ function LoadingScreen() {
   );
 }
 
-function DeathScreen({ onRespawn, onNewGame }: { onRespawn: () => void; onNewGame: () => void }) {
-  const credits = useGameState(s => s.player.credits);
+function DeathScreen({ autosaveUnavailable, onLoadAutosave, onLoadSave, onNewGame }: {
+  autosaveUnavailable: boolean;
+  onLoadAutosave: () => void;
+  onLoadSave: () => void;
+  onNewGame: () => void;
+}) {
   const deathMessage = useGameState(s => s.ui.deathMessage);
-  const penalty = Math.max(100, Math.floor(credits * 0.1));
+
+  const btnBase = {
+    padding: '10px 28px', fontSize: 13, letterSpacing: 3,
+    fontFamily: 'inherit', cursor: 'pointer',
+  } as const;
 
   return (
     <div style={{
@@ -512,43 +546,46 @@ function DeathScreen({ onRespawn, onNewGame }: { onRespawn: () => void; onNewGam
         </div>
         <div style={{ fontSize: 13, color: 'rgba(220,180,180,0.8)', lineHeight: 1.7, marginBottom: 24 }}>
           {deathMessage?.length ? (
-            <>
-              {deathMessage.map((line, i) => (
-                <span key={i}>
-                  {line}
-                  <br />
-                </span>
-              ))}
-            </>
+            deathMessage.map((line, i) => (
+              <span key={i}>
+                {line}
+                <br />
+              </span>
+            ))
           ) : (
             <>
               Hull integrity failed. Emergency beacon triggered.<br />
-              Rescue vessel recovered pilot and cargo.<br />
+              No wreckage recovered.<br />
             </>
           )}
-          <span style={{ color: '#FFAA00' }}>
-            Insurance deducted: CR {penalty.toLocaleString()}
-          </span>
         </div>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button
-            onClick={onRespawn}
-            style={{
-              padding: '10px 28px', fontSize: 13, letterSpacing: 3,
-              border: '1px solid rgba(255,34,0,0.5)',
-              background: 'rgba(255,34,0,0.1)', color: '#FF6644',
-              fontFamily: 'inherit', cursor: 'pointer',
+            onClick={onLoadAutosave}
+            disabled={autosaveUnavailable}
+            style={{ ...btnBase,
+              border: `1px solid ${autosaveUnavailable ? 'rgba(255,255,255,0.15)' : 'rgba(255,34,0,0.5)'}`,
+              background: autosaveUnavailable ? 'rgba(255,255,255,0.02)' : 'rgba(255,34,0,0.1)',
+              color: autosaveUnavailable ? 'rgba(255,255,255,0.3)' : '#FF6644',
+              cursor: autosaveUnavailable ? 'default' : 'pointer',
             }}
           >
-            CLAIM INSURANCE
+            {autosaveUnavailable ? 'NO AUTOSAVE' : 'LOAD AUTOSAVE'}
+          </button>
+          <button
+            onClick={onLoadSave}
+            style={{ ...btnBase,
+              border: '1px solid rgba(255,255,255,0.3)',
+              background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)',
+            }}
+          >
+            LOAD SAVE
           </button>
           <button
             onClick={onNewGame}
-            style={{
-              padding: '10px 28px', fontSize: 13, letterSpacing: 3,
+            style={{ ...btnBase,
               border: '1px solid rgba(255,255,255,0.2)',
               background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)',
-              fontFamily: 'inherit', cursor: 'pointer',
             }}
           >
             NEW GAME
