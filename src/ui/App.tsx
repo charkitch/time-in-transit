@@ -11,11 +11,14 @@ import { StationUI } from './StationUI/StationUI';
 import { LandingDialog } from './LandingDialog/LandingDialog';
 import { SystemEntryDialog } from './SystemEntryDialog/SystemEntryDialog';
 import { CommDialog } from './CommDialog/CommDialog';
+import { LoadingScreen } from './LoadingScreen';
+import { DeathScreen } from './DeathScreen';
 import type { SceneEntity } from '../game/rendering/SceneRenderer';
 import { TRAVEL_TERMS, type GoodName } from '../game/constants';
 import { saveToSlot, loadFromSlot, loadAutosave, buildSlotMeta, loadAutosaveByKind, type AutosaveKind } from './MainMenu/saveSlots';
 import { isFiniteVec3, isFiniteQuat, isOriginVec3 } from '../game/spatialValidation';
 import { detectRuntimeProfile, type RuntimeProfile } from '../runtime/runtimeProfile';
+import { useMobileOrientation } from './hooks/useMobileOrientation';
 import * as THREE from 'three';
 
 const BUILD_TAG_LABEL = `v: early beta • build ${__APP_BUILD__.number} • commits ${__APP_BUILD__.commitCount} • ${__APP_BUILD__.sha}`;
@@ -34,7 +37,6 @@ function runtimeProfileInitKey(profile: RuntimeProfile | null): string {
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
-  const orientationLockAttemptedRef = useRef(false);
 
   const uiMode = useGameState(s => s.ui.mode);
   const hyperspaceCountdown = useGameState(s => s.ui.hyperspaceCountdown);
@@ -106,31 +108,7 @@ export function App() {
     };
   }, [runtimeInitKey, gameEpoch]);
 
-  useEffect(() => {
-    if (!runtimeProfile?.isMobile || orientationLockAttemptedRef.current) return;
-    const orientationApi = screen.orientation as (ScreenOrientation & {
-      lock?: (orientation: 'any' | 'natural' | 'landscape' | 'portrait' | 'portrait-primary' | 'portrait-secondary' | 'landscape-primary' | 'landscape-secondary') => Promise<void>;
-    }) | undefined;
-    if (!orientationApi?.lock) {
-      orientationLockAttemptedRef.current = true;
-      return;
-    }
-    const attemptLock = () => {
-      if (orientationLockAttemptedRef.current) return;
-      orientationLockAttemptedRef.current = true;
-      orientationApi.lock?.('landscape').catch(() => {
-        // Browser denied lock (common on iOS/without active user gesture). Keep letterboxed fallback.
-      });
-    };
-    window.addEventListener('pointerdown', attemptLock, { once: true });
-    window.addEventListener('touchstart', attemptLock, { once: true });
-    window.addEventListener('keydown', attemptLock, { once: true });
-    return () => {
-      window.removeEventListener('pointerdown', attemptLock);
-      window.removeEventListener('touchstart', attemptLock);
-      window.removeEventListener('keydown', attemptLock);
-    };
-  }, [runtimeProfile]);
+  useMobileOrientation(runtimeProfile);
 
   // Detect uiMode transitions for flash effects
   useEffect(() => {
@@ -458,140 +436,3 @@ export function App() {
   );
 }
 
-function LoadingScreen() {
-  return (
-    <div style={{
-      position: 'absolute',
-      inset: 0,
-      zIndex: 200,
-      background: '#000',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 16,
-      fontFamily: 'var(--font-hud)',
-      pointerEvents: 'all',
-    }}>
-      <div style={{
-        fontSize: 22,
-        letterSpacing: 6,
-        color: 'var(--color-hud)',
-        opacity: 0.9,
-      }}>
-        INITIALIZING
-      </div>
-      <div style={{
-        width: 180,
-        height: 2,
-        background: 'rgba(255,255,255,0.1)',
-        borderRadius: 1,
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          width: '40%',
-          height: '100%',
-          background: 'var(--color-hud)',
-          opacity: 0.6,
-          animation: 'loadingSlide 1.2s ease-in-out infinite',
-        }} />
-      </div>
-      <div style={{
-        fontSize: 11,
-        letterSpacing: 3,
-        color: 'var(--color-hud)',
-        opacity: 0.4,
-        marginTop: 4,
-      }}>
-        GENERATING STAR SYSTEM
-      </div>
-      <style>{`
-        @keyframes loadingSlide {
-          0% { transform: translateX(-180px); }
-          100% { transform: translateX(270px); }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-function DeathScreen({ autosaveUnavailable, onLoadAutosave, onLoadSave, onNewGame }: {
-  autosaveUnavailable: boolean;
-  onLoadAutosave: () => void;
-  onLoadSave: () => void;
-  onNewGame: () => void;
-}) {
-  const deathMessage = useGameState(s => s.ui.deathMessage);
-
-  const btnBase = {
-    padding: '10px 28px', fontSize: 13, letterSpacing: 3,
-    fontFamily: 'inherit', cursor: 'pointer',
-  } as const;
-
-  return (
-    <div style={{
-      position: 'absolute', inset: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(40,0,0,0.97)', zIndex: 40, pointerEvents: 'all',
-    }}>
-      <div style={{
-        border: '1px solid rgba(255,34,0,0.6)',
-        padding: '36px 44px',
-        maxWidth: 480,
-        textAlign: 'center',
-        fontFamily: 'Courier New, monospace',
-      }}>
-        <div style={{ fontSize: 28, letterSpacing: 8, color: '#FF2200', marginBottom: 16 }}>
-          SHIP DESTROYED
-        </div>
-        <div style={{ fontSize: 13, color: 'rgba(220,180,180,0.8)', lineHeight: 1.7, marginBottom: 24 }}>
-          {deathMessage?.length ? (
-            deathMessage.map((line, i) => (
-              <span key={i}>
-                {line}
-                <br />
-              </span>
-            ))
-          ) : (
-            <>
-              Hull integrity failed. Emergency beacon triggered.<br />
-              No wreckage recovered.<br />
-            </>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button
-            onClick={onLoadAutosave}
-            disabled={autosaveUnavailable}
-            style={{ ...btnBase,
-              border: `1px solid ${autosaveUnavailable ? 'rgba(255,255,255,0.15)' : 'rgba(255,34,0,0.5)'}`,
-              background: autosaveUnavailable ? 'rgba(255,255,255,0.02)' : 'rgba(255,34,0,0.1)',
-              color: autosaveUnavailable ? 'rgba(255,255,255,0.3)' : '#FF6644',
-              cursor: autosaveUnavailable ? 'default' : 'pointer',
-            }}
-          >
-            {autosaveUnavailable ? 'NO AUTOSAVE' : 'LOAD AUTOSAVE'}
-          </button>
-          <button
-            onClick={onLoadSave}
-            style={{ ...btnBase,
-              border: '1px solid rgba(255,255,255,0.3)',
-              background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)',
-            }}
-          >
-            LOAD SAVE
-          </button>
-          <button
-            onClick={onNewGame}
-            style={{ ...btnBase,
-              border: '1px solid rgba(255,255,255,0.2)',
-              background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)',
-            }}
-          >
-            NEW GAME
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
