@@ -78,9 +78,9 @@ pub fn simulate_galaxy(
                 .map(|choices| {
                     let rep_effect = choices.trading_reputation as f64 * 0.01;
                     let faction_effect = match choices.faction_tag.as_deref() {
-                        Some("rebel_ally") => -0.05, // destabilizing
-                        Some("gov_ally") => 0.05,    // stabilizing
-                        _ => 0.0,
+                        Some(FACTION_TAG_REBEL_ALLY) => -0.05, // destabilizing
+                        Some(FACTION_TAG_GOV_ALLY) => 0.05,    // stabilizing
+                        _ => 0.0, // corp_ally is intentionally stability-neutral
                     };
                     rep_effect + faction_effect
                 })
@@ -148,9 +148,9 @@ pub fn simulate_galaxy(
                     .map(|tag| {
                         // If player is allied with a faction whose politics match this faction's affinity
                         match tag {
-                            "corp_ally" if faction.political_affinity.contains(&PoliticalType::PalimpsestAuthority) => 0.05,
-                            "rebel_ally" if faction.political_affinity.contains(&PoliticalType::DriftSovereignty) => 0.05,
-                            "gov_ally" if faction.political_affinity.contains(&PoliticalType::SilenceMandate) => 0.05,
+                            FACTION_TAG_CORP_ALLY if faction.political_affinity.contains(&PoliticalType::PalimpsestAuthority) => 0.05,
+                            FACTION_TAG_REBEL_ALLY if faction.political_affinity.contains(&PoliticalType::DriftSovereignty) => 0.05,
+                            FACTION_TAG_GOV_ALLY if faction.political_affinity.contains(&PoliticalType::SilenceMandate) => 0.05,
                             _ => 0.0,
                         }
                     })
@@ -255,7 +255,7 @@ mod tests {
 
         let mut player_b = empty_player();
         let mut choices = SystemChoices::default();
-        choices.faction_tag = Some("rebel_ally".to_string());
+        choices.faction_tag = Some(FACTION_TAG_REBEL_ALLY.to_string());
         choices.trading_reputation = -3;
         player_b.player_choices.insert(0, choices);
 

@@ -21,6 +21,11 @@ pub struct PlayerHistory {
     pub galactic_flags: HashSet<String>,
 }
 
+// These tags must stay in sync with factionTag values in engine/content/events/
+pub const FACTION_TAG_REBEL_ALLY: &str = "rebel_ally";
+pub const FACTION_TAG_GOV_ALLY: &str = "gov_ally";
+pub const FACTION_TAG_CORP_ALLY: &str = "corp_ally";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SystemChoices {
