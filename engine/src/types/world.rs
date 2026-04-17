@@ -67,6 +67,14 @@ impl StarType {
         0.08, 0.07, 0.06, 0.05, 0.06,
         0.05, 0.07, 0.01, 0.13,
     ];
+
+    pub const COMMON: &'static [StarType] = &[
+        StarType::G, StarType::K, StarType::M, StarType::F, StarType::A, StarType::WD,
+    ];
+
+    pub fn is_exotic(self) -> bool {
+        !Self::COMMON.contains(&self) && self != StarType::Iron
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

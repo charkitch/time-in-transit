@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::prng::PRNG;
 use crate::types::*;
 
@@ -26,19 +28,18 @@ fn generate_name(rng: &mut PRNG) -> String {
 
 fn pick_star_type(rng: &mut PRNG) -> StarType {
     let r = rng.next();
-    let mut cumul = 0.0;
-    for (i, &weight) in StarType::WEIGHTS.iter().enumerate() {
-        cumul += weight;
-        if r < cumul {
-            return StarType::ALL[i];
-        }
-    }
-    StarType::G
+    StarType::ALL.iter()
+        .zip(StarType::WEIGHTS.iter())
+        .scan(0.0, |acc, (&st, &w)| { *acc += w; Some((st, *acc)) })
+        .find(|&(_, cumul)| r < cumul)
+        .map(|(st, _)| st)
+        .unwrap_or(StarType::G)
 }
 
 pub fn generate_cluster() -> Vec<StarSystemData> {
     let mut rng = PRNG::new(CLUSTER_SEED);
     let mut systems: Vec<StarSystemData> = Vec::new();
+    let mut used_exotics: HashSet<StarType> = HashSet::new();
     let min_dist: f64 = 8.0;
 
     let mut attempts = 0;
@@ -58,7 +59,24 @@ pub fn generate_cluster() -> Vec<StarSystemData> {
 
         let id = systems.len() as u32;
         let mut sys_rng = PRNG::from_index(CLUSTER_SEED, id);
-        let star_type = pick_star_type(&mut sys_rng);
+        let mut star_type = pick_star_type(&mut sys_rng);
+
+        // Each exotic type appears at most once in the cluster
+        if star_type.is_exotic() && used_exotics.contains(&star_type) {
+            let remaining_exotics: Vec<StarType> = StarType::ALL.iter()
+                .copied()
+                .filter(|t| t.is_exotic() && !used_exotics.contains(t))
+                .collect();
+            star_type = if remaining_exotics.is_empty() {
+                sys_rng.pick_clone(StarType::COMMON)
+            } else {
+                sys_rng.pick_clone(&remaining_exotics)
+            };
+        }
+        if star_type.is_exotic() {
+            used_exotics.insert(star_type);
+        }
+
         let tech_level = sys_rng.int(1, 14);
         let economy = sys_rng.pick_clone(EconomyType::ALL);
 
@@ -264,6 +282,17 @@ mod tests {
         assert_eq!(a_crown.id, b_crown.id);
         assert_eq!(a_crown.x, b_crown.x);
         assert_eq!(a_crown.y, b_crown.y);
+    }
+
+    #[test]
+    fn unique_exotic_star_types() {
+        let cluster = generate_cluster();
+        let exotics: Vec<StarType> = cluster.iter()
+            .map(|s| s.star_type)
+            .filter(|t| t.is_exotic())
+            .collect();
+        let unique: HashSet<StarType> = exotics.iter().copied().collect();
+        assert_eq!(exotics.len(), unique.len(), "Duplicate exotic types found");
     }
 
     #[test]
