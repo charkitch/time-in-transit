@@ -1,5 +1,6 @@
-// Parity: engine/src/noise.rs is a Rust port of this file. Both must stay in sync.
-// Changes here require matching changes in Rust — see the golden-value tests.
+// Parity: engine/src/noise.rs is a Rust port of snoise/fbm. Both must stay in sync.
+// Changes to snoise/fbm require matching changes in Rust — see the golden-value tests.
+// voronoi3/hash33 are GLSL-only (visual dock zone shading, not terrain sampling).
 #define TAU 6.28318530718
 
 vec3 mod289(vec3 x) { return x - floor(x * (1.0/289.0)) * 289.0; }
@@ -60,4 +61,46 @@ float fbm(vec3 p) {
     a *= 0.5;
   }
   return v;
+}
+
+// --- Voronoi (GLSL-only — not ported to Rust, not used in terrain sampling) ---
+
+vec3 hash33(vec3 p) {
+  p = vec3(
+    dot(p, vec3(127.1, 311.7, 74.7)),
+    dot(p, vec3(269.5, 183.3, 246.1)),
+    dot(p, vec3(113.5, 271.9, 124.6))
+  );
+  return fract(sin(p) * 43758.5453);
+}
+
+// Returns: x = distance to nearest cell edge, y = cell ID hash (0-1)
+vec2 voronoi3(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+
+  float minDist1 = 1e9;
+  float minDist2 = 1e9;
+  vec3 nearestCell = vec3(0.0);
+
+  for (int x = -1; x <= 1; x++)
+  for (int y = -1; y <= 1; y++)
+  for (int z = -1; z <= 1; z++) {
+    vec3 neighbor = vec3(float(x), float(y), float(z));
+    vec3 offset = hash33(i + neighbor);
+    vec3 diff = neighbor + offset - f;
+    float d = dot(diff, diff);
+
+    if (d < minDist1) {
+      minDist2 = minDist1;
+      minDist1 = d;
+      nearestCell = i + neighbor;
+    } else if (d < minDist2) {
+      minDist2 = d;
+    }
+  }
+
+  float edgeDist = sqrt(minDist2) - sqrt(minDist1);
+  float cellId = fract(sin(dot(nearestCell, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+  return vec2(edgeDist, cellId);
 }

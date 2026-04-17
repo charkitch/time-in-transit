@@ -8,6 +8,7 @@ uniform float windowRadius;   // window porthole radius (raw UV space)
 // Set by applyGateDiscard:
 float windowBlend = 0.0;   // 1.0 inside a cosmetic window
 float gateEdgeBlend = 0.0; // 1.0 at the rim of a gate opening
+float dockZoneBlend = 0.0; // 1.0 at dock/industrial zones near gates and entrances
 
 void applyGateDiscard() {
   float dv = abs(vUv.y - 0.5);
@@ -22,7 +23,13 @@ void applyGateDiscard() {
     if (gateDist < gateRadius) discard;
     // Industrial rim just outside the opening
     gateEdgeBlend = smoothstep(gateRadius * 1.6, gateRadius, gateDist);
+    // Dock zone — ecumenopolis surrounding each gate (~3x gate radius, soft bleed)
+    dockZoneBlend = smoothstep(gateRadius * 7.0, gateRadius * 1.5, gateDist);
   }
+
+  // Entrance dock zones at tube endpoints
+  dockZoneBlend = max(dockZoneBlend, smoothstep(0.05, 0.0, vUv.x));
+  dockZoneBlend = max(dockZoneBlend, smoothstep(0.95, 1.0, vUv.x));
 
   // Cosmetic windows — tinted glass, not openings
   if (windowsPerWrap >= 0.5) {

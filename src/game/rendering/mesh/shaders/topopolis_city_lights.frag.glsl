@@ -2,6 +2,7 @@
 #include includes/hash.glsl
 #include includes/planet_varyings.glsl
 #include includes/gate_discard.glsl
+#include includes/topopolis_biomes.glsl
 
 uniform float seed;
 uniform float uLightPhase;
@@ -11,19 +12,6 @@ uniform float uNoiseScale;
 uniform float biomeSeed;
 uniform sampler2D interactionFieldTex;
 uniform float interactionFieldBlend;
-uniform float biomeCount;
-uniform float biomeIndices[10];
-
-vec3 biomeParams(float idx) {
-  // x: sea bias (-dry .. +wet), y: dryness
-  if (idx < 0.5) return vec3(0.00, 0.30, 0.0);
-  if (idx < 1.5) return vec3(0.35, 0.10, 0.0);
-  if (idx < 2.5) return vec3(-0.30, 0.95, 0.0);
-  if (idx < 3.5) return vec3(0.02, 0.20, 0.0);
-  if (idx < 4.5) return vec3(0.06, 0.20, 0.0);
-  return vec3(0.12, 0.18, 0.0);
-}
-
 void main() {
   applyGateDiscard();
   // Inside a topopolis, the entire interior is inhabited — no dark side.
@@ -39,15 +27,8 @@ void main() {
   vec2 cell = floor(gridUv);
   vec2 local = fract(gridUv) - 0.5;
 
-  float tubePos = vUv.x * biomeCount;
-  int idx0 = int(clamp(floor(tubePos), 0.0, 9.0));
-  int idx1 = int(clamp(ceil(tubePos), 0.0, 9.0));
-  float zoneBlend = smoothstep(0.28, 0.72, fract(tubePos));
-  vec3 biomeP = mix(
-    biomeParams(biomeIndices[idx0]),
-    biomeParams(biomeIndices[idx1]),
-    zoneBlend
-  );
+  vec3 biomeP, biomeTintUnused;
+  blendBiomes(biomeP, biomeTintUnused);
 
   float fieldMacro = texture2D(interactionFieldTex, vUv).r * 2.0 - 1.0;
   vec3 macroPos = vLocalPos * uNoiseScale + vec3(seed * 13.37, biomeSeed * 7.13, seed * 3.71);
@@ -77,6 +58,9 @@ void main() {
   }
 
   city = min(city, 1.0);
+  // Dock zones are all infrastructure — full land coverage, brighter lights
+  landMask = mix(landMask, 1.0, dockZoneBlend);
+  brightness = mix(brightness, 1.0, dockZoneBlend * 0.5);
   float alpha = brightness * city * landMask * 0.95 * (1.0 - windowBlend);
   vec3 color = mix(vec3(1.0, 0.82, 0.4), vec3(1.0, 0.95, 0.7), h);
 

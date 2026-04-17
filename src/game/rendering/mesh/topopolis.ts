@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { TopopolisBiome, InteractionFieldData } from '../../engine';
 import type { QualityTier } from '../../../runtime/runtimeProfile';
 import planetVertex from './shaders/includes/planet_vertex.glsl';
@@ -395,11 +396,11 @@ export function makeTopopolisCoil(
     for (let g = 1; g < collarCount; g++) {
       const t = g / collarCount;
 
-      // Skip collars at cosmetic window positions (UV.x ≈ 0.5 per wrap)
+      // Skip collars near flyable gate positions
       const wrapUvX = (g % collarsPerWrap) / collarsPerWrap;
-      const ws = 1.0 / flyableGatesPerWrap;
-      const nearestWin = Math.round(wrapUvX / ws) * ws;
-      if (nearestWin > 0.08 && nearestWin < 0.92 && Math.abs(wrapUvX - nearestWin) < 0.06) continue;
+      const gateSpacing = 1.0 / flyableGatesPerWrap;
+      const nearestGateUvX = Math.round((wrapUvX - gateSpacing * 0.5) / gateSpacing) * gateSpacing + gateSpacing * 0.5;
+      if (Math.abs(wrapUvX - nearestGateUvX) < 0.09) continue;
 
       const center = strandCurve.getPointAt(t);
       const tangent = strandCurve.getTangentAt(t).normalize();
@@ -431,6 +432,50 @@ export function makeTopopolisCoil(
         entranceGroup.add(accent);
       });
     }
+  }
+
+  // Gate-framing collars — structural rings at each flyable gate opening
+  // Merged into a single geometry to minimise draw calls.
+  {
+    const collarThickness = strandTubeRadius * 0.08;
+    const templateGeo = new THREE.TorusGeometry(
+      strandTubeRadius * 1.03, collarThickness, 8, 32,
+    );
+    const gateCollarGeos: THREE.BufferGeometry[] = [];
+    const mat4 = new THREE.Matrix4();
+    const quat = new THREE.Quaternion();
+
+    strandCurves.forEach((strandCurve) => {
+      for (let wrap = 0; wrap < coilCount; wrap++) {
+        for (let fg = 0; fg < flyableGatesPerWrap; fg++) {
+          const gateUvX = (fg + 0.5) / flyableGatesPerWrap;
+          const t = (wrap + gateUvX) / coilCount;
+          const center = strandCurve.getPointAt(t);
+          const tangent = strandCurve.getTangentAt(t).normalize();
+
+          const up = Math.abs(tangent.y) < 0.9
+            ? new THREE.Vector3(0, 1, 0)
+            : new THREE.Vector3(1, 0, 0);
+          const lookAt = new THREE.Matrix4().lookAt(
+            center, center.clone().add(tangent), up,
+          );
+          quat.setFromRotationMatrix(lookAt);
+          mat4.compose(center, quat, new THREE.Vector3(1, 1, 1));
+
+          const clone = templateGeo.clone().applyMatrix4(mat4);
+          gateCollarGeos.push(clone);
+        }
+      }
+    });
+
+    if (gateCollarGeos.length > 0) {
+      const merged = mergeGeometries(gateCollarGeos);
+      if (merged) {
+        entranceGroup.add(new THREE.Mesh(merged, collarAccentMat));
+      }
+      gateCollarGeos.forEach((g) => g.dispose());
+    }
+    templateGeo.dispose();
   }
 
   // Compute gate surface positions — the point on the outward tube surface
