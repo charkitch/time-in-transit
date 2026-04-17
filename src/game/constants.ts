@@ -274,12 +274,14 @@ const BUYABLE_GOODS = [
 export const COMBAT_INTELLIGENCE_GOOD = 'Combat Intelligence' as const;
 export const RELATIVISTIC_ASH_GOOD = 'Relativistic Ash' as const;
 export const PULSAR_SILK_GOOD = 'Pulsar Silk' as const;
+export const TRANSFER_PLASMA_GOOD = 'Transfer Plasma' as const;
 
 export const GOODS = [
   ...BUYABLE_GOODS,
   COMBAT_INTELLIGENCE_GOOD,
   RELATIVISTIC_ASH_GOOD,
   PULSAR_SILK_GOOD,
+  TRANSFER_PLASMA_GOOD,
 ] as const;
 
 export type GoodName = typeof GOODS[number];

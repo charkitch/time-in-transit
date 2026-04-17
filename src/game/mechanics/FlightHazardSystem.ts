@@ -8,6 +8,7 @@ import {
   COMBAT_INTELLIGENCE_GOOD,
   RELATIVISTIC_ASH_GOOD,
   PULSAR_SILK_GOOD,
+  TRANSFER_PLASMA_GOOD,
   STAR_ATTRIBUTES,
   MAX_CARGO,
 } from '../constants';
@@ -28,6 +29,7 @@ import type { SecretBaseType } from '../engine';
 const XB_STREAM_HAZARD_RADIUS = 40;
 const COMBAT_INTEL_INTERVAL = 8;
 const BEAM_HARVEST_INTERVAL = 5;
+const HARVEST_CAP_PER_GOOD = 5;
 // Pulsar burst damage per sweep (flat amounts, not per-second rates)
 const PULSAR_LETHAL_SHIELD_BURST = [30, 80] as const; // [min, max] — proximity-scaled
 const PULSAR_LETHAL_HEAT_BURST = [25, 50] as const;
@@ -78,6 +80,7 @@ export class FlightHazardSystem {
   private insideTopopolis = false;
   combatIntelTimer = 0;
   private jetHarvestTimer = 0;
+  private streamHarvestTimer = 0;
   private pulsarInZone = false;
   private pulsarLethalHit = false;
 
@@ -215,25 +218,27 @@ export class FlightHazardSystem {
     }
 
     // ── Hazard checks ──
-    const cargoUsed = Object.values(state.player.cargo).reduce((sum, qty) => sum + (qty ?? 0), 0);
+    const cargo = state.player.cargo;
+    const cargoUsed = Object.values(cargo).reduce((sum, qty) => sum + (qty ?? 0), 0);
+    const canHarvest = (good: GoodName) =>
+      cargoUsed + cargoHarvests.reduce((s, h) => s + h.qty, 0) < MAX_CARGO &&
+      (cargo[good] ?? 0) + cargoHarvests.filter(h => h.good === good).reduce((s, h) => s + h.qty, 0) < HARVEST_CAP_PER_GOOD;
 
     const battleEffect = checkBattleZoneHazard({
       pos,
       battle: this.sceneRenderer.getFleetBattle(),
       battleDangerRange: BATTLE_DANGER_RANGE,
-      cargoUsed,
-      maxCargo: MAX_CARGO,
     });
     if (battleEffect.alert) {
       effects.push(battleEffect);
-      // Combat intel harvesting timer
-      if (battleEffect.zone === 'harvesting' && cargoUsed < MAX_CARGO) {
+      // Combat intel harvesting — must be in the lethal (crossfire) zone
+      if (battleEffect.zone === 'lethal' && canHarvest(COMBAT_INTELLIGENCE_GOOD)) {
         this.combatIntelTimer += dt;
-        while (this.combatIntelTimer >= COMBAT_INTEL_INTERVAL && cargoUsed + cargoHarvests.reduce((s, h) => s + h.qty, 0) < MAX_CARGO) {
+        while (this.combatIntelTimer >= COMBAT_INTEL_INTERVAL && canHarvest(COMBAT_INTELLIGENCE_GOOD)) {
           cargoHarvests.push({ good: COMBAT_INTELLIGENCE_GOOD, qty: 1 });
           this.combatIntelTimer -= COMBAT_INTEL_INTERVAL;
         }
-      } else if (battleEffect.zone !== 'harvesting') {
+      } else if (battleEffect.zone !== 'lethal') {
         this.combatIntelTimer = 0;
       }
     } else {
@@ -247,6 +252,16 @@ export class FlightHazardSystem {
     });
     if (xrayEffect.alert) effects.push(xrayEffect);
 
+    if (xrayEffect.zone === 'lethal') {
+      this.streamHarvestTimer += dt;
+      while (this.streamHarvestTimer >= BEAM_HARVEST_INTERVAL && canHarvest(TRANSFER_PLASMA_GOOD)) {
+        cargoHarvests.push({ good: TRANSFER_PLASMA_GOOD, qty: 1 });
+        this.streamHarvestTimer -= BEAM_HARVEST_INTERVAL;
+      }
+    } else {
+      this.streamHarvestTimer = 0;
+    }
+
     const mqJet = this.sceneRenderer.getMicroquasarJetParams();
     if (mqJet) {
       const mqStarEntity = this.sceneRenderer.getEntity(mqJet.starEntityId);
@@ -257,12 +272,10 @@ export class FlightHazardSystem {
       });
       if (jetEffect.alert) effects.push(jetEffect);
       if (jetEffect.zone === 'scooping') {
-        if (cargoUsed + cargoHarvests.reduce((s, h) => s + h.qty, 0) < MAX_CARGO) {
-          this.jetHarvestTimer += dt;
-          if (this.jetHarvestTimer >= BEAM_HARVEST_INTERVAL) {
-            cargoHarvests.push({ good: RELATIVISTIC_ASH_GOOD, qty: 1 });
-            this.jetHarvestTimer -= BEAM_HARVEST_INTERVAL;
-          }
+        this.jetHarvestTimer += dt;
+        while (this.jetHarvestTimer >= BEAM_HARVEST_INTERVAL && canHarvest(RELATIVISTIC_ASH_GOOD)) {
+          cargoHarvests.push({ good: RELATIVISTIC_ASH_GOOD, qty: 1 });
+          this.jetHarvestTimer -= BEAM_HARVEST_INTERVAL;
         }
       } else {
         this.jetHarvestTimer = 0;
@@ -309,7 +322,7 @@ export class FlightHazardSystem {
               hazardType: 'PulsarBeam',
               zone: 'harvesting',
             });
-            if (cargoUsed + cargoHarvests.reduce((s, h) => s + h.qty, 0) < MAX_CARGO) {
+            if (canHarvest(PULSAR_SILK_GOOD)) {
               cargoHarvests.push({ good: PULSAR_SILK_GOOD, qty: 1 });
             }
           }
@@ -394,6 +407,7 @@ export class FlightHazardSystem {
   resetTimers(): void {
     this.combatIntelTimer = 0;
     this.jetHarvestTimer = 0;
+    this.streamHarvestTimer = 0;
     this.pulsarInZone = false;
     this.pulsarLethalHit = false;
   }

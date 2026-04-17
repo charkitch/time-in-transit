@@ -274,16 +274,12 @@ export function checkBattleZoneHazard(params: {
   pos: THREE.Vector3;
   battle: FleetBattle | null;
   battleDangerRange: number;
-  cargoUsed: number;
-  maxCargo: number;
 }): HazardEffect {
-  const { pos, battle, battleDangerRange, cargoUsed, maxCargo } = params;
+  const { pos, battle, battleDangerRange } = params;
   if (!battle) return EMPTY_EFFECT;
 
   const dist = pos.distanceTo(battle.position);
   if (dist >= battle.noGoRadius) return EMPTY_EFFECT;
-
-  const gatheringIntel = cargoUsed < maxCargo;
 
   if (dist < battleDangerRange) {
     return {
@@ -297,8 +293,7 @@ export function checkBattleZoneHazard(params: {
   }
   return {
     ...EMPTY_EFFECT,
-    alert: gatheringIntel ? 'COLLECTING COMBAT INTELLIGENCE' : 'WARNING: ACTIVE COMBAT ZONE',
+    alert: 'WARNING: ACTIVE COMBAT ZONE',
     hazardType: 'BattleZone',
-    zone: gatheringIntel ? 'harvesting' : null,
   };
 }

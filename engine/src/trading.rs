@@ -32,6 +32,7 @@ fn base_price(good: GoodName) -> i32 {
         GoodName::RelativisticAsh => 1280,
         GoodName::PulsarSilk => 1820,
         GoodName::CombatIntelligence => 1460,
+        GoodName::TransferPlasma => 1580,
     }
 }
 
@@ -60,6 +61,7 @@ fn volatility(good: GoodName) -> f64 {
         GoodName::RelativisticAsh => 0.38,
         GoodName::PulsarSilk => 0.48,
         GoodName::CombatIntelligence => 0.42,
+        GoodName::TransferPlasma => 0.40,
     }
 }
 
@@ -88,6 +90,7 @@ fn rarity(good: GoodName) -> f64 {
         GoodName::RelativisticAsh => 0.98,
         GoodName::PulsarSilk => 0.98,
         GoodName::CombatIntelligence => 0.98,
+        GoodName::TransferPlasma => 0.98,
     }
 }
 

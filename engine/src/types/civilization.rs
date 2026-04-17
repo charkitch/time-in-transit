@@ -50,11 +50,13 @@ pub enum GoodName {
     PulsarSilk,
     #[serde(rename = "Combat Intelligence")]
     CombatIntelligence,
+    #[serde(rename = "Transfer Plasma")]
+    TransferPlasma,
 }
 
 impl GoodName {
     pub fn harvest_only(self) -> bool {
-        matches!(self, GoodName::RelativisticAsh | GoodName::PulsarSilk | GoodName::CombatIntelligence | GoodName::QuasarGlass)
+        matches!(self, GoodName::RelativisticAsh | GoodName::PulsarSilk | GoodName::CombatIntelligence | GoodName::QuasarGlass | GoodName::TransferPlasma)
     }
 
     pub const ALL: &'static [GoodName] = &[
@@ -81,6 +83,7 @@ impl GoodName {
         GoodName::RelativisticAsh,
         GoodName::PulsarSilk,
         GoodName::CombatIntelligence,
+        GoodName::TransferPlasma,
     ];
 }
 
