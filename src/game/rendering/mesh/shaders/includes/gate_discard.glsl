@@ -24,7 +24,7 @@ void applyGateDiscard() {
     // Industrial rim just outside the opening
     gateEdgeBlend = smoothstep(gateRadius * 1.6, gateRadius, gateDist);
     // Dock zone — ecumenopolis surrounding each gate (~3x gate radius, soft bleed)
-    dockZoneBlend = smoothstep(gateRadius * 7.0, gateRadius * 1.5, gateDist);
+    dockZoneBlend = smoothstep(gateRadius * 4.0, gateRadius * 1.5, gateDist);
   }
 
   // Entrance dock zones at tube endpoints

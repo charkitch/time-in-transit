@@ -24,6 +24,13 @@ export interface TopopolisMaterialEntry {
   cityMats: THREE.ShaderMaterial[];
   cloudMats: THREE.ShaderMaterial[];
   lightningMats: THREE.ShaderMaterial[];
+  /** Per-wrap refs to expensive meshes for t-space distance culling */
+  distanceCullMeshes: THREE.Object3D[][];
+  /** Helix centerline samples (local space) for camera projection */
+  helixSamples: THREE.Vector3[];
+  /** Parent group — needed to transform camera into local space */
+  coilParent: THREE.Object3D;
+  coilCount: number;
 }
 
 export interface BeamParams {
@@ -34,6 +41,8 @@ export interface BeamParams {
 }
 
 const _worldPos = new THREE.Vector3();
+const _starPos = new THREE.Vector3();
+const _localCam = new THREE.Vector3();
 
 export function tickSceneAnimations(params: {
   entities: Map<string, SceneEntity>;
@@ -91,20 +100,56 @@ export function tickSceneAnimations(params: {
     entry.cityMat.uniforms.uLightPos.value.copy(_worldPos);
   }
 
-  // Topopolis materials — lit by the star at origin
-  const starPos = new THREE.Vector3(0, 0, 0);
+  // Topopolis materials — lit by the star at origin, with t-space distance culling
+  _starPos.set(0, 0, 0);
   for (const entry of topopolisMaterials) {
-    for (const mat of entry.interiorMats) {
-      mat.uniforms.uLightPos.value.copy(starPos);
+    // Project camera onto helix curve in local space to find current t-value.
+    // Full scan over ~300 samples — cheaper than a single snoise evaluation.
+    let cameraTValue = 0.5;
+    const samples = entry.helixSamples;
+    if (samples.length > 0) {
+      entry.coilParent.worldToLocal(_localCam.copy(camera.getWorldPosition(_worldPos)));
+      let closestDistSq = Infinity;
+      let closestIdx = 0;
+      for (let i = 0; i < samples.length; i++) {
+        const dSq = _localCam.distanceToSquared(samples[i]);
+        if (dSq < closestDistSq) { closestDistSq = dSq; closestIdx = i; }
+      }
+      cameraTValue = closestIdx / (samples.length - 1);
     }
-    for (const mat of entry.cityMats) {
-      mat.uniforms.uLightPos.value.copy(starPos);
-    }
-    for (const mat of entry.cloudMats) {
-      mat.uniforms.uTime.value = time;
-    }
-    for (const mat of entry.lightningMats) {
-      mat.uniforms.uTime.value = time;
+
+    // Per-wrap visibility culling + uniform updates
+    const { coilCount } = entry;
+    entry.interiorMats.forEach((mat) => {
+      mat.uniforms.uLightPos.value.copy(_starPos);
+    });
+
+    for (let wrap = 0; wrap < coilCount; wrap++) {
+      const wrapMidT = (wrap + 0.5) / coilCount;
+      const tDist = Math.abs(cameraTValue - wrapMidT);
+
+      // Show expensive layers for wraps near the camera along the tube
+      const showAll = tDist < 2.5 / coilCount;
+      const showCity = tDist < 4.0 / coilCount;
+
+      const cullMeshes = entry.distanceCullMeshes[wrap];
+      if (cullMeshes) {
+        // cullMeshes order: [city, clouds, lightning] (when present)
+        cullMeshes.forEach((mesh, i) => {
+          mesh.visible = i === 0 ? showCity : showAll;
+        });
+      }
+
+      // Only update uniforms for visible materials
+      if (showCity && entry.cityMats[wrap]) {
+        entry.cityMats[wrap].uniforms.uLightPos.value.copy(_starPos);
+      }
+      if (showAll && entry.cloudMats[wrap]) {
+        entry.cloudMats[wrap].uniforms.uTime.value = time;
+      }
+      if (showAll && entry.lightningMats[wrap]) {
+        entry.lightningMats[wrap].uniforms.uTime.value = time;
+      }
     }
   }
 

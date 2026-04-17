@@ -48,6 +48,10 @@ export function buildTopopolisCoils(params: {
       cityMats: result.cityLightMaterials,
       cloudMats: result.cloudMaterials,
       lightningMats: result.lightningMaterials,
+      distanceCullMeshes: result.distanceCullMeshes,
+      helixSamples: result.helixSamples,
+      coilParent,
+      coilCount: result.coilCount,
     });
 
     // Create collision samples from helix centerline.

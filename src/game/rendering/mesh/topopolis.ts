@@ -26,6 +26,61 @@ const LOD: Record<QualityTier, { tubularSegments: number; radialSegments: number
   medium: { tubularSegments: 60,  radialSegments: 12, cityLights: false },
 };
 
+/** Bake a 2D voronoi pattern to a tileable texture. R = edge distance, G = cell ID. */
+function makeVoronoiTexture(size = 256, cellCount = 8): THREE.DataTexture {
+  const fract = (x: number) => x - Math.floor(x);
+  const hash2 = (x: number, y: number, salt: number) =>
+    fract(Math.sin(x * 127.1 + y * 311.7 + salt) * 43758.5453);
+
+  const data = new Uint8Array(size * size * 4);
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      const u = (px / size) * cellCount;
+      const v = (py / size) * cellCount;
+      const ix = Math.floor(u), iy = Math.floor(v);
+      const fx = u - ix, fy = v - iy;
+
+      let d1 = 1e9, d2 = 1e9, nearHash = 0;
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const nx = ((ix + dx) % cellCount + cellCount) % cellCount;
+          const ny = ((iy + dy) % cellCount + cellCount) % cellCount;
+          const ox = hash2(nx, ny, 0);
+          const oy = hash2(nx, ny, 47.3);
+          const cx = dx + ox - fx, cy = dy + oy - fy;
+          const dist = cx * cx + cy * cy;
+          if (dist < d1) {
+            d2 = d1;
+            d1 = dist;
+            nearHash = hash2(nx, ny, 74.7);
+          } else if (dist < d2) {
+            d2 = dist;
+          }
+        }
+      }
+
+      const edgeDist = Math.min(1, (Math.sqrt(d2) - Math.sqrt(d1)) * 2.5);
+      const i = (py * size + px) * 4;
+      data[i] = edgeDist * 255;
+      data[i + 1] = nearHash * 255;
+      data[i + 2] = 0;
+      data[i + 3] = 255;
+    }
+  }
+
+  const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+let _sharedVoronoiTex: THREE.DataTexture | null = null;
+function getVoronoiTexture(): THREE.DataTexture {
+  return (_sharedVoronoiTex ??= makeVoronoiTexture(512, 24));
+}
+
 /**
  * Parametric helix curve for TubeGeometry.
  * Wraps `coilCount` times around the Y axis at `radius` with `pitch` vertical spacing.
@@ -100,6 +155,8 @@ export interface TopopolisCoilMeshResult {
   cityLightMaterials: THREE.ShaderMaterial[];
   cloudMaterials: THREE.ShaderMaterial[];
   lightningMaterials: THREE.ShaderMaterial[];
+  /** Per-wrap refs to expensive meshes (city, clouds, lightning) for distance culling */
+  distanceCullMeshes: THREE.Object3D[][];
   /** Sampled helix centerline points for collision detection */
   helixSamples: THREE.Vector3[];
   /** The helix curve, for computing landing site positions */
@@ -127,14 +184,13 @@ export function makeTopopolisCoil(
   seed = 0,
   interactionField?: InteractionFieldData,
 ): TopopolisCoilMeshResult {
-  // Default to ultra for now while tuning visuals
-  const lod = LOD['ultra'];
-  void qualityTier;
+  const lod = LOD[qualityTier];
   const groups: THREE.Group[] = [];
   const interiorMaterials: THREE.ShaderMaterial[] = [];
   const cityLightMaterials: THREE.ShaderMaterial[] = [];
   const cloudMaterials: THREE.ShaderMaterial[] = [];
   const lightningMaterials: THREE.ShaderMaterial[] = [];
+  const distanceCullMeshes: THREE.Object3D[][] = [];
   const helixSamples: THREE.Vector3[] = [];
 
   // Single strand that weaves around itself via the wobble in the helix curve.
@@ -222,6 +278,7 @@ export function makeTopopolisCoil(
           biomeIndices: { value: biomeIndices },
           uAspect: { value: uvAspect },
           uNoiseScale: { value: noiseScale },
+          uVoronoiTex: { value: getVoronoiTexture() },
           gatesPerWrap: { value: flyableGatesPerWrap },
           gateRadius: { value: gateOpeningRadius },
           gateAspect: { value: uvAspect },
@@ -271,6 +328,7 @@ export function makeTopopolisCoil(
       group.add(new THREE.Mesh(glassGeo, glassMat));
 
       // City lights — BackSide, additive (skip on medium quality)
+      const wrapCullMeshes: THREE.Object3D[] = [];
       if (lod.cityLights) {
         const cityMat = new THREE.ShaderMaterial({
           transparent: true,
@@ -303,8 +361,10 @@ export function makeTopopolisCoil(
           lod.radialSegments,
           false,
         );
-        group.add(new THREE.Mesh(cityGeo, cityMat));
+        const cityMesh = new THREE.Mesh(cityGeo, cityMat);
+        group.add(cityMesh);
         cityLightMaterials.push(cityMat);
+        wrapCullMeshes.push(cityMesh);
 
         // Interior clouds — BackSide, slightly inset from city lights
         const cloudMat = new THREE.ShaderMaterial({
@@ -333,8 +393,10 @@ export function makeTopopolisCoil(
         const cloudGeo = new THREE.TubeGeometry(
           wrapCurve, lod.tubularSegments, strandTubeRadius * 0.985, lod.radialSegments, false,
         );
-        group.add(new THREE.Mesh(cloudGeo, cloudMat));
+        const cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
+        group.add(cloudMesh);
         cloudMaterials.push(cloudMat);
+        wrapCullMeshes.push(cloudMesh);
 
         // Interior lightning storms — rare flashes inside the tube
         const lightningMat = new THREE.ShaderMaterial({
@@ -357,10 +419,13 @@ export function makeTopopolisCoil(
         const lightningGeo = new THREE.TubeGeometry(
           wrapCurve, lod.tubularSegments, strandTubeRadius * 0.990, lod.radialSegments, false,
         );
-        group.add(new THREE.Mesh(lightningGeo, lightningMat));
+        const lightningMesh = new THREE.Mesh(lightningGeo, lightningMat);
+        group.add(lightningMesh);
         lightningMaterials.push(lightningMat);
+        wrapCullMeshes.push(lightningMesh);
       }
 
+      distanceCullMeshes.push(wrapCullMeshes);
       groups.push(group);
     }
   }
@@ -389,49 +454,68 @@ export function makeTopopolisCoil(
     color: 0x88BBDD,
     side: THREE.DoubleSide,
   });
-  // Decorative collars — 12 per wrap, visual structure only (no collision gap)
+  // Decorative collars — 12 per wrap, visual structure only (no collision gap).
+  // Merged into 2 draw calls (one per material) instead of individual meshes.
   const collarCount = Math.max(2, Math.floor(coilCount * 12));
   const collarsPerWrap = collarCount / coilCount;
-  for (const strandCurve of strandCurves) {
-    for (let g = 1; g < collarCount; g++) {
-      const t = g / collarCount;
+  {
+    const collarThickness = strandTubeRadius * 0.06;
+    const collarTemplate = new THREE.TorusGeometry(
+      strandTubeRadius * 1.02, collarThickness, 8, 32,
+    );
+    const accentTemplate = new THREE.TorusGeometry(
+      strandTubeRadius * 1.01, collarThickness * 0.4, 6, 32,
+    );
+    const collarGeos: THREE.BufferGeometry[] = [];
+    const accentGeos: THREE.BufferGeometry[] = [];
+    const mat4 = new THREE.Matrix4();
+    const quat = new THREE.Quaternion();
 
-      // Skip collars near flyable gate positions
-      const wrapUvX = (g % collarsPerWrap) / collarsPerWrap;
-      const gateSpacing = 1.0 / flyableGatesPerWrap;
-      const nearestGateUvX = Math.round((wrapUvX - gateSpacing * 0.5) / gateSpacing) * gateSpacing + gateSpacing * 0.5;
-      if (Math.abs(wrapUvX - nearestGateUvX) < 0.09) continue;
+    for (const strandCurve of strandCurves) {
+      for (let g = 1; g < collarCount; g++) {
+        const t = g / collarCount;
 
-      const center = strandCurve.getPointAt(t);
-      const tangent = strandCurve.getTangentAt(t).normalize();
+        // Skip collars near flyable gate positions
+        const wrapUvX = (g % collarsPerWrap) / collarsPerWrap;
+        const gateSpacing = 1.0 / flyableGatesPerWrap;
+        const nearestGateUvX = Math.round((wrapUvX - gateSpacing * 0.5) / gateSpacing) * gateSpacing + gateSpacing * 0.5;
+        if (Math.abs(wrapUvX - nearestGateUvX) < 0.09) continue;
 
-      const collarThickness = strandTubeRadius * 0.06;
-      const collarGeo = new THREE.TorusGeometry(
-        strandTubeRadius * 1.02, collarThickness, 8, 32,
-      );
-      const collar = new THREE.Mesh(collarGeo, collarMat);
-      collar.position.copy(center);
-      const up = Math.abs(tangent.y) < 0.9
-        ? new THREE.Vector3(0, 1, 0)
-        : new THREE.Vector3(1, 0, 0);
-      const collarMatrix = new THREE.Matrix4().lookAt(
-        center, center.clone().add(tangent), up,
-      );
-      collar.quaternion.setFromRotationMatrix(collarMatrix);
-      entranceGroup.add(collar);
-
-      [-1, 1].forEach((side) => {
-        const accentGeo = new THREE.TorusGeometry(
-          strandTubeRadius * 1.01, collarThickness * 0.4, 6, 32,
+        const center = strandCurve.getPointAt(t);
+        const tangent = strandCurve.getTangentAt(t).normalize();
+        const up = Math.abs(tangent.y) < 0.9
+          ? new THREE.Vector3(0, 1, 0)
+          : new THREE.Vector3(1, 0, 0);
+        const lookAt = new THREE.Matrix4().lookAt(
+          center, center.clone().add(tangent), up,
         );
-        const accent = new THREE.Mesh(accentGeo, collarAccentMat);
-        accent.position.copy(center).add(
-          tangent.clone().multiplyScalar(side * strandTubeRadius * 0.12),
-        );
-        accent.quaternion.copy(collar.quaternion);
-        entranceGroup.add(accent);
-      });
+        quat.setFromRotationMatrix(lookAt);
+
+        mat4.compose(center, quat, new THREE.Vector3(1, 1, 1));
+        collarGeos.push(collarTemplate.clone().applyMatrix4(mat4));
+
+        [-1, 1].forEach((side) => {
+          const offset = center.clone().add(
+            tangent.clone().multiplyScalar(side * strandTubeRadius * 0.12),
+          );
+          mat4.compose(offset, quat, new THREE.Vector3(1, 1, 1));
+          accentGeos.push(accentTemplate.clone().applyMatrix4(mat4));
+        });
+      }
     }
+
+    if (collarGeos.length > 0) {
+      const merged = mergeGeometries(collarGeos);
+      if (merged) entranceGroup.add(new THREE.Mesh(merged, collarMat));
+      collarGeos.forEach((g) => g.dispose());
+    }
+    if (accentGeos.length > 0) {
+      const merged = mergeGeometries(accentGeos);
+      if (merged) entranceGroup.add(new THREE.Mesh(merged, collarAccentMat));
+      accentGeos.forEach((g) => g.dispose());
+    }
+    collarTemplate.dispose();
+    accentTemplate.dispose();
   }
 
   // Gate-framing collars — structural rings at each flyable gate opening
@@ -534,7 +618,7 @@ export function makeTopopolisCoil(
 
   groups[0]?.add(entranceGroup);
 
-  return { groups, interiorMaterials, cityLightMaterials, cloudMaterials, lightningMaterials, helixSamples, curve: primaryCurve, tubeRadius: strandTubeRadius, coilCount, gatesPerWrap: flyableGatesPerWrap, gateSurfacePositions };
+  return { groups, interiorMaterials, cityLightMaterials, cloudMaterials, lightningMaterials, distanceCullMeshes, helixSamples, curve: primaryCurve, tubeRadius: strandTubeRadius, coilCount, gatesPerWrap: flyableGatesPerWrap, gateSurfacePositions };
 }
 
 /**

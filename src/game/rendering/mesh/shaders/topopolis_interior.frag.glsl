@@ -13,6 +13,7 @@ uniform sampler2D interactionFieldTex;
 uniform float interactionFieldBlend;
 uniform float uAspect;
 uniform float uNoiseScale;
+uniform sampler2D uVoronoiTex;
 
 void main() {
   applyGateDiscard();
@@ -76,22 +77,21 @@ void main() {
     biomeColor = mix(biomeColor, glassTint, windowBlend * 0.35);
   }
 
-  // Dock zones — orbital-scale ecumenopolis via domain-warped voronoi
+  // Dock zones — ecumenopolis via baked voronoi texture (sampled at two scales)
   if (dockZoneBlend > 0.0) {
     vec3 urbanPos = vLocalPos * uNoiseScale + vec3(seed * 7.91, biomeSeed * 11.03, seed * 5.29);
 
-    // Domain warp: offset voronoi input with snoise so cells flow organically
-    vec3 warp = vec3(
+    // Domain warp — two independent snoise axes for organic, non-correlated flow
+    vec2 warp = vec2(
       snoise(urbanPos * 0.7 + 10.0),
-      snoise(urbanPos * 0.7 + 50.0),
-      snoise(urbanPos * 0.7 + 90.0)
-    ) * 0.45;
-    vec3 warpedPos = urbanPos + warp;
+      snoise(urbanPos * 0.7 + 50.0)
+    ) * 0.04;
+    vec2 baseUv = vUv * vec2(uAspect, 1.0) * 0.4 + vec2(seed * 0.31, biomeSeed * 0.17) + warp;
 
-    // District scale — large zones with per-district tone variation
-    vec2 districts = voronoi3(warpedPos);
-    float districtEdge = districts.x;
-    float districtId = districts.y;
+    // District scale — baked voronoi gives organic cells cheaply
+    vec2 districts = texture2D(uVoronoiTex, baseUv).rg;
+    float districtEdge = districts.r;
+    float districtId = districts.g;
 
     vec3 builtDark  = vec3(0.20, 0.19, 0.18);
     vec3 builtLight = vec3(0.38, 0.36, 0.34);
@@ -99,27 +99,26 @@ void main() {
     float warmCool = fract(districtId * 7.13) - 0.5;
     builtColor *= mix(vec3(0.97, 0.96, 1.04), vec3(1.04, 1.0, 0.96), step(0.0, warmCool));
 
-    // Corridor scale — luminous transport arteries at cell edges
-    vec2 corridors = voronoi3(warpedPos * 3.5);
-    float corridorLine = smoothstep(0.06, 0.01, corridors.x);
-    float majorArtery = smoothstep(0.10, 0.02, districtEdge);
+    // Corridor scale — same texture at higher frequency for street-level detail
+    vec2 corridors = texture2D(uVoronoiTex, baseUv * 3.5 + 0.37).rg;
+    float corridorLine = smoothstep(0.25, 0.04, corridors.r);
+    float majorArtery = smoothstep(0.40, 0.08, districtEdge);
     builtColor = mix(builtColor, vec3(0.55, 0.50, 0.40), corridorLine * 0.6);
     builtColor = mix(builtColor, vec3(0.65, 0.55, 0.35), majorArtery * 0.7);
 
-    // Fine texture — high-frequency noise for built-surface granularity
-    float fineGrain = snoise(urbanPos * 18.0 + 137.0) * 0.5
-                    + snoise(urbanPos * 35.0 + 251.0) * 0.25;
-    builtColor += builtColor * fineGrain * 0.12;
+    // Fine texture — per-block hash brightness
+    vec2 blockCell = floor(baseUv * 35.0);
+    float blockBright = hash(blockCell, seed + 31.0) * 0.15 - 0.075;
+    builtColor += builtColor * blockBright;
 
-    // Urban coverage — near-total in the core, with organic fringes at the bleed edge
-    float urbanNoise = fbm(urbanPos) + snoise(urbanPos * 2.5 + 31.0) * 0.12;
-    float urbanMask = smoothstep(-0.5, 0.1, urbanNoise + dockZoneBlend * 1.5 - 0.5);
+    // Urban fringe mask — sharp organic boundary with biome terrain
+    float fringeNoise = snoise(urbanPos);
+    float urbanMask = smoothstep(-0.05, 0.05, fringeNoise + dockZoneBlend * 1.5 - 0.5);
 
-    // Interstitial gaps — thin dark crevices within the urban mass
-    float gap = smoothstep(0.15, 0.0, urbanNoise + dockZoneBlend * 0.8);
+    // Interstitial gaps within the urban mass
+    float gap = smoothstep(0.15, 0.0, fringeNoise + dockZoneBlend * 0.8);
     builtColor = mix(builtColor, vec3(0.10, 0.10, 0.12), gap * 0.5);
 
-    // Blend: dockZoneBlend drives the overall transition, urbanMask adds fringe detail
     biomeColor = mix(biomeColor, builtColor, urbanMask * dockZoneBlend);
   }
 
