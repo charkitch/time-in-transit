@@ -5,7 +5,7 @@ import { InputSystem } from './input/InputSystem';
 import { DockingSystem } from './mechanics/DockingSystem';
 import { TargetingSystem } from './mechanics/TargetingSystem';
 import { ScanningSystem } from './mechanics/ScanningSystem';
-import { FlightHazardSystem } from './mechanics/FlightHazardSystem';
+import { FlightHazardSystem, COLLISION_HAZARD_MAP, DEATH_MESSAGES, DEFAULT_DEATH } from './mechanics/FlightHazardSystem';
 import { InteractionSystem } from './mechanics/InteractionSystem';
 import { JumpSystem } from './mechanics/JumpSystem';
 
@@ -45,24 +45,6 @@ function shipSpatialFromSave(data: SaveData): ShipSpatial | undefined {
   };
 }
 
-function collisionDeathMessage(type: SceneEntity['type']): string[] {
-  switch (type) {
-    case 'star':
-      return ['STELLAR IMPACT', 'Ship incinerated on approach to stellar surface.', 'No wreckage found.'];
-    case 'planet':
-      return ['PLANETARY IMPACT', 'Uncontrolled descent into planetary body.', 'Crash site detected on surface.'];
-    case 'moon':
-      return ['LUNAR IMPACT', 'Collision with lunar surface at terminal velocity.', 'Debris field detected in low orbit.'];
-    case 'station':
-      return ['STATION COLLISION', 'Hull breached on impact with orbital structure.', 'Station authorities notified.'];
-    case 'dyson_shell':
-      return ['SHELL IMPACT', 'Ship destroyed on collision with Dyson shell.', 'Wreckage embedded in superstructure.'];
-    case 'topopolis':
-      return ['TOPOPOLIS IMPACT', 'Ship destroyed on collision with topopolis hull.', 'Wreckage scattered across habitat surface.'];
-    default:
-      return ['SHIP DESTROYED', 'Impact with stellar body.'];
-  }
-}
 
 export class Game {
   private sceneRenderer: SceneRenderer;
@@ -299,7 +281,7 @@ export class Game {
     const collidables = this.sceneRenderer.getCollidables();
     const hitEntity = this.flightModel.resolveCollisions(this.sceneRenderer.shipGroup, collidables);
     if (hitEntity && hitEntity.type !== 'station' && !this.isDead) {
-      this.triggerDeath(collisionDeathMessage(hitEntity.type));
+      this.triggerDeath(DEATH_MESSAGES[COLLISION_HAZARD_MAP[hitEntity.type]!] ?? DEFAULT_DEATH);
       return;
     }
 

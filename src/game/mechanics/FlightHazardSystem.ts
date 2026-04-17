@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { SceneRenderer } from '../rendering/SceneRenderer';
+import type { SceneEntity } from '../rendering/scene/types';
 import { useGameState } from '../GameState';
 import {
   FUEL_HARVEST,
@@ -33,7 +34,18 @@ const PULSAR_LETHAL_HEAT_BURST = [25, 50] as const;
 const PULSAR_HARVEST_SHIELD_BURST = 3;
 const PULSAR_HARVEST_HEAT_BURST = 5;
 
-const DEATH_MESSAGES: Partial<Record<HazardType, string[]>> = {
+// Only collidable body types — npc_ship, fleet_ship, landing_site can't collide
+export const COLLISION_HAZARD_MAP: Partial<Record<SceneEntity['type'], HazardType>> = {
+  star: 'StarCollision',
+  planet: 'PlanetCollision',
+  moon: 'MoonCollision',
+  dyson_shell: 'DysonShellCollision',
+  topopolis: 'TopopolisCollision',
+};
+
+export const DEFAULT_DEATH = ['SHIP DESTROYED', 'Impact with stellar body.'];
+
+export const DEATH_MESSAGES: Partial<Record<HazardType, string[]>> = {
   Overheat: ['THERMAL FAILURE', 'Reactor overheat destroyed primary systems.', 'Emergency coolant exhausted.'],
   MicroquasarJet: ['RELATIVISTIC JET', 'Ship vaporized by relativistic plasma outflow.', 'No wreckage recovered.'],
   PulsarBeam: ['RADIATION EXPOSURE', 'Sustained pulsar radiation overwhelmed shields.', 'Hull breach across all decks.'],
@@ -374,7 +386,7 @@ export class FlightHazardSystem {
 
     // ── Death ──
     if (result.dead && result.deathCause) {
-      const msg = DEATH_MESSAGES[result.deathCause] ?? ['SHIP DESTROYED', 'Impact with stellar body.'];
+      const msg = DEATH_MESSAGES[result.deathCause] ?? DEFAULT_DEATH;
       onDeath(msg);
     }
   }
