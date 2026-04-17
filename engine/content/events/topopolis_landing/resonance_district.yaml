@@ -1,0 +1,25 @@
+id: TOPOPOLIS_RESONANCE_DISTRICT
+title: RESONANCE DISTRICT
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_interior]
+narrativeLines:
+  - >-
+    In this section, the tube wall is thin enough to transmit vibration from the exterior. Not sound, exactly — the vacuum outside carries nothing — but thermal expansion, micrometeorite impacts, the slow flex of orbital mechanics. The interior resonates. The air here has a permanent sub-bass thrum that you feel more than hear. Long-term residents say they stop noticing after a few years. Short-term visitors develop headaches, or religious convictions, or both.
+  - >-
+    A monastery has been built directly against the thinnest point of the wall. The monks do not worship anything. They listen. They have been transcribing the tube's vibrations into a musical notation of their own invention for centuries. The collected works fill a library. They will play you a section if you ask. It sounds like a star breathing.
+choices:
+  - id: listen_to_performance
+    label: Ask for a performance
+    description: "Free, and strange"
+    effect:
+      tradingReputation: 1
+  - id: commission_copy
+    label: Commission a copy of their latest transcription
+    description: "-45 credits"
+    effect:
+      creditsReward: -45
+  - id: leave_quietly
+    label: Your head already hurts
+    description: No effect
+    effect: {}

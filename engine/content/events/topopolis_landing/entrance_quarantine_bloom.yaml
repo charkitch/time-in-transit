@@ -1,0 +1,25 @@
+id: TOPOPOLIS_ENTRANCE_QUARANTINE_BLOOM
+title: QUARANTINE BLOOM
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_entrance]
+narrativeLines:
+  - >-
+    The gate is partially closed. Not a mechanical failure — a biological one. A crystalline growth has colonized the inner surface of the gate collar, spreading in fractal branches that catch the light from the tube interior and scatter it into spectra that should not exist in atmosphere. The growth is beautiful. It is also, according to the hazard notice on your approach frequency, technically quarantined.
+  - >-
+    Gate authority insists it is harmless. It does not metabolize, does not reproduce in any observed way, and does not respond to any stimulus they have tried. It simply appeared, over the course of a single night, and has been exactly the same size ever since. The quarantine is precautionary. A xenobiologist stationed at the gate has been studying it for thirty years without publishing a single finding. She says she is waiting until she has something to say. The growth, she notes, is patient too.
+choices:
+  - id: ask_xenobiologist
+    label: Ask the xenobiologist for her best guess
+    description: "+Reputation"
+    effect:
+      tradingReputation: 1
+  - id: scrape_sample
+    label: Scrape a sample — carefully
+    description: "-10 credits for a containment vial"
+    effect:
+      creditsReward: -10
+  - id: steer_clear
+    label: Give the growth a wide berth
+    description: No effect
+    effect: {}

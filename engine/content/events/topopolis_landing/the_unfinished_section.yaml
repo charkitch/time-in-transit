@@ -1,0 +1,25 @@
+id: TOPOPOLIS_UNFINISHED_SECTION
+title: THE UNFINISHED SECTION
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_interior]
+narrativeLines:
+  - >-
+    You dock at a habitat zone where the interior surface simply stops. Beyond the last terrace of farmland, the tube wall is raw — exposed structural lattice, unfinished thermal regulators, conduit bundles thicker than your ship trailing off into darkness. The topopolis was never completed here. Or it was completed and something removed the finishing.
+  - >-
+    Salvage crews work the boundary. They are careful, almost reverent. The raw structure is not dead material — it hums, faintly, at a frequency you can feel in your teeth. One of the crew chiefs explains: the topopolis is still growing. Not fast. A few centimeters a year. The unfinished section is not a ruin. It is a construction site on a timescale that makes glaciers look impulsive.
+choices:
+  - id: hire_on
+    label: Join a salvage survey for a shift
+    description: "+50 credits, dangerous work"
+    effect:
+      creditsReward: 50
+  - id: record_growth
+    label: Take measurements of the growth front
+    description: "+Reputation among cartographers"
+    effect:
+      tradingReputation: 2
+  - id: move_on
+    label: Leave the edge alone
+    description: No effect
+    effect: {}

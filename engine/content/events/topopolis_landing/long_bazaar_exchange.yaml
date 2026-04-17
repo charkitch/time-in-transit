@@ -20,7 +20,7 @@ choices:
     label: Try the forty-two-thousand-mile broth
     description: "-15 credits"
     effect:
-      credits: -15
+      creditsReward: -15
   - id: browse_further
     label: Continue deeper into the exchange
     description: No effect

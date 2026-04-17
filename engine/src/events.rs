@@ -145,6 +145,16 @@ fn pool_events(pool: EventPool) -> Vec<GameEvent> {
     content::events_for_pool(pool)
 }
 
+/// Strip choices whose `requires` conditions aren't met, recursing into nested moments.
+fn filter_unavailable_choices(choices: &mut Vec<EventChoice>, ctx: &EventContext) {
+    choices.retain(|c| c.requires.iter().all(|cond| check_condition(cond, ctx)));
+    choices.iter_mut().for_each(|c| {
+        if let Some(ref mut moment) = c.next_moment {
+            filter_unavailable_choices(&mut moment.choices, ctx);
+        }
+    });
+}
+
 pub fn select_game_event(pool: EventPool, ctx: &EventContext, seed: u32) -> Option<GameEvent> {
     let mut all = pool_events(pool);
     if !matches!(pool, EventPool::Triggered) {
@@ -163,17 +173,23 @@ pub fn select_game_event(pool: EventPool, ctx: &EventContext, seed: u32) -> Opti
         return None;
     }
 
+    let finalize = |event: &GameEvent| {
+        let mut selected = event.clone();
+        filter_unavailable_choices(&mut selected.choices, ctx);
+        selected
+    };
+
     let total: f64 = weighted.iter().map(|(_, w)| w).sum();
     let mut rng = PRNG::new(seed);
     let mut roll = rng.next() * total;
     for (event, w) in &weighted {
         roll -= w;
         if roll <= 0.0 {
-            return Some(event.clone());
+            return Some(finalize(event));
         }
     }
     // Fallback: floating-point rounding can overshoot — weighted is non-empty (early return above)
-    Some(weighted.last().expect("weighted pool confirmed non-empty").0.clone())
+    Some(finalize(&weighted.last().expect("weighted pool confirmed non-empty").0))
 }
 
 #[cfg(test)]

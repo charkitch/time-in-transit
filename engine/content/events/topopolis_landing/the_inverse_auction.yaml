@@ -1,0 +1,25 @@
+id: TOPOPOLIS_INVERSE_AUCTION
+title: THE INVERSE AUCTION
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_interior]
+narrativeLines:
+  - >-
+    In a pocket of the Bazaar where the lighting has been replaced by something bioluminescent and unregulated, you find a market where the goods are not displayed. Buyers describe what they want. Sellers bid for the right to provide it. The catch is that no one here sells objects. They sell processes. Ongoing chemical reactions in sealed vessels. Magnetic field geometries maintained by equipment you cannot identify. A slow combustion that has been burning in a glass sphere for eleven hundred years and which, the auctioneer insists, is not fire — it is an argument between two elements that have not yet been discovered by any civilization present.
+  - >-
+    The most active bidding war is over something called a "held shape" — a region of space approximately the size of a fist in which gravity points inward from all directions simultaneously. It sits on a pedestal, visibly doing nothing whatsoever. The auctioneer says it was found drifting in deep space by a mining survey and that it has no power source. It simply is. Three bidders are offering increasingly abstract things in exchange: a copyright on a mathematical proof, seven years of someone's future labor, and exclusive navigational rights to a corridor of space that the bidder claims to own but cannot prove exists.
+choices:
+  - id: bid_on_shape
+    label: Place a bid on the held shape
+    description: "-90 credits — you probably won't win"
+    effect:
+      creditsReward: -90
+  - id: buy_the_argument
+    label: Buy the eleven-hundred-year argument
+    description: "-60 credits"
+    effect:
+      creditsReward: -60
+  - id: back_away
+    label: You do not understand enough of this to participate
+    description: No effect
+    effect: {}

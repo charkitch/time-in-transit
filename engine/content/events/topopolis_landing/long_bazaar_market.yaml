@@ -15,12 +15,12 @@ choices:
     label: Buy structural alloy hull patches
     description: "-60 credits, ship repair materials"
     effect:
-      credits: -60
+      creditsReward: -60
   - id: trade_cargo
     label: Offer your cargo at Tidewater prices
     description: "+100 credits"
     effect:
-      credits: 100
+      creditsReward: 100
   - id: listen_to_music
     label: Follow the music
     description: "+Reputation"

@@ -1,0 +1,51 @@
+id: TOPOPOLIS_WRONG_SKY
+title: THE WRONG SKY
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_interior]
+narrativeLines:
+  - >-
+    Something has gone wrong with the lighting panels in this section. Not broken — wrong. The artificial sky, which normally simulates a plausible day-night cycle, has been displaying a star field that does not match any known region of the galaxy. It has been doing this for forty years. Maintenance crews have inspected the panels repeatedly. The hardware is functioning correctly. It is displaying what it has been told to display. No one can find who told it.
+  - >-
+    The locals have adapted. They navigate by the false stars. Children born here can identify constellations that exist nowhere else. An astronomer at the local university has spent her career mapping the fake sky. She has a theory — spectral analysis of the brightest objects suggests they are consistent with the galactic core of IC 1101, a galaxy roughly a billion light-years from here. A sky no instrument in our galaxy has ever resolved at this fidelity. She has partial models, but nothing definitive. The match is suggestive, not proven.
+choices:
+  - id: share_quasar_charts
+    label: Show her the Quasar Array star charts
+    description: "+Reputation"
+    requires:
+      - !AnyFlagSet quasar_array_completed
+    effect:
+      tradingReputation: 1
+    nextMoment:
+      narrativeLines:
+        - >-
+          She goes very quiet. She spreads your charts across three screens and overlays them against her own partial maps, adjusting for redshift, adjusting for proper motion, adjusting for the billion-year light delay. One by one the reference stars lock into place. The field geometries match. The spectral signatures match.
+        - >-
+          The thing the Quasar Array was built to study — the scars of something immense acting across distances that should not permit coordination — is visible in this sky. Not as distant echoes. As current observation. As if something at the heart of IC 1101 is watching the same events your telescope chain detected, and feeding the data here, to a set of lighting panels inside a tube orbiting an unremarkable star.
+        - >-
+          She sits down. She does not speak for a long time. When she does, she says: "I have been working on this for twenty-three years. I had a theory and I could not prove it and I had made peace with that." She looks at you. "You just handed me proof from a telescope you built for a completely different reason. That is either the most elegant piece of science I have ever been part of, or the universe is making fun of us."
+      choices:
+        - id: it_is_that_system
+          label: "It is that system. I've seen the data."
+          description: "+Reputation"
+          effect:
+            tradingReputation: 2
+        - id: leave_her_to_it
+          label: Leave her to it — she has work to do
+          description: "Some answers open more questions"
+          effect: {}
+  - id: fund_research
+    label: Fund her next publication
+    description: "-50 credits, +Reputation"
+    effect:
+      creditsReward: -50
+      tradingReputation: 2
+  - id: photograph_sky
+    label: Photograph the false constellations for your own records
+    description: "+Reputation"
+    effect:
+      tradingReputation: 1
+  - id: prefer_real_stars
+    label: You have seen enough false things
+    description: No effect
+    effect: {}

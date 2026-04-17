@@ -1,0 +1,25 @@
+id: TOPOPOLIS_FUNGAL_CUSTOMS
+title: FUNGAL CUSTOMS
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_interior]
+narrativeLines:
+  - >-
+    The port is overgrown. Not neglected — cultivated. Every surface is covered in a pale mycelium that the inhabitants tend with the attentiveness of gardeners. It grows into the docking clamps, through the cargo manifests, across the walls of the customs office. The customs officer herself has a fine dusting of spores on her uniform. She does not brush them off.
+  - >-
+    The fungus, she explains while processing your entry documents, is the local government. Not a metaphor. The mycelial network that connects this two-hundred-mile section of tube is a single distributed organism with demonstrated problem-solving capacity. It manages resource allocation, waste processing, and climate regulation more efficiently than any administrative body the inhabitants have tried. They voted it into office, technically. Unanimously. Twice, because the first vote felt too easy and they wanted to be sure.
+choices:
+  - id: petition_the_fungus
+    label: Submit a trade petition to the network
+    description: "+Reputation — the fungus approves"
+    effect:
+      tradingReputation: 2
+  - id: buy_spore_culture
+    label: Buy a starter culture for your ship
+    description: "-35 credits"
+    effect:
+      creditsReward: -35
+  - id: decline_politely
+    label: You prefer your governments multicellular
+    description: No effect
+    effect: {}

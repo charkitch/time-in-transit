@@ -34,6 +34,8 @@ export interface SceneEntity {
   gateSurfaceLocal?: THREE.Vector3[];
   /** Gate surface positions in world space (updated each frame). */
   gateSurfaceWorld?: THREE.Vector3[];
+  /** Arc-length position (0–1) along the host topopolis curve. */
+  siteCurveT?: number;
   /** Set after first dock/land — revisits skip events and go straight to market. */
   visited?: boolean;
 }

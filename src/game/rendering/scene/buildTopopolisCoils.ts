@@ -81,6 +81,8 @@ export function buildTopopolisCoils(params: {
       collisionSamplesWorld: collisionSamples.map(() => new THREE.Vector3()),
       gateSurfaceLocal: result.gateSurfacePositions,
       gateSurfaceWorld: result.gateSurfacePositions.map(() => new THREE.Vector3()),
+      siteHostId: coil.id,
+      siteCurveT: 0.5,
     });
   }
 }

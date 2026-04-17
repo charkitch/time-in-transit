@@ -1,0 +1,25 @@
+id: TOPOPOLIS_ENTRANCE_TIME_GRAFFITI
+title: THE GATE WALL
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_entrance]
+narrativeLines:
+  - >-
+    The interior face of the gate is covered in writing. Thousands of years of it. Scratched, painted, etched, projected, grown in bioluminescent cultures. Ship names and dates. Warnings. Love letters addressed to people who will arrive centuries after the writer has gone. Mathematical proofs that were wrong when they were carved and have since become right as the axioms of the field shifted. A drawing of a face that has been here so long the metal around it has corroded into a frame.
+  - >-
+    Near the docking clamps, a woman sells engraving time. For a fee, she will carve whatever you want into the gate wall with a plasma cutter. She guarantees legibility for a minimum of four thousand years, weather permitting. She says the weather inside a topopolis is always permitting. It was designed to be.
+choices:
+  - id: leave_your_mark
+    label: Engrave your ship's name and the date
+    description: "-25 credits"
+    effect:
+      creditsReward: -25
+  - id: read_the_old_ones
+    label: Spend an hour reading the oldest inscriptions
+    description: "+Reputation"
+    effect:
+      tradingReputation: 1
+  - id: pass_through
+    label: You were never one for graffiti
+    description: No effect
+    effect: {}

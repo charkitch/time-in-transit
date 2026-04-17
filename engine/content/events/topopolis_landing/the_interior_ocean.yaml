@@ -1,0 +1,26 @@
+id: TOPOPOLIS_INTERIOR_OCEAN
+title: THE INTERIOR OCEAN
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_interior]
+narrativeLines:
+  - >-
+    The ocean biome sections of the topopolis are not metaphorical. For six hundred miles, the interior is flooded to a depth of three kilometers. The water is held in place by spin gravity and sheer structural audacity. Above the ocean, the tube curves upward and you can see — if the weather is clear — more ocean hanging overhead, inverted, its waves pointing at yours.
+  - >-
+    Something lives in the deep sections. Something large enough that its movements create visible surface currents. The port authority lists it in their navigational advisories alongside weather patterns and shipping lanes: DEEP RESIDENT — MOVEMENTS UNPREDICTABLE — MAINTAIN 500M CLEARANCE FROM SURFACE DISTURBANCES. No one has ever seen it clearly. Sonar returns suggest it may be part of the original tube infrastructure. It may not be alive in any conventional sense. It has been here longer than the ocean.
+choices:
+  - id: charter_a_boat
+    label: Charter a surface observation tour
+    description: "-55 credits, unforgettable"
+    effect:
+      creditsReward: -55
+  - id: buy_sonar_data
+    label: Buy sonar data from the port authority
+    description: "-30 credits, +Reputation"
+    effect:
+      creditsReward: -30
+      tradingReputation: 1
+  - id: stay_on_land
+    label: You prefer your unknowns at a distance
+    description: No effect
+    effect: {}

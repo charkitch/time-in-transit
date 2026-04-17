@@ -12,7 +12,7 @@ choices:
     label: Buy the snow globe
     description: "-40 credits, perspective"
     effect:
-      credits: -40
+      creditsReward: -40
   - id: refuel_cheap
     label: Top off the tank at Oort prices
     description: "+2 fuel"

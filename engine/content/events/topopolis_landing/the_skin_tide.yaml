@@ -1,0 +1,25 @@
+id: TOPOPOLIS_SKIN_TIDE
+title: THE SKIN TIDE
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_interior]
+narrativeLines:
+  - >-
+    Once every local decade, something migrates through the tube walls. Not through them, exactly — along them. A bioluminescent slime, kilometers wide, that creeps across the interior surface at walking pace. It takes eleven months to pass any given point. The locals call it the Skin Tide.
+  - >-
+    You have arrived mid-transit. The ground beneath the port is faintly alive — a shimmering amber film that smells like ozone and warm copper. It is not dangerous. It is not even inconvenient, really, apart from the fact that it digests certain polymers. Several ships at dock have had their landing gear partially dissolved. The port authority is apologetic but unsurprised.
+choices:
+  - id: sell_samples
+    label: Scrape a sample — xenobiologists pay well
+    description: "+70 credits"
+    effect:
+      creditsReward: 70
+  - id: protect_ship
+    label: Buy a chemical barrier for your landing gear
+    description: "-35 credits"
+    effect:
+      creditsReward: -35
+  - id: watch_it_move
+    label: Sit and watch the tide creep past
+    description: No effect
+    effect: {}

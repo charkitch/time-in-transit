@@ -15,12 +15,12 @@ choices:
     label: Browse the rare mineral collection
     description: "-80 credits, acquire rare goods"
     effect:
-      credits: -80
+      creditsReward: -80
   - id: buy_a_map
     label: Buy a map of the Bazaar
     description: "-20 credits, +Reputation"
     effect:
-      credits: -20
+      creditsReward: -20
       tradingReputation: 1
   - id: keep_walking
     label: Keep walking — the Bazaar is long

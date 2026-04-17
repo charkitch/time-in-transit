@@ -17,12 +17,12 @@ choices:
     label: Buy a souvenir from the kiosk
     description: "-30 credits, a memento"
     effect:
-      credits: -30
+      creditsReward: -30
   - id: take_the_tour
     label: Sign up for the guided tour
     description: "-50 credits, +Reputation"
     effect:
-      credits: -50
+      creditsReward: -50
       tradingReputation: 2
   - id: skip_ahead
     label: Skip the tourist traps and head for the Bazaar

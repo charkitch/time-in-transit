@@ -1,0 +1,26 @@
+id: TOPOPOLIS_THE_WALL_MOUTHS
+title: THE WALL MOUTHS
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_interior]
+narrativeLines:
+  - >-
+    In a section of tube where the biome has no official classification, the interior walls have developed orifices. They open and close on a tidal schedule that corresponds to no known gravitational body. The locals feed them. They are not mouths, exactly — they are stress fractures in the habitat shell that have been colonized by a symbiotic biofilm. The biofilm digests organic waste and excretes a structural polymer that has been quietly reinforcing this section of tube for longer than the current inhabitants have had a written language.
+  - >-
+    A woman sitting on a stool near the largest orifice is selling what she calls "conversations." You pay, you speak into the wall, the biofilm vibrates in response. She insists it is not random. She has transcripts going back decades. The wall, she says, has opinions about agriculture.
+choices:
+  - id: have_conversation
+    label: Pay for a conversation with the wall
+    description: "-25 credits"
+    effect:
+      creditsReward: -25
+  - id: buy_transcripts
+    label: Buy a decade of transcripts
+    description: "-40 credits, +Reputation"
+    effect:
+      creditsReward: -40
+      tradingReputation: 1
+  - id: walk_past
+    label: The wall can keep its opinions
+    description: No effect
+    effect: {}

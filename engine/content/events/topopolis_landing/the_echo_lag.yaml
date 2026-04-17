@@ -1,0 +1,27 @@
+id: TOPOPOLIS_ECHO_LAG
+title: THE ECHO LAG
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_interior]
+narrativeLines:
+  - >-
+    Sound behaves incorrectly here. The tube geometry in this section creates an acoustic anomaly — words spoken aloud arrive back at the speaker between nine and fourteen hours later, reflected off the curved interior surface thousands of miles away and focused back to their origin point with unsettling clarity. The locals call it the Echo Lag. They plan around it. Important announcements are made in the morning so the confirmation arrives by evening.
+  - >-
+    A courier service has built an entire economy on it. For a fee, they will position themselves at calculated points along the tube and relay messages at acoustic-reflection speeds — faster than any ground transport, slower than radio, and impossible to intercept because the signal is just sound bouncing off the inside of a tube. A dispatcher offers you the service. She says they can deliver a message to the far end of the inhabited section in six days. Anything you want to say to someone eleven thousand miles away, she says, they can make sure it arrives in your own voice.
+choices:
+  - id: send_message
+    label: Send a message to the far gate merchants
+    description: "-20 credits, +Reputation"
+    effect:
+      creditsReward: -20
+      tradingReputation: 1
+  - id: hire_as_relay
+    label: Hire a relay point for your trade negotiations
+    description: "-65 credits, +Reputation"
+    effect:
+      creditsReward: -65
+      tradingReputation: 2
+  - id: keep_quiet
+    label: You would rather not hear yourself played back
+    description: No effect
+    effect: {}

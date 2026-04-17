@@ -17,4 +17,4 @@ choices:
     label: Commission a survey of your flight path
     description: "-50 credits"
     effect:
-      credits: -50
+      creditsReward: -50

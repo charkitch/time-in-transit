@@ -230,6 +230,7 @@ export class LandingSiteManager {
       classification: string,
       label: string,
       biome?: string,
+      curveT?: number,
     ) => {
       const marker = makeLandingSiteMarker(classification);
       marker.position.copy(pos);
@@ -255,6 +256,7 @@ export class LandingSiteManager {
         siteHostId: hostId,
         siteDiscovered: false,
         siteBiome: biome,
+        siteCurveT: curveT,
       });
     };
 
@@ -267,7 +269,7 @@ export class LandingSiteManager {
       // Position just inside the tube opening
       const pos = center.clone().add(tangent.clone().multiplyScalar(endIdx === 0 ? tubeRadius * 0.3 : -tubeRadius * 0.3));
       const lookTarget = center.clone().add(tangent.clone().multiplyScalar(endIdx === 0 ? tubeRadius : -tubeRadius));
-      addSite(pos, lookTarget, 'topopolis_entrance', `${hostLabel} ${entranceNames[endIdx]}`, 'entrance');
+      addSite(pos, lookTarget, 'topopolis_entrance', `${hostLabel} ${entranceNames[endIdx]}`, 'entrance', t);
     });
 
     // ── Interior habitat sites along the tube ───────────────────────────────
@@ -300,7 +302,7 @@ export class LandingSiteManager {
         .multiplyScalar(tubeRadius * 0.92);
       const pos = centerPoint.clone().add(offset);
 
-      addSite(pos, centerPoint, 'topopolis_interior', `THE LONG BAZAAR · ${biomeLabel} ${['PORT', 'MARKET', 'EXCHANGE'][created]}`, biome);
+      addSite(pos, centerPoint, 'topopolis_interior', `THE LONG BAZAAR · ${biomeLabel} ${['PORT', 'MARKET', 'EXCHANGE'][created]}`, biome, u);
       created++;
     }
   }

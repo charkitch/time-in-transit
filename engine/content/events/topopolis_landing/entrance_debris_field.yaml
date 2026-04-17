@@ -1,0 +1,25 @@
+id: TOPOPOLIS_ENTRANCE_DEBRIS_FIELD
+title: GATE DEBRIS
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_entrance]
+narrativeLines:
+  - >-
+    The gate approach is cluttered. Not dangerously — more like an attic. Decommissioned docking arms drift in slow tumbles. Hull panels from ships that were scrapped in place rather than towed. A navigational buoy that is still broadcasting approach vectors for a gate configuration that was replaced centuries ago. No one has turned it off. The signal has become part of the local pilots' mental furniture — they navigate around it without thinking.
+  - >-
+    A salvage tug is parked near the gate lip, its crew eating lunch on the hull in pressure suits. One of them waves you in. She points to a clear lane between two slowly rotating cargo containers and holds up a sign: TIPS APPRECIATED — WE KEEP THE LANE OPEN.
+choices:
+  - id: tip_the_crew
+    label: Tip the salvage crew
+    description: "-15 credits, good karma"
+    effect:
+      creditsReward: -15
+  - id: buy_salvage
+    label: Ask about buying salvage
+    description: "-40 credits"
+    effect:
+      creditsReward: -40
+  - id: fly_through
+    label: Thread the needle yourself
+    description: No effect
+    effect: {}

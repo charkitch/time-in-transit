@@ -1,0 +1,28 @@
+id: TOPOPOLIS_GRAVITY_SEAM
+title: THE GRAVITY SEAM
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_interior]
+narrativeLines:
+  - >-
+    Between two habitat sections, the spin gravity disagrees with itself. A seam — maybe a hundred meters wide — where the rotational parameters of adjacent tube segments do not quite match. Things fall sideways here. Rain drifts. Birds have learned to hang motionless in the confused air.
+  - >-
+    An entire culture lives in the seam. They build horizontally, vertically, and at angles that would be nonsensical anywhere else. Their architecture is gorgeous and deeply unsettling. Staircases lead in directions your inner ear refuses to accept. A child runs along a wall and turns a corner onto a ceiling without slowing down.
+  - >-
+    A merchant has set up shop at the seam's thickest point, where gravity is essentially a suggestion. Her goods float in slow orbits around her stall. She catches a bottle of something luminous and offers you a drink.
+choices:
+  - id: drink
+    label: Accept the drink
+    description: "-15 credits"
+    effect:
+      creditsReward: -15
+  - id: trade_for_architecture
+    label: Commission a model of a seam-house
+    description: "-60 credits, +Reputation"
+    effect:
+      creditsReward: -60
+      tradingReputation: 2
+  - id: leave_seam
+    label: Your inner ear has had enough
+    description: No effect
+    effect: {}

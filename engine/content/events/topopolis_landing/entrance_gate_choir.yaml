@@ -1,0 +1,25 @@
+id: TOPOPOLIS_ENTRANCE_GATE_CHOIR
+title: THE GATE CHOIR
+requires:
+  - !HostTypeIs [topopolis]
+  - !SiteClassIs [topopolis_entrance]
+narrativeLines:
+  - >-
+    As you pass through the gate, your hull picks up a vibration. Not mechanical — harmonic. The gate structure itself is singing. A resonance between the tube's rotation and the thermal expansion of the gate collar produces a chord that shifts with the topopolis's orbital position. It has been doing this since the gate was built. The engineers did not intend it. The locals will not let them fix it.
+  - >-
+    A listening platform has been bolted to the gate interior, just past the docking clamps. Dozens of people sit in silence, headphones pressed to the railing, eyes closed. A vendor sells recordings, but regulars say the recordings miss the point — you have to feel it through the metal. A placard reads: CURRENT KEY — F SHARP DIMINISHED. EXPECTED TRANSITION TO G MINOR IN APPROXIMATELY 11 YEARS.
+choices:
+  - id: listen
+    label: Sit on the platform and listen
+    description: "Worth the time"
+    effect:
+      tradingReputation: 1
+  - id: buy_recording
+    label: Buy a recording
+    description: "-20 credits"
+    effect:
+      creditsReward: -20
+  - id: dock_and_move_on
+    label: You have heard stranger things
+    description: No effect
+    effect: {}
