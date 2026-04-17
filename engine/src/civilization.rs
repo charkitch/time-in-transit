@@ -26,12 +26,11 @@ pub fn political_clusters() -> &'static [&'static [PoliticalType]] {
 }
 
 fn cluster_of(p: PoliticalType) -> &'static [PoliticalType] {
-    for cluster in POLITICAL_CLUSTERS {
-        if cluster.contains(&p) {
-            return cluster;
-        }
-    }
-    PoliticalType::ALL
+    POLITICAL_CLUSTERS
+        .iter()
+        .find(|cluster| cluster.contains(&p))
+        .copied()
+        .unwrap_or(PoliticalType::ALL)
 }
 
 // ─── Banned goods per politics ──────────────────────────────────────────────

@@ -18,8 +18,6 @@ export function loadTexture(path: string): THREE.Texture {
 }
 
 export function disposeAll(): void {
-  for (const tex of cache.values()) {
-    tex.dispose();
-  }
+  cache.forEach(tex => tex.dispose());
   cache.clear();
 }

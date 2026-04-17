@@ -176,11 +176,11 @@ pub fn simulate_galaxy(
 /// Initialize galaxy state for all systems
 pub fn init_galaxy_state(cluster: &[StarSystemData], galaxy_year: u32) -> GalaxyState {
     let systems = cluster.iter().map(|star| {
-        let mut faction_strength = HashMap::new();
         let factions = all_factions();
-        for faction in factions.iter() {
-            faction_strength.insert(faction.id.clone(), 0.5);
-        }
+        let faction_strength: HashMap<String, f64> = factions
+            .iter()
+            .map(|f| (f.id.clone(), 0.5))
+            .collect();
 
         SystemSimState {
             system_id: star.id,

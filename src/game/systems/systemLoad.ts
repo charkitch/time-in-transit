@@ -6,19 +6,16 @@ import { SceneRenderer } from '../rendering/SceneRenderer';
 export function buildWasmPlayerState(
   state: ReturnType<typeof useGameState.getState>,
 ): WasmPlayerState {
-  const cargo: Record<string, number> = {};
-  for (const [k, v] of Object.entries(state.player.cargo)) {
-    if (v) cargo[k] = v;
-  }
+  const cargo: Record<string, number> = Object.fromEntries(
+    Object.entries(state.player.cargo).filter(([, v]) => v),
+  );
 
-  const cargoCostBasis: Record<string, number> = {};
-  for (const [k, v] of Object.entries(state.player.cargoCostBasis)) {
-    if (v !== undefined) cargoCostBasis[k] = v;
-  }
+  const cargoCostBasis: Record<string, number> = Object.fromEntries(
+    Object.entries(state.player.cargoCostBasis).filter(([, v]) => v !== undefined),
+  );
 
-  const playerChoices: WasmPlayerState['playerChoices'] = {};
-  for (const [k, v] of Object.entries(state.playerChoices)) {
-    playerChoices[Number(k) as SystemId] = {
+  const playerChoices: WasmPlayerState['playerChoices'] = Object.fromEntries(
+    Object.entries(state.playerChoices).map(([k, v]) => [Number(k) as SystemId, {
       tradingReputation: v.tradingReputation,
       bannedGoods: v.bannedGoods,
       priceModifier: v.priceModifier,
@@ -26,17 +23,16 @@ export function buildWasmPlayerState(
       completedEventIds: v.completedEventIds,
       flags: v.flags,
       firedTriggers: v.firedTriggers,
-    };
-  }
+    }]),
+  );
 
-  const factionMemory: WasmPlayerState['factionMemory'] = {};
-  for (const [k, v] of Object.entries(state.factionMemory)) {
-    factionMemory[Number(k) as SystemId] = {
+  const factionMemory: WasmPlayerState['factionMemory'] = Object.fromEntries(
+    Object.entries(state.factionMemory).map(([k, v]) => [Number(k) as SystemId, {
       factionId: v.factionId,
       contestingFactionId: v.contestingFactionId,
       galaxyYear: v.galaxyYear,
-    };
-  }
+    }]),
+  );
 
   return {
     credits: state.player.credits,

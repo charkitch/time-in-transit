@@ -144,12 +144,10 @@ export function HUD({
   let targetSiteTotal = 0;
   let targetSiteDiscovered = 0;
   if (targetScanBodyId) {
-    for (const [, entity] of entities) {
-      if (entity.type !== 'landing_site') continue;
-      if (entity.siteHostId !== targetScanBodyId) continue;
-      targetSiteTotal++;
-      if (entity.siteDiscovered) targetSiteDiscovered++;
-    }
+    const sites = [...entities.values()]
+      .filter(e => e.type === 'landing_site' && e.siteHostId === targetScanBodyId);
+    targetSiteTotal = sites.length;
+    targetSiteDiscovered = sites.filter(e => e.siteDiscovered).length;
   }
 
   // Check if target is a secret base

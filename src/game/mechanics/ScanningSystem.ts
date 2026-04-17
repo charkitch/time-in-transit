@@ -137,25 +137,26 @@ export class ScanningSystem {
   restoreIntelForSystem(state: ReturnType<typeof useGameState.getState>): void {
     const perSystem = state.scannedBodies[state.currentSystemId];
     if (!perSystem) return;
-    const freshBodyIds = new Set<string>();
-    for (const [bodyId, scannedYear] of Object.entries(perSystem) as [ScannableBodyId, GalaxyYear][]) {
-      if (state.galaxyYear - scannedYear <= SCAN_INTEL_MAX_AGE_YEARS) {
-        freshBodyIds.add(bodyId);
-      }
-    }
+    const freshBodyIds = new Set(
+      (Object.entries(perSystem) as [ScannableBodyId, GalaxyYear][])
+        .filter(([, scannedYear]) => state.galaxyYear - scannedYear <= SCAN_INTEL_MAX_AGE_YEARS)
+        .map(([bodyId]) => bodyId),
+    );
     if (freshBodyIds.size > 0) {
       this.sceneRenderer.revealLandingSitesForHosts(freshBodyIds);
     }
   }
 
   syncFromState(state: ReturnType<typeof useGameState.getState>): void {
-    this.currentVisitScannedHosts.clear();
     const perSystem = state.scannedBodies[state.currentSystemId];
-    if (!perSystem) return;
-    for (const [bodyId, scannedYear] of Object.entries(perSystem) as [ScannableBodyId, GalaxyYear][]) {
-      if (state.galaxyYear - scannedYear <= SCAN_INTEL_MAX_AGE_YEARS) {
-        this.currentVisitScannedHosts.add(bodyId);
-      }
+    if (!perSystem) {
+      this.currentVisitScannedHosts = new Set();
+      return;
     }
+    this.currentVisitScannedHosts = new Set(
+      (Object.entries(perSystem) as [ScannableBodyId, GalaxyYear][])
+        .filter(([, scannedYear]) => state.galaxyYear - scannedYear <= SCAN_INTEL_MAX_AGE_YEARS)
+        .map(([bodyId]) => bodyId),
+    );
   }
 }

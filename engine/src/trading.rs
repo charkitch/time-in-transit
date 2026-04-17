@@ -361,12 +361,11 @@ pub fn get_market(
         1.0 + c.trading_reputation as f64 * REPUTATION_SELL_BONUS
     });
 
-    let mut listed_goods: Vec<GoodName> = Vec::new();
-    for &good in GoodName::ALL {
-        if rng.next() < listing_probability(economy, good) {
-            listed_goods.push(good);
-        }
-    }
+    let mut listed_goods: Vec<GoodName> = GoodName::ALL
+        .iter()
+        .copied()
+        .filter(|&good| rng.next() < listing_probability(economy, good))
+        .collect();
 
     while listed_goods.len() < MIN_LISTED_GOODS {
         pick_missing(&mut listed_goods, GoodName::ALL, &mut rng);

@@ -17,20 +17,19 @@ const SUFFIXES: &[&str] = &["athi", "eron", "undi", "imar", "ossa", "enth"];
 fn generate_factions() -> Vec<Faction> {
     let mut rng = PRNG::from_index(CLUSTER_SEED, 0xFAC710);
     let clusters = political_clusters();
-    let mut factions = Vec::new();
-
-    for i in 0..6usize {
-        let name = format!("{}{}", PREFIXES[i], SUFFIXES[i]);
-        let cluster_idx = if i < clusters.len() { i } else { rng.int(0, clusters.len() as i32 - 1) as usize };
-        let political_affinity = clusters[cluster_idx].to_vec();
-
-        factions.push(Faction {
-            id: format!("faction-{}", i),
-            name,
-            color: FACTION_COLORS[i],
-            political_affinity,
-        });
-    }
+    let mut factions: Vec<Faction> = (0..6usize)
+        .map(|i| {
+            let name = format!("{}{}", PREFIXES[i], SUFFIXES[i]);
+            let cluster_idx = if i < clusters.len() { i } else { rng.int(0, clusters.len() as i32 - 1) as usize };
+            let political_affinity = clusters[cluster_idx].to_vec();
+            Faction {
+                id: format!("faction-{}", i),
+                name,
+                color: FACTION_COLORS[i],
+                political_affinity,
+            }
+        })
+        .collect();
 
     // The Crown's own faction — not generated, hand-placed
     factions.push(Faction {

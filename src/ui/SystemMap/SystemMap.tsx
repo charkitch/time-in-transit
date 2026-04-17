@@ -251,10 +251,9 @@ export function SystemMap({ onClose, getEntities, getFleetBattle, onTarget }: Sy
       }
 
       // Moons
-      for (let mi = 0; mi < planet.moons.length; mi++) {
-        const moon = planet.moons[mi];
+      planet.moons.forEach(moon => {
         const moonEntity = entities.get(moon.id);
-        if (!moonEntity) continue;
+        if (!moonEntity) return;
         const [mx2, my2] = toMap(moonEntity.worldPos.x, moonEntity.worldPos.z);
         const mR = Math.max(1.5, moon.radius * scale * 0.5);
 
@@ -267,7 +266,7 @@ export function SystemMap({ onClose, getEntities, getFleetBattle, onTarget }: Sy
         ctx.arc(mx2, my2, mR, 0, Math.PI * 2);
         ctx.fill();
         pickTargets.push({ id: moon.id, x: mx2, y: my2, r: Math.max(mR + 2, 6), tooltip: 'Moon' });
-      }
+      });
     }
 
     // ---------- Dyson shells ----------

@@ -78,9 +78,7 @@ export function buildFleetBattle(params: {
     systemObjects.push(battleProjectiles);
 
     battleExplosions = createBattleExplosions(scene);
-    for (const s of battleExplosions.sprites) {
-      systemObjects.push(s);
-    }
+    systemObjects.push(...battleExplosions.sprites);
   }
 
   return { fleetBattleData, battleProjectiles, battleExplosions };

@@ -18,10 +18,7 @@ export function SystemEntryText() {
     setFading(false);
 
     // Stagger line appearance
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    for (let i = 0; i < lines.length; i++) {
-      timers.push(setTimeout(() => setVisibleCount(i + 1), i * 500));
-    }
+    const timers = lines.map((_, i) => setTimeout(() => setVisibleCount(i + 1), i * 500));
 
     // Start fade after 8 seconds
     timers.push(setTimeout(() => setFading(true), 8000));
