@@ -6,6 +6,8 @@ Keeping in mind it is very much still in development, give it a try: [https://ti
 
 Built with React, TypeScript, Three.js, and Vite — with a Rust/WASM game engine for procedural generation, galaxy simulation.
 
+[Baseball.html](./Baseball.html) remains in the repository as a reminder of what Claude made the first time I asked it to build a game.
+
 ## Features
 
 - **Free-flight spaceship controls** — thrust, pitch, yaw, roll, with shield, heat, and fuel management
@@ -55,6 +57,40 @@ npm run test:e2e:ui               # Playwright interactive UI
 ```
 
 Tests live in `tests/specs/`. The framework exposes a dev-only bridge (`__GAME__`, `__STORE__`) so tests can inspect game state and trigger actions like hyperspace jumps without UI interaction.
+
+## Linting and Pre-Commit Hooks
+
+The repository uses standard linting for both TypeScript and Rust:
+
+```bash
+npm run lint:ts      # ESLint recommended rules for TS/TSX
+npm run lint:rust    # rustfmt check + clippy (warnings are errors)
+npm run lint         # both
+```
+
+Pre-commit hooks are managed with Lefthook.
+On commit, it runs:
+- `npm run lint:ts` when staged TS/TSX files are present
+- `npm run lint:rust` when staged Rust files are present
+
+After installing dependencies, hooks are installed automatically via the `prepare` script.
+
+If hooks are not installed yet, run:
+
+```bash
+npm run prepare
+```
+
+You can also use the Makefile shortcuts:
+
+```bash
+make setup
+make lint
+make hooks-run
+make dev
+make test-e2e
+make help
+```
 
 ## Architecture
 

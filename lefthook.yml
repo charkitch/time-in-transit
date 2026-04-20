@@ -1,0 +1,9 @@
+pre-commit:
+  parallel: true
+  commands:
+    lint-ts:
+      glob: "**/*.{ts,tsx}"
+      run: npm run lint:ts
+    lint-rust:
+      glob: "**/*.rs"
+      run: npm run lint:rust
