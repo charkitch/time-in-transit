@@ -82,11 +82,12 @@ export function getInteractionDistance(entityType?: string, collisionRadius = 0)
 }
 
 export const HYPERSPACE = {
-  maxRange:   25,  // galaxy units — MIN_DIST is 8, so this gives ~5-8 reachable neighbours
-  fuelPerUnit: 0.35,
-  tankSize:    7,
-  countdown:   3,  // seconds
-  duration:    2,  // tunnel animation seconds
+  maxRange:      25,    // galaxy units — MIN_DIST is 8, so this gives ~5-8 reachable neighbours
+  fuelPerUnit:   0.35,
+  tankSize:      7,
+  countdown:     3,     // seconds
+  duration:      2,     // tunnel animation seconds
+  cruiseVelocity: 0.93,  // peak velocity in c
 } as const;
 
 export const TRAVEL_TERMS = {

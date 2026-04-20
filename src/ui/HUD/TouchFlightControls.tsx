@@ -110,7 +110,7 @@ export function TouchFlightControls({
 
   const updateStickFromPointer = (
     stickRef: React.RefObject<HTMLDivElement | null>,
-    radiusRef: React.RefObject<number>,
+    radiusRef: { current: number },
     clientX: number,
     clientY: number,
     setX: (x: number) => void,

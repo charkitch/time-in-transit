@@ -84,6 +84,7 @@ export class JumpSystem {
 
     this.pendingSystemPayload = jumpResult.systemPayload;
     this.pendingPlayerSnapshot = jumpResult.playerState;
+    state.setPendingTransitYears(jumpResult.yearsElapsed, jumpResult.shipYearsElapsed);
 
     this.hyperspaceActive = true;
     this.hyperspaceTimer = HYPERSPACE.duration;
@@ -139,6 +140,7 @@ export class JumpSystem {
     this.hazards.resetTimers();
     state.setHyperspaceTarget(null);
     state.setHyperspaceCountdown(0);
+    state.setPendingTransitYears(null);
     this.hyperspaceActive = false;
     this.sceneRenderer.stopHyperspace();
 

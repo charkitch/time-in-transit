@@ -116,6 +116,8 @@ export interface GameStateData {
   // ── Faction tracking ─────────────────────────────────────────────────────
   knownFactions: Set<string>;
   factionMemory: Record<SystemId, FactionMemoryEntry>;
+  pendingTransitYears: number | null;
+  pendingShipYears: number | null;
   systemEntryLines: string[] | null;
   pendingSystemEntryDialog: SystemEntryDialog | null;
   seenSystemDialogIds: string[];
@@ -175,6 +177,7 @@ export interface GameActions {
   recordVisitYear: (systemId: SystemId, year: GalaxyYear) => void;
   addKnownFaction: (id: string) => void;
   setFactionMemory: (systemId: SystemId, data: FactionMemoryEntry) => void;
+  setPendingTransitYears: (years: number | null, shipYears?: number | null) => void;
   setSystemEntryLines: (lines: string[] | null) => void;
   setPendingSystemEntryDialog: (dialog: SystemEntryDialog | null) => void;
   markSystemDialogSeen: (id: string) => void;

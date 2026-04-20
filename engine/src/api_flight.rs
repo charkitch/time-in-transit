@@ -5,7 +5,7 @@ use crate::api_state::with_engine_mut;
 use crate::civilization::get_civ_state;
 use crate::factions;
 use crate::simulation::simulate_galaxy;
-use crate::system_payload::{build_system_payload, build_cluster_summary, compute_chain_targets, jump_years_elapsed};
+use crate::system_payload::{build_system_payload, build_cluster_summary, compute_chain_targets, jump_years_elapsed, ship_years_elapsed};
 
 #[wasm_bindgen]
 pub fn jump_to_system(target_system_id: u32, fuel_cost: f64) -> Result<String, JsValue> {
@@ -19,6 +19,7 @@ pub fn jump_to_system(target_system_id: u32, fuel_cost: f64) -> Result<String, J
         let dy = target.y - current.y;
         let distance = (dx * dx + dy * dy).sqrt();
         let years_elapsed = jump_years_elapsed(distance);
+        let ship_years = ship_years_elapsed(distance);
         let pre_jump_era = ps.galaxy_year / ERA_LENGTH;
         let new_galaxy_year = ps.galaxy_year + years_elapsed;
 
@@ -68,6 +69,7 @@ pub fn jump_to_system(target_system_id: u32, fuel_cost: f64) -> Result<String, J
             system_payload,
             cluster_summary,
             years_elapsed,
+            ship_years_elapsed: ship_years,
             new_galaxy_year,
             galaxy_sim_state: engine.galaxy_state.systems.clone(),
             chain_targets,
@@ -75,6 +77,7 @@ pub fn jump_to_system(target_system_id: u32, fuel_cost: f64) -> Result<String, J
                 from_system_id,
                 to_system_id: target_system_id,
                 years_elapsed,
+                ship_years_elapsed: ship_years,
                 galaxy_year_after: new_galaxy_year,
             },
             player_state: engine.player_state.clone(),

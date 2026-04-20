@@ -14,7 +14,8 @@ import { CommDialog } from './CommDialog/CommDialog';
 import { LoadingScreen } from './LoadingScreen';
 import { DeathScreen } from './DeathScreen';
 import type { SceneEntity } from '../game/rendering/SceneRenderer';
-import { TRAVEL_TERMS, type GoodName } from '../game/constants';
+import { type GoodName } from '../game/constants';
+import { HyperspaceOverlay } from './HUD/HyperspaceOverlay';
 import { saveToSlot, loadFromSlot, loadAutosave, buildSlotMeta, loadAutosaveByKind, type AutosaveKind } from './MainMenu/saveSlots';
 import { isFiniteVec3, isFiniteQuat, isOriginVec3 } from '../game/spatialValidation';
 import { detectRuntimeProfile, type RuntimeProfile } from '../runtime/runtimeProfile';
@@ -295,32 +296,7 @@ export function App() {
         <SystemEntryDialog onDismiss={handleSystemEntryDialogDismiss} />
       )}
 
-      {uiMode === 'hyperspace' && (
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: '#000',
-          pointerEvents: 'none',
-          zIndex: 20,
-        }} />
-      )}
-
-      {uiMode === 'hyperspace' && (
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          color: 'var(--color-hyperspace-bright)',
-          fontSize: '24px',
-          letterSpacing: '8px',
-          textShadow: '0 0 20px #8866FF',
-          pointerEvents: 'none',
-          zIndex: 21,
-        }}>
-          {TRAVEL_TERMS.modeNameUpper}
-        </div>
-      )}
+      {uiMode === 'hyperspace' && <HyperspaceOverlay />}
 
       {/* Nearlight passage charge glow — pulses during countdown */}
       {hyperspaceCountdown > 0 && (

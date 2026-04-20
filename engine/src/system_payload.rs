@@ -202,20 +202,17 @@ pub fn build_system_payload(
     let current_era = galaxy_year / ERA_LENGTH;
     if let Some(prev_era) = pre_jump_era {
         if current_era != prev_era {
-            let eras_crossed = current_era - prev_era;
             lines.push(format!("— GALAXY YEAR {} —", galaxy_year));
-            if eras_crossed == 1 {
-                lines.push("Centuries have passed. Empires have risen and fallen in your absence.".to_string());
-            } else {
-                lines.push("Eras have passed. The galaxy you knew is ancient history.".to_string());
-            }
+            lines.push("Centuries have passed. Empires have risen and fallen in your absence.".to_string());
             lines.push(String::new());
         }
     }
 
     lines.push(format!("ENTERING {}", star.name.to_uppercase()));
     if let Some(years) = jump_years_in_transit {
-        lines.push(format!("+{} YEARS IN TRANSIT", years));
+        let ship_time = years as f64 * LORENTZ_FACTOR;
+        lines.push(format!("+{} YEARS IN TRANSIT ({} SHIP TIME)",
+            years, format_duration(ship_time)));
     }
 
     let control_faction = get_faction(&faction_state.controlling_faction_id);
@@ -275,5 +272,27 @@ pub fn build_system_payload(
 }
 
 pub fn jump_years_elapsed(distance: f64) -> u32 {
-    (10.0 * distance.powf(1.4)).floor() as u32
+    10 + ((distance * 14.0).floor() as u32)
+}
+
+/// Proper time experienced by the ship during a jump (Lorentz-contracted).
+/// At 0.93c the Lorentz factor ≈ 0.368, compressing centuries into decades.
+pub fn ship_years_elapsed(distance: f64) -> f64 {
+    let external = 10.0 + distance * 14.0;
+    external * LORENTZ_FACTOR
+}
+
+fn format_duration(years: f64) -> String {
+    let whole_years = years.floor() as u64;
+    if whole_years > 0 {
+        return format!("{} YEARS", whole_years);
+    }
+    let total_days = (years * 365.25) as u64;
+    let m = total_days / 30;
+    let d = total_days % 30;
+    match (m, d) {
+        (0, d) => format!("{} DAYS", d),
+        (m, 0) => format!("{} MONTHS", m),
+        (m, d) => format!("{} MONTHS {} DAYS", m, d),
+    }
 }

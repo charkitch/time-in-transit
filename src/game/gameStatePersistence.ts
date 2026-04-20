@@ -58,6 +58,8 @@ export function buildInitialState(mode: UIMode): Omit<GameStateData, 'cluster'> 
     // Faction tracking
     knownFactions: new Set(),
     factionMemory: {},
+    pendingTransitYears: null,
+    pendingShipYears: null,
     systemEntryLines: null,
     pendingSystemEntryDialog: null,
     seenSystemDialogIds: [],

@@ -311,6 +311,7 @@ export interface JumpLogEntry {
   fromSystemId: SystemId;
   toSystemId: SystemId;
   yearsElapsed: number;
+  shipYearsElapsed: number;
   galaxyYearAfter: GalaxyYear;
 }
 
@@ -318,6 +319,7 @@ export interface JumpResult {
   systemPayload: SystemPayload;
   clusterSummary: ClusterSystemSummary[];
   yearsElapsed: number;
+  shipYearsElapsed: number;
   newGalaxyYear: GalaxyYear;
   galaxySimState: SystemSimState[];
   chainTargets: ChainTarget[];

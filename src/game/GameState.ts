@@ -177,6 +177,10 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   setFactionMemory: (systemId, data) => set(s => ({
     factionMemory: { ...s.factionMemory, [systemId]: data },
   })),
+  setPendingTransitYears: (years, shipYears) => set({
+    pendingTransitYears: years,
+    pendingShipYears: shipYears ?? null,
+  }),
   setSystemEntryLines: (lines) => set({ systemEntryLines: lines }),
   setPendingSystemEntryDialog: (dialog) => set({ pendingSystemEntryDialog: dialog }),
   markSystemDialogSeen: (id) => set(s => ({

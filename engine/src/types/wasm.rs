@@ -41,6 +41,7 @@ pub struct JumpLogEntry {
     pub from_system_id: u32,
     pub to_system_id: u32,
     pub years_elapsed: u32,
+    pub ship_years_elapsed: f64,
     pub galaxy_year_after: u32,
 }
 
@@ -50,6 +51,7 @@ pub struct JumpResult {
     pub system_payload: SystemPayload,
     pub cluster_summary: Vec<ClusterSystemSummary>,
     pub years_elapsed: u32,
+    pub ship_years_elapsed: f64,
     pub new_galaxy_year: u32,
     pub galaxy_sim_state: Vec<SystemSimState>,
     pub chain_targets: Vec<ChainTarget>,
