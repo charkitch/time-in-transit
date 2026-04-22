@@ -100,6 +100,5 @@ pub struct ChainTarget {
 // ─── Events / Content Types (defined in content-types subcrate) ─────────────
 
 pub use content_types::{
-    ChoiceEffect, EventChoice, EventCondition,
-    GameEvent, Trigger, TriggerFile, SystemEntryDialog,
+    ChoiceEffect, EventChoice, EventCondition, GameEvent, SystemEntryDialog, Trigger, TriggerFile,
 };

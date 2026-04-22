@@ -1,11 +1,14 @@
 use wasm_bindgen::prelude::*;
 
-use crate::types::*;
 use crate::api_state::with_engine_mut;
 use crate::civilization::get_civ_state;
 use crate::factions;
 use crate::simulation::simulate_galaxy;
-use crate::system_payload::{build_system_payload, build_cluster_summary, compute_chain_targets, jump_years_elapsed, ship_years_elapsed};
+use crate::system_payload::{
+    build_cluster_summary, build_system_payload, compute_chain_targets, jump_years_elapsed,
+    ship_years_elapsed,
+};
+use crate::types::*;
 
 #[wasm_bindgen]
 pub fn jump_to_system(target_system_id: u32, fuel_cost: f64) -> Result<String, JsValue> {
@@ -36,14 +39,25 @@ pub fn jump_to_system(target_system_id: u32, fuel_cost: f64) -> Result<String, J
         ps.last_visit_year.insert(target_system_id, new_galaxy_year);
 
         let target_civ = get_civ_state(target_system_id, new_galaxy_year, target.economy);
-        let faction_state = factions::get_system_faction_state(target_system_id, new_galaxy_year, target_civ.politics);
-        ps.faction_memory.insert(target_system_id, FactionMemoryEntry {
-            faction_id: faction_state.controlling_faction_id.clone(),
-            contesting_faction_id: faction_state.contesting_faction_id.clone(),
-            galaxy_year: new_galaxy_year,
-        });
-        if !ps.known_factions.contains(&faction_state.controlling_faction_id) {
-            ps.known_factions.push(faction_state.controlling_faction_id.clone());
+        let faction_state = factions::get_system_faction_state(
+            target_system_id,
+            new_galaxy_year,
+            target_civ.politics,
+        );
+        ps.faction_memory.insert(
+            target_system_id,
+            FactionMemoryEntry {
+                faction_id: faction_state.controlling_faction_id.clone(),
+                contesting_faction_id: faction_state.contesting_faction_id.clone(),
+                galaxy_year: new_galaxy_year,
+            },
+        );
+        if !ps
+            .known_factions
+            .contains(&faction_state.controlling_faction_id)
+        {
+            ps.known_factions
+                .push(faction_state.controlling_faction_id.clone());
         }
         if let Some(ref contesting) = faction_state.contesting_faction_id {
             if !ps.known_factions.contains(contesting) {
@@ -51,7 +65,12 @@ pub fn jump_to_system(target_system_id: u32, fuel_cost: f64) -> Result<String, J
             }
         }
 
-        simulate_galaxy(cluster, &mut engine.galaxy_state, &engine.player_state, years_elapsed);
+        simulate_galaxy(
+            cluster,
+            &mut engine.galaxy_state,
+            &engine.player_state,
+            years_elapsed,
+        );
 
         let system_payload = build_system_payload(
             target,
@@ -130,11 +149,13 @@ pub fn tick_flight(context_json: &str) -> Result<String, JsValue> {
             && ps.shields <= 0.0
             && (ctx.shield_damage_rate > 0.0 || ps.heat >= HEAT_MAX);
         let death_cause = if dead {
-            Some(if ps.heat >= HEAT_MAX && ctx.active_hazard == HazardType::None {
-                HazardType::Overheat
-            } else {
-                ctx.active_hazard
-            })
+            Some(
+                if ps.heat >= HEAT_MAX && ctx.active_hazard == HazardType::None {
+                    HazardType::Overheat
+                } else {
+                    ctx.active_hazard
+                },
+            )
         } else {
             None
         };

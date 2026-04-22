@@ -1,0 +1,19 @@
+pre-commit:
+  parallel: true
+  commands:
+    fix-ts:
+      glob: "**/*.{ts,tsx}"
+      run: npx eslint --ext .ts,.tsx --fix {staged_files}
+      stage_fixed: true
+    fix-rust:
+      glob: "**/*.rs"
+      run: cargo fmt --manifest-path engine/Cargo.toml --all
+      stage_fixed: true
+    clippy:
+      glob: "**/*.rs"
+      run: cargo clippy --manifest-path engine/Cargo.toml --all-targets --all-features -- -D warnings
+
+pre-push:
+  commands:
+    test:
+      run: make test

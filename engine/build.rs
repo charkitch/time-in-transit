@@ -4,7 +4,7 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use content_types::{GameEvent, TriggerFile, SystemEntryDialog};
+use content_types::{GameEvent, SystemEntryDialog, TriggerFile};
 
 struct EventPoolSpec {
     dir: &'static str,
@@ -12,17 +12,50 @@ struct EventPoolSpec {
 }
 
 const EVENT_POOLS: &[EventPoolSpec] = &[
-    EventPoolSpec { dir: "landing", variant: "Landing" },
-    EventPoolSpec { dir: "asteroid_base", variant: "AsteroidBase" },
-    EventPoolSpec { dir: "oort_cloud", variant: "OortCloudBase" },
-    EventPoolSpec { dir: "maximum_space", variant: "MaximumSpace" },
-    EventPoolSpec { dir: "triggered", variant: "Triggered" },
-    EventPoolSpec { dir: "system_entry", variant: "SystemEntry" },
-    EventPoolSpec { dir: "proximity_star", variant: "ProximityStar" },
-    EventPoolSpec { dir: "proximity_base", variant: "ProximityBase" },
-    EventPoolSpec { dir: "planet_landing", variant: "PlanetLanding" },
-    EventPoolSpec { dir: "dyson_landing", variant: "DysonLanding" },
-    EventPoolSpec { dir: "topopolis_landing", variant: "TopopolisLanding" },
+    EventPoolSpec {
+        dir: "landing",
+        variant: "Landing",
+    },
+    EventPoolSpec {
+        dir: "asteroid_base",
+        variant: "AsteroidBase",
+    },
+    EventPoolSpec {
+        dir: "oort_cloud",
+        variant: "OortCloudBase",
+    },
+    EventPoolSpec {
+        dir: "maximum_space",
+        variant: "MaximumSpace",
+    },
+    EventPoolSpec {
+        dir: "triggered",
+        variant: "Triggered",
+    },
+    EventPoolSpec {
+        dir: "system_entry",
+        variant: "SystemEntry",
+    },
+    EventPoolSpec {
+        dir: "proximity_star",
+        variant: "ProximityStar",
+    },
+    EventPoolSpec {
+        dir: "proximity_base",
+        variant: "ProximityBase",
+    },
+    EventPoolSpec {
+        dir: "planet_landing",
+        variant: "PlanetLanding",
+    },
+    EventPoolSpec {
+        dir: "dyson_landing",
+        variant: "DysonLanding",
+    },
+    EventPoolSpec {
+        dir: "topopolis_landing",
+        variant: "TopopolisLanding",
+    },
 ];
 
 fn walk_yaml_files(root: &Path, files: &mut Vec<PathBuf>) -> Result<(), String> {
@@ -53,7 +86,9 @@ fn to_const_name(pool: &str) -> String {
     format!("{}_EVENT_FILES", pool.to_ascii_uppercase())
 }
 
-fn yaml_to_bincode<T: serde::de::DeserializeOwned + serde::Serialize>(path: &Path) -> Result<Vec<u8>, String> {
+fn yaml_to_bincode<T: serde::de::DeserializeOwned + serde::Serialize>(
+    path: &Path,
+) -> Result<Vec<u8>, String> {
     let raw = fs::read_to_string(path)
         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
     let value: T = serde_yaml::from_str(&raw)
@@ -70,7 +105,9 @@ fn rel_label(root: &Path, path: &Path, prefix: &str) -> Result<String, String> {
     Ok(format!("{}/{}", prefix, rel))
 }
 
-fn discover_event_entries(root: &Path) -> Result<BTreeMap<String, Vec<(String, Vec<u8>)>>, String> {
+type EventPoolMap = BTreeMap<String, Vec<(String, Vec<u8>)>>;
+
+fn discover_event_entries(root: &Path) -> Result<EventPoolMap, String> {
     let mut by_pool = BTreeMap::new();
     for pool in EVENT_POOLS {
         by_pool.insert(pool.dir.to_string(), Vec::new());
@@ -130,11 +167,12 @@ fn write_bytes_const(
         write!(file, "    ({:?}, &[", label)
             .map_err(|e| format!("Failed writing entry {}: {}", label, e))?;
         for (i, byte) in bytes.iter().enumerate() {
-            if i > 0 { write!(file, ",").map_err(|e| e.to_string())?; }
+            if i > 0 {
+                write!(file, ",").map_err(|e| e.to_string())?;
+            }
             write!(file, "{}", byte).map_err(|e| e.to_string())?;
         }
-        writeln!(file, "]),")
-            .map_err(|e| format!("Failed writing entry {}: {}", label, e))?;
+        writeln!(file, "]),").map_err(|e| format!("Failed writing entry {}: {}", label, e))?;
     }
     writeln!(file, "];").map_err(|e| format!("Failed closing const {}: {}", const_name, e))?;
     Ok(())
@@ -180,7 +218,7 @@ fn write_dialog_lookup(file: &mut fs::File) -> Result<(), String> {
 
 fn write_generated_registry(
     out_path: &Path,
-    event_entries: &BTreeMap<String, Vec<(String, Vec<u8>)>>,
+    event_entries: &EventPoolMap,
     trigger_entries: &[(String, Vec<u8>)],
     dialog_entries: &[(String, Vec<u8>)],
 ) -> Result<(), String> {
@@ -226,9 +264,8 @@ fn main() -> Result<(), String> {
     let trigger_entries = discover_trigger_entries(&content_root.join("triggers"))?;
     let dialog_entries = discover_dialog_entries(&content_root.join("dialogs"))?;
 
-    let out_dir = PathBuf::from(
-        env::var("OUT_DIR").map_err(|e| format!("OUT_DIR is unavailable: {}", e))?,
-    );
+    let out_dir =
+        PathBuf::from(env::var("OUT_DIR").map_err(|e| format!("OUT_DIR is unavailable: {}", e))?);
     write_generated_registry(
         &out_dir.join("generated_content_registry.rs"),
         &event_entries,

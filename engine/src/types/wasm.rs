@@ -82,8 +82,8 @@ pub struct GalaxyState {
 #[serde(rename_all = "camelCase")]
 pub struct SystemSimState {
     pub system_id: u32,
-    pub stability: f64,        // 0.0 = chaos, 1.0 = stable
-    pub prosperity: f64,       // 0.0 = collapse, 1.0 = boom
+    pub stability: f64,  // 0.0 = chaos, 1.0 = stable
+    pub prosperity: f64, // 0.0 = collapse, 1.0 = boom
     pub faction_strength: HashMap<String, f64>,
     pub recent_events: Vec<String>,
 }

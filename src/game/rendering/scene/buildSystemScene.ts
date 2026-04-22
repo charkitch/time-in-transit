@@ -122,7 +122,7 @@ export function buildSystemScene(params: {
     const failed: string[] = [];
     scene.traverse((obj) => {
       if (obj instanceof THREE.Mesh && obj.material instanceof THREE.ShaderMaterial) {
-        const prog = (renderer.properties.get(obj.material) as any)?.currentProgram;
+        const prog = (renderer.properties.get(obj.material) as Record<string, unknown>)?.currentProgram;
         if (!prog) {
           failed.push(obj.name || obj.uuid);
         }

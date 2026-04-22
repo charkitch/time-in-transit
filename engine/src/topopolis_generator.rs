@@ -1,4 +1,4 @@
-use crate::prng::PRNG;
+use crate::prng::Prng;
 use crate::types::*;
 use crate::world_interaction_field::build_topopolis_interaction_field;
 
@@ -10,7 +10,7 @@ pub fn generate_topopolis(star: &StarSystemData) -> Vec<TopopolisCoilData> {
     }
 
     // Separate RNG stream so topopolis generation does not perturb existing system generation.
-    let mut rng = PRNG::from_index(0xC011_0001, star.id.wrapping_mul(31337).wrapping_add(7));
+    let mut rng = Prng::from_index(0xC011_0001, star.id.wrapping_mul(31337).wrapping_add(7));
 
     let coil_count = rng.int(4, 6) as u32;
     let orbit_radius = rng.float(3000.0, 4500.0);
@@ -59,7 +59,8 @@ mod tests {
     #[test]
     fn crown_system_generates_topopolis() {
         let cluster = generate_cluster();
-        let crown = cluster.iter()
+        let crown = cluster
+            .iter()
             .find(|s| s.special_kind == SpecialSystemKind::TheCrown)
             .expect("Missing Crown system");
         let coils = generate_topopolis(crown);
@@ -73,7 +74,8 @@ mod tests {
     #[test]
     fn non_crown_systems_produce_no_topopolis() {
         let cluster = generate_cluster();
-        let normal = cluster.iter()
+        let normal = cluster
+            .iter()
             .find(|s| s.special_kind == SpecialSystemKind::None)
             .expect("cluster should contain non-special systems");
         assert!(generate_topopolis(normal).is_empty());
@@ -82,7 +84,8 @@ mod tests {
     #[test]
     fn deterministic_topopolis_generation() {
         let cluster = generate_cluster();
-        let crown = cluster.iter()
+        let crown = cluster
+            .iter()
             .find(|s| s.special_kind == SpecialSystemKind::TheCrown)
             .expect("cluster should contain Crown system");
         let a = generate_topopolis(crown);

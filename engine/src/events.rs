@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::content;
-use crate::prng::PRNG;
+use crate::prng::Prng;
 use crate::types::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -79,46 +79,71 @@ fn check_condition(cond: &EventCondition, ctx: &EventContext) -> bool {
         EventCondition::FlagNotSet(flag) => !choices.flags.contains(flag),
         EventCondition::AnyFlagSet(flag) => any_system_has_flag(flag),
         EventCondition::AnyFlagNotSet(flag) => !any_system_has_flag(flag),
-        EventCondition::SurfaceIs(surfaces) => {
-            ctx.surface.map_or(false, |surface| surfaces.contains(&surface))
-        }
-        EventCondition::SiteClassIs(classes) => {
-            ctx.site_class
-                .map(|site_class| classes.iter().any(|class| class == site_class))
-                .unwrap_or(false)
-        }
-        EventCondition::HostTypeIs(host_types) => {
-            ctx.host_type
-                .map(|host_type| host_types.iter().any(|ht| ht == host_type))
-                .unwrap_or(false)
-        }
+        EventCondition::SurfaceIs(surfaces) => ctx
+            .surface
+            .is_some_and(|surface| surfaces.contains(&surface)),
+        EventCondition::SiteClassIs(classes) => ctx
+            .site_class
+            .map(|site_class| classes.iter().any(|class| class == site_class))
+            .unwrap_or(false),
+        EventCondition::HostTypeIs(host_types) => ctx
+            .host_type
+            .map(|host_type| host_types.iter().any(|ht| ht == host_type))
+            .unwrap_or(false),
         EventCondition::TriggerFired(id) => choices.fired_triggers.contains(id),
-        EventCondition::ChainTargetHere(chain_id) => {
-            ctx.player_state.chain_targets.iter().any(|ct| {
-                ct.chain_id == *chain_id && ct.target_system_id == ctx.current_system_id
-            })
-        }
-        EventCondition::GalacticFlag(flag) => ctx.player_state.player_history.galactic_flags.contains(flag),
-        EventCondition::GalacticFlagNotSet(flag) => !ctx.player_state.player_history.galactic_flags.contains(flag),
+        EventCondition::ChainTargetHere(chain_id) => ctx
+            .player_state
+            .chain_targets
+            .iter()
+            .any(|ct| ct.chain_id == *chain_id && ct.target_system_id == ctx.current_system_id),
+        EventCondition::GalacticFlag(flag) => ctx
+            .player_state
+            .player_history
+            .galactic_flags
+            .contains(flag),
+        EventCondition::GalacticFlagNotSet(flag) => !ctx
+            .player_state
+            .player_history
+            .galactic_flags
+            .contains(flag),
     }
 }
 
 /// Returns the selection weight for this event (0.0 = unavailable).
 fn event_weight(event: &GameEvent, ctx: &EventContext) -> f64 {
-    let prior = ctx.player_state.player_history.completed_events.get(&event.id);
+    let prior = ctx
+        .player_state
+        .player_history
+        .completed_events
+        .get(&event.id);
 
     if let Some(completed) = prior {
         let w = event.repeatability.repeat_weight();
-        if w == 0.0 { return 0.0; }
+        if w == 0.0 {
+            return 0.0;
+        }
         // Never repeat in the same system
-        if completed.system_id == ctx.current_system_id { return 0.0; }
+        if completed.system_id == ctx.current_system_id {
+            return 0.0;
+        }
         // Suppress repeats within 20 galaxy years
-        if ctx.player_state.galaxy_year.saturating_sub(completed.galaxy_year) < 20 { return 0.0; }
-        if !conditions_met(event, ctx) { return 0.0; }
+        if ctx
+            .player_state
+            .galaxy_year
+            .saturating_sub(completed.galaxy_year)
+            < 20
+        {
+            return 0.0;
+        }
+        if !conditions_met(event, ctx) {
+            return 0.0;
+        }
         return w;
     }
 
-    if !conditions_met(event, ctx) { return 0.0; }
+    if !conditions_met(event, ctx) {
+        return 0.0;
+    }
     1.0
 }
 
@@ -165,7 +190,11 @@ pub fn select_game_event(pool: EventPool, ctx: &EventContext, seed: u32) -> Opti
         .into_iter()
         .filter_map(|event| {
             let w = event_weight(&event, ctx);
-            if w > 0.0 { Some((event, w)) } else { None }
+            if w > 0.0 {
+                Some((event, w))
+            } else {
+                None
+            }
         })
         .collect();
 
@@ -180,7 +209,7 @@ pub fn select_game_event(pool: EventPool, ctx: &EventContext, seed: u32) -> Opti
     };
 
     let total: f64 = weighted.iter().map(|(_, w)| w).sum();
-    let mut rng = PRNG::new(seed);
+    let mut rng = Prng::new(seed);
     let mut roll = rng.next() * total;
     for (event, w) in &weighted {
         roll -= w;
@@ -189,7 +218,12 @@ pub fn select_game_event(pool: EventPool, ctx: &EventContext, seed: u32) -> Opti
         }
     }
     // Fallback: floating-point rounding can overshoot — weighted is non-empty (early return above)
-    Some(finalize(&weighted.last().expect("weighted pool confirmed non-empty").0))
+    Some(finalize(
+        &weighted
+            .last()
+            .expect("weighted pool confirmed non-empty")
+            .0,
+    ))
 }
 
 #[cfg(test)]
@@ -239,7 +273,7 @@ mod tests {
         assert!(content::events_for_pool(EventPool::AsteroidBase).len() >= 9);
         assert!(content::events_for_pool(EventPool::OortCloudBase).len() >= 7);
         assert!(content::events_for_pool(EventPool::MaximumSpace).len() >= 8);
-        assert!(content::events_for_pool(EventPool::Triggered).len() >= 1);
+        assert!(!content::events_for_pool(EventPool::Triggered).is_empty());
         assert!(content::events_for_pool(EventPool::DysonLanding).len() >= 2);
         assert!(content::events_for_pool(EventPool::TopopolisLanding).len() >= 2);
     }
@@ -297,7 +331,9 @@ mod tests {
         let triggers = content::all_triggers();
 
         let mut choices = SystemChoices::default();
-        choices.fired_triggers.insert("rebel-contact-ready".to_string());
+        choices
+            .fired_triggers
+            .insert("rebel-contact-ready".to_string());
         let ctx_without_flag = EventContext {
             civ_state: &civ,
             player_state: &player,
@@ -327,6 +363,9 @@ mod tests {
         };
         let event = select_game_event(EventPool::Triggered, &ctx_with_flag, 2);
         assert!(event.is_some());
-        assert_eq!(event.expect("triggered event should be selected").id, "REBEL_CONTACT_FOLLOWS_UP");
+        assert_eq!(
+            event.expect("triggered event should be selected").id,
+            "REBEL_CONTACT_FOLLOWS_UP"
+        );
     }
 }

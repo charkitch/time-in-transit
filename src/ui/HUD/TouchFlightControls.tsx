@@ -62,7 +62,6 @@ export function TouchFlightControls({
   const [rightPointerId, setRightPointerId] = useState<number | null>(null);
   const [rightX, setRightX] = useState(0);
   const [rightY, setRightY] = useState(0);
-  const [rightRawX, setRightRawX] = useState(0);
   const [rightRawY, setRightRawY] = useState(0);
   const [boostPressed, setBoostPressed] = useState(false);
 
@@ -91,7 +90,6 @@ export function TouchFlightControls({
       setRightPointerId(null);
       setRightX(0);
       setRightY(0);
-      setRightRawX(0);
       setRightRawY(0);
       setBoostPressed(false);
       setActionsOpen(false);
@@ -115,7 +113,6 @@ export function TouchFlightControls({
     clientY: number,
     setX: (x: number) => void,
     setY: (y: number) => void,
-    setRawX?: (x: number) => void,
     setRawY?: (y: number) => void,
   ) => {
     const root = stickRef.current;
@@ -132,7 +129,6 @@ export function TouchFlightControls({
     const clamped = Math.min(dist, radius);
     const nx = dist > 0 ? (dx / dist) * (clamped / radius) : 0;
     const ny = dist > 0 ? (dy / dist) * (clamped / radius) : 0;
-    setRawX?.(nx);
     setRawY?.(ny);
 
     const finalX = Math.abs(nx) < STICK_DEADZONE ? 0 : nx;
@@ -171,13 +167,13 @@ export function TouchFlightControls({
     e.currentTarget.setPointerCapture(e.pointerId);
     setRightActive(true);
     setRightPointerId(e.pointerId);
-    updateStickFromPointer(rightStickRef, rightRadiusRef, e.clientX, e.clientY, setRightX, setRightY, setRightRawX, setRightRawY);
+    updateStickFromPointer(rightStickRef, rightRadiusRef, e.clientX, e.clientY, setRightX, setRightY, setRightRawY);
   };
 
   const handleRightMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!enabled || !rightActive || e.pointerId !== rightPointerId) return;
     e.preventDefault();
-    updateStickFromPointer(rightStickRef, rightRadiusRef, e.clientX, e.clientY, setRightX, setRightY, setRightRawX, setRightRawY);
+    updateStickFromPointer(rightStickRef, rightRadiusRef, e.clientX, e.clientY, setRightX, setRightY, setRightRawY);
   };
 
   const handleRightUp = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -187,7 +183,6 @@ export function TouchFlightControls({
     setRightPointerId(null);
     setRightX(0);
     setRightY(0);
-    setRightRawX(0);
     setRightRawY(0);
   };
 

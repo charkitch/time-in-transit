@@ -3,7 +3,6 @@
 /// Direct port of the GLSL implementation in `shaders/includes/noise.glsl`
 /// (Ashima/Stefan Gustavson). Both implementations MUST stay in sync —
 /// the parity tests below lock them to the same golden values.
-
 // All helpers mirror the GLSL vec4 operations element-wise.
 fn mod289(x: f64) -> f64 {
     x - (x * (1.0 / 289.0)).floor() * 289.0
@@ -41,7 +40,11 @@ pub fn snoise(vx: f64, vy: f64, vz: f64) -> f64 {
 
     // vec3 x0 = v - i + dot(i, C.xxx);
     let dot_i_cx = (i[0] + i[1] + i[2]) * c_x;
-    let x0 = [vx - i[0] + dot_i_cx, vy - i[1] + dot_i_cx, vz - i[2] + dot_i_cx];
+    let x0 = [
+        vx - i[0] + dot_i_cx,
+        vy - i[1] + dot_i_cx,
+        vz - i[2] + dot_i_cx,
+    ];
 
     // vec3 g = step(x0.yzx, x0.xyz);
     let g: [f64; 3] = [
@@ -58,9 +61,17 @@ pub fn snoise(vx: f64, vy: f64, vz: f64) -> f64 {
     let i2 = [g[0].max(l[2]), g[1].max(l[0]), g[2].max(l[1])];
 
     // vec3 x1 = x0 - i1 + C.xxx;
-    let x1 = [x0[0] - i1[0] + c_x, x0[1] - i1[1] + c_x, x0[2] - i1[2] + c_x];
+    let x1 = [
+        x0[0] - i1[0] + c_x,
+        x0[1] - i1[1] + c_x,
+        x0[2] - i1[2] + c_x,
+    ];
     // vec3 x2 = x0 - i2 + C.yyy;
-    let x2 = [x0[0] - i2[0] + c_y, x0[1] - i2[1] + c_y, x0[2] - i2[2] + c_y];
+    let x2 = [
+        x0[0] - i2[0] + c_y,
+        x0[1] - i2[1] + c_y,
+        x0[2] - i2[2] + c_y,
+    ];
     // vec3 x3 = x0 - D.yyy;
     let x3 = [x0[0] - 0.5, x0[1] - 0.5, x0[2] - 0.5];
 
@@ -192,27 +203,41 @@ pub fn fbm(mut x: f64, mut y: f64, mut z: f64) -> f64 {
     v
 }
 
+pub struct TopopolisTerrainParams<'a> {
+    pub field_values: &'a [u8],
+    pub field_width: u16,
+    pub field_height: u16,
+    pub u: f64,
+    pub v: f64,
+    pub local_pos: [f64; 3],
+    pub noise_scale: f64,
+    pub seed: f64,
+    pub biome_seed: f64,
+    pub field_blend: f64,
+}
+
 /// Sample topopolis terrain at a position, replicating the shader's computation.
 /// Returns the macro terrain value (same as `macro` in topopolis_interior.frag.glsl).
-pub fn sample_topopolis_terrain(
-    field_values: &[u8],
-    field_width: u16,
-    field_height: u16,
-    u: f64,
-    v: f64,
-    local_pos: [f64; 3],
-    noise_scale: f64,
-    seed: f64,
-    biome_seed: f64,
-    field_blend: f64,
-) -> f64 {
+pub fn sample_topopolis_terrain(p: &TopopolisTerrainParams) -> f64 {
+    let &TopopolisTerrainParams {
+        field_values,
+        field_width,
+        field_height,
+        u,
+        v,
+        local_pos,
+        noise_scale,
+        seed,
+        biome_seed,
+        field_blend,
+    } = p;
     // Bilinear sample of the interaction field — matches the GPU's LINEAR filter.
     let w = field_width as f64;
     let h = field_height as f64;
     let uu = u.rem_euclid(1.0) * w - 0.5;
     let vv = v.clamp(0.0, 1.0) * h - 0.5;
     let x0 = (uu.floor() as isize).rem_euclid(field_width as isize) as usize;
-    let x1 = ((x0 + 1) % field_width as usize) as usize;
+    let x1 = (x0 + 1) % field_width as usize;
     let y0 = (vv.floor().max(0.0) as usize).min(field_height as usize - 1);
     let y1 = (y0 + 1).min(field_height as usize - 1);
     let fx = uu.fract();
@@ -265,13 +290,17 @@ mod tests {
         let inputs: Vec<(f64, f64, f64)> = (0..1000)
             .map(|i| {
                 let t = i as f64 * 0.137;
-                (t.sin() * 50.0, (t * 1.3).cos() * 50.0, (t * 0.7).sin() * 50.0)
+                (
+                    t.sin() * 50.0,
+                    (t * 1.3).cos() * 50.0,
+                    (t * 0.7).sin() * 50.0,
+                )
             })
             .collect();
         for (x, y, z) in &inputs {
             let v = snoise(*x, *y, *z);
             assert!(
-                v >= -1.5 && v <= 1.5,
+                (-1.5..=1.5).contains(&v),
                 "snoise({x}, {y}, {z}) = {v} out of range"
             );
         }
@@ -282,13 +311,17 @@ mod tests {
         let inputs: Vec<(f64, f64, f64)> = (0..1000)
             .map(|i| {
                 let t = i as f64 * 0.213;
-                (t.cos() * 30.0, (t * 0.9).sin() * 30.0, (t * 1.7).cos() * 30.0)
+                (
+                    t.cos() * 30.0,
+                    (t * 0.9).sin() * 30.0,
+                    (t * 1.7).cos() * 30.0,
+                )
             })
             .collect();
         for (x, y, z) in &inputs {
             let v = fbm(*x, *y, *z);
             assert!(
-                v >= -1.5 && v <= 1.5,
+                (-1.5..=1.5).contains(&v),
                 "fbm({x}, {y}, {z}) = {v} out of range"
             );
         }
@@ -303,7 +336,12 @@ mod tests {
         assert_approx(snoise(0.0, 0.0, 0.0), -0.412198798740470, eps, "origin");
         assert_approx(snoise(1.0, 2.0, 3.0), 0.733515211734548, eps, "simple");
         assert_approx(snoise(-0.5, 0.7, 1.3), 0.080307272639140, eps, "negative");
-        assert_approx(snoise(100.1, 200.2, 300.3), -0.322324183118609, eps, "large");
+        assert_approx(
+            snoise(100.1, 200.2, 300.3),
+            -0.322324183118609,
+            eps,
+            "large",
+        );
         assert_approx(snoise(0.25, 0.25, 0.25), -0.122253092268295, eps, "quarter");
         assert_approx(snoise(-10.0, 5.5, -3.3), 0.446321109723967, eps, "mixed");
     }
@@ -312,7 +350,12 @@ mod tests {
     fn fbm_golden_values() {
         let eps = 1e-10;
         assert_approx(fbm(0.5, 0.5, 0.5), -0.074447200209263, eps, "fbm center");
-        assert_approx(fbm(13.37, 7.13, 3.71), 0.058541761372269, eps, "fbm seed-like");
+        assert_approx(
+            fbm(13.37, 7.13, 3.71),
+            0.058541761372269,
+            eps,
+            "fbm seed-like",
+        );
         assert_approx(fbm(0.0, 0.0, 0.0), -0.048498540890963, eps, "fbm origin");
     }
 
@@ -340,8 +383,22 @@ mod tests {
     #[test]
     fn sample_topopolis_terrain_blends_field_and_noise() {
         let field: Vec<u8> = (0..16).map(|i| (i * 16) as u8).collect();
-        let val = sample_topopolis_terrain(&field, 4, 4, 0.5, 0.5, [10.0, 20.0, 30.0], 0.01, 42.0, 7.0, 0.25);
+        let val = sample_topopolis_terrain(&TopopolisTerrainParams {
+            field_values: &field,
+            field_width: 4,
+            field_height: 4,
+            u: 0.5,
+            v: 0.5,
+            local_pos: [10.0, 20.0, 30.0],
+            noise_scale: 0.01,
+            seed: 42.0,
+            biome_seed: 7.0,
+            field_blend: 0.25,
+        });
         assert!(val.is_finite(), "terrain sample is not finite: {val}");
-        assert!(val > -2.0 && val < 2.0, "terrain sample out of range: {val}");
+        assert!(
+            (-2.0..2.0).contains(&val),
+            "terrain sample out of range: {val}"
+        );
     }
 }

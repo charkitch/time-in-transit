@@ -1,22 +1,22 @@
 use std::collections::HashSet;
 
-use crate::prng::PRNG;
+use crate::prng::Prng;
 use crate::types::*;
 
 const SYLLABLES_START: &[&str] = &[
-    "Ac", "Be", "Ce", "Di", "En", "Fe", "Ge", "Hi", "Is", "Jo", "Ka", "La", "Me",
-    "No", "Or", "Pa", "Qu", "Re", "Si", "Te", "Ul", "Ve", "Wo", "Xe", "Za",
+    "Ac", "Be", "Ce", "Di", "En", "Fe", "Ge", "Hi", "Is", "Jo", "Ka", "La", "Me", "No", "Or", "Pa",
+    "Qu", "Re", "Si", "Te", "Ul", "Ve", "Wo", "Xe", "Za",
 ];
 const SYLLABLES_MID: &[&str] = &[
-    "ar", "bi", "ce", "da", "et", "fi", "ge", "ho", "in", "ja", "ki", "lo", "ma",
-    "ni", "on", "pe", "ri", "sa", "ti", "un", "ve",
+    "ar", "bi", "ce", "da", "et", "fi", "ge", "ho", "in", "ja", "ki", "lo", "ma", "ni", "on", "pe",
+    "ri", "sa", "ti", "un", "ve",
 ];
 const SYLLABLES_END: &[&str] = &[
-    "aar", "ble", "dis", "eon", "fis", "gon", "hus", "ion", "jex", "kus", "lis",
-    "mex", "nis", "oos", "pus", "rix", "sus", "tix", "uun", "vex",
+    "aar", "ble", "dis", "eon", "fis", "gon", "hus", "ion", "jex", "kus", "lis", "mex", "nis",
+    "oos", "pus", "rix", "sus", "tix", "uun", "vex",
 ];
 
-fn generate_name(rng: &mut PRNG) -> String {
+fn generate_name(rng: &mut Prng) -> String {
     let parts = rng.int(1, 2);
     let mut name = rng.pick_clone(SYLLABLES_START).to_string();
     if parts > 1 {
@@ -26,18 +26,22 @@ fn generate_name(rng: &mut PRNG) -> String {
     name
 }
 
-fn pick_star_type(rng: &mut PRNG) -> StarType {
+fn pick_star_type(rng: &mut Prng) -> StarType {
     let r = rng.next();
-    StarType::ALL.iter()
+    StarType::ALL
+        .iter()
         .zip(StarType::WEIGHTS.iter())
-        .scan(0.0, |acc, (&st, &w)| { *acc += w; Some((st, *acc)) })
+        .scan(0.0, |acc, (&st, &w)| {
+            *acc += w;
+            Some((st, *acc))
+        })
         .find(|&(_, cumul)| r < cumul)
         .map(|(st, _)| st)
         .unwrap_or(StarType::G)
 }
 
 pub fn generate_cluster() -> Vec<StarSystemData> {
-    let mut rng = PRNG::new(CLUSTER_SEED);
+    let mut rng = Prng::new(CLUSTER_SEED);
     let mut systems: Vec<StarSystemData> = Vec::new();
     let mut used_exotics: HashSet<StarType> = HashSet::new();
     let min_dist: f64 = 8.0;
@@ -58,12 +62,13 @@ pub fn generate_cluster() -> Vec<StarSystemData> {
         }
 
         let id = systems.len() as u32;
-        let mut sys_rng = PRNG::from_index(CLUSTER_SEED, id);
+        let mut sys_rng = Prng::from_index(CLUSTER_SEED, id);
         let mut star_type = pick_star_type(&mut sys_rng);
 
         // Each exotic type appears at most once in the cluster
         if star_type.is_exotic() && used_exotics.contains(&star_type) {
-            let remaining_exotics: Vec<StarType> = StarType::ALL.iter()
+            let remaining_exotics: Vec<StarType> = StarType::ALL
+                .iter()
                 .copied()
                 .filter(|t| t.is_exotic() && !used_exotics.contains(t))
                 .collect();
@@ -105,7 +110,10 @@ pub fn generate_cluster() -> Vec<StarSystemData> {
         let origin_x = systems[0].x;
         let origin_y = systems[0].y;
 
-        let mut ranked: Vec<(usize, f64)> = systems.iter().enumerate().skip(1)
+        let mut ranked: Vec<(usize, f64)> = systems
+            .iter()
+            .enumerate()
+            .skip(1)
             .map(|(i, s)| {
                 let dx = s.x - origin_x;
                 let dy = s.y - origin_y;
@@ -124,7 +132,8 @@ pub fn generate_cluster() -> Vec<StarSystemData> {
 
         // Crown: farthest system from origin that's also far from IRON
         // (roughly opposite direction). Score = distance_from_origin + distance_from_iron.
-        let non_iron: Vec<(usize, f64)> = ranked.iter()
+        let non_iron: Vec<(usize, f64)> = ranked
+            .iter()
             .filter(|(i, _)| *i != iron_idx)
             .copied()
             .collect();
@@ -189,14 +198,25 @@ mod tests {
     fn iron_star_placement() {
         let cluster = generate_cluster();
         let origin = &cluster[0];
-        let iron = cluster.iter().find(|s| s.star_type == StarType::Iron).expect("cluster should contain iron star");
+        let iron = cluster
+            .iter()
+            .find(|s| s.star_type == StarType::Iron)
+            .expect("cluster should contain iron star");
         let dx = iron.x - origin.x;
         let dy = iron.y - origin.y;
         let dist = (dx * dx + dy * dy).sqrt();
         if cfg!(feature = "dev-placement") {
-            assert!(dist <= HYPERSPACE_MAX_RANGE, "Iron should be near origin in dev, got {}", dist);
+            assert!(
+                dist <= HYPERSPACE_MAX_RANGE,
+                "Iron should be near origin in dev, got {}",
+                dist
+            );
         } else {
-            assert!(dist > HYPERSPACE_MAX_RANGE, "Iron should be far from origin in prod, got {}", dist);
+            assert!(
+                dist > HYPERSPACE_MAX_RANGE,
+                "Iron should be far from origin in prod, got {}",
+                dist
+            );
         }
     }
 
@@ -204,7 +224,7 @@ mod tests {
     fn print_cluster_types() {
         let cluster = generate_cluster();
         for (i, s) in cluster.iter().enumerate() {
-            let mut sys_rng = PRNG::from_index(CLUSTER_SEED, i as u32);
+            let mut sys_rng = Prng::from_index(CLUSTER_SEED, i as u32);
             let r = sys_rng.next();
             println!("System {}: {} - {:?} (r={:.4})", i, s.name, s.star_type, r);
         }
@@ -232,7 +252,10 @@ mod tests {
     #[test]
     fn iron_star_has_special_kind() {
         let cluster = generate_cluster();
-        let iron = cluster.iter().find(|s| s.star_type == StarType::Iron).expect("cluster should contain iron star");
+        let iron = cluster
+            .iter()
+            .find(|s| s.star_type == StarType::Iron)
+            .expect("cluster should contain iron star");
         assert_eq!(iron.special_kind, SpecialSystemKind::IronStar);
     }
 
@@ -249,7 +272,8 @@ mod tests {
     #[test]
     fn crown_system_properties() {
         let cluster = generate_cluster();
-        let crown = cluster.iter()
+        let crown = cluster
+            .iter()
             .find(|s| s.special_kind == SpecialSystemKind::TheCrown)
             .expect("Missing Crown system");
         assert_eq!(crown.star_type, StarType::G);
@@ -260,16 +284,25 @@ mod tests {
     fn crown_placement() {
         let cluster = generate_cluster();
         let origin = &cluster[0];
-        let crown = cluster.iter()
+        let crown = cluster
+            .iter()
             .find(|s| s.special_kind == SpecialSystemKind::TheCrown)
             .expect("cluster should contain Crown system");
         let dx = crown.x - origin.x;
         let dy = crown.y - origin.y;
         let dist = (dx * dx + dy * dy).sqrt();
         if cfg!(feature = "dev-placement") {
-            assert!(dist <= HYPERSPACE_MAX_RANGE, "Crown should be near origin in dev, got {}", dist);
+            assert!(
+                dist <= HYPERSPACE_MAX_RANGE,
+                "Crown should be near origin in dev, got {}",
+                dist
+            );
         } else {
-            assert!(dist > HYPERSPACE_MAX_RANGE, "Crown should be far from origin in prod, got {}", dist);
+            assert!(
+                dist > HYPERSPACE_MAX_RANGE,
+                "Crown should be far from origin in prod, got {}",
+                dist
+            );
         }
     }
 
@@ -277,8 +310,14 @@ mod tests {
     fn deterministic_crown_placement() {
         let a = generate_cluster();
         let b = generate_cluster();
-        let a_crown = a.iter().find(|s| s.special_kind == SpecialSystemKind::TheCrown).expect("cluster should contain Crown system");
-        let b_crown = b.iter().find(|s| s.special_kind == SpecialSystemKind::TheCrown).expect("cluster should contain Crown system");
+        let a_crown = a
+            .iter()
+            .find(|s| s.special_kind == SpecialSystemKind::TheCrown)
+            .expect("cluster should contain Crown system");
+        let b_crown = b
+            .iter()
+            .find(|s| s.special_kind == SpecialSystemKind::TheCrown)
+            .expect("cluster should contain Crown system");
         assert_eq!(a_crown.id, b_crown.id);
         assert_eq!(a_crown.x, b_crown.x);
         assert_eq!(a_crown.y, b_crown.y);
@@ -287,7 +326,8 @@ mod tests {
     #[test]
     fn unique_exotic_star_types() {
         let cluster = generate_cluster();
-        let exotics: Vec<StarType> = cluster.iter()
+        let exotics: Vec<StarType> = cluster
+            .iter()
             .map(|s| s.star_type)
             .filter(|t| t.is_exotic())
             .collect();
@@ -298,9 +338,14 @@ mod tests {
     #[test]
     fn non_special_systems_have_none_kind() {
         let cluster = generate_cluster();
-        let non_special: Vec<&StarSystemData> = cluster.iter()
+        let non_special: Vec<&StarSystemData> = cluster
+            .iter()
             .filter(|s| s.special_kind == SpecialSystemKind::None)
             .collect();
-        assert_eq!(non_special.len(), 28, "Expected 28 non-special systems (30 - iron - crown)");
+        assert_eq!(
+            non_special.len(),
+            28,
+            "Expected 28 non-special systems (30 - iron - crown)"
+        );
     }
 }

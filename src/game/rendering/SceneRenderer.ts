@@ -3,18 +3,16 @@ import { PALETTE } from '../constants';
 import {
   createStarfield, createHyperspaceTunnel, updateHyperspaceTunnel,
   createHyperspaceGrid, updateHyperspaceGrid,
-  type BattleExplosions,
 } from './effects';
 import { disposeAll as disposeTextureCache } from './textureCache';
 import type { SolarSystemData, SystemFactionState } from '../engine';
 import type { SystemId, GalaxyYear } from '../types';
 import type { NPCShipState } from '../mechanics/NPCSystem';
 import type { FleetBattle } from '../mechanics/FleetBattleSystem';
-import type { SceneEntity, XRayTransferStream } from './scene/types';
+import type { SceneEntity } from './scene/types';
 import type { RuntimeProfile } from '../../runtime/runtimeProfile';
 import { LandingSiteManager } from './scene/LandingSiteManager';
 import { tickSceneAnimations } from './scene/tickSceneAnimations';
-import type { BeamParams } from './scene/tickSceneAnimations';
 import { buildSystemScene, type SystemSceneState, GALAXY_SEED } from './scene/buildSystemScene';
 export type { SceneEntity } from './scene/types';
 

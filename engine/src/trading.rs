@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::prng::PRNG;
+use crate::prng::Prng;
 use crate::types::*;
 
 const REPUTATION_SELL_BONUS: f64 = 0.02;
@@ -175,9 +175,18 @@ pub fn legality_for_good(politics: PoliticalType, good: GoodName) -> MarketLegal
             }
         }
         PoliticalType::SilenceMandate => {
-            if matches!(good, GoodName::DreamResin | GoodName::SilenceVials | GoodName::WitnessInk | GoodName::SurrenderCodes) {
+            if matches!(
+                good,
+                GoodName::DreamResin
+                    | GoodName::SilenceVials
+                    | GoodName::WitnessInk
+                    | GoodName::SurrenderCodes
+            ) {
                 MarketLegality::Prohibited
-            } else if matches!(good, GoodName::AncestralBackups | GoodName::WeatherKeys | GoodName::JurisdictionSeals) {
+            } else if matches!(
+                good,
+                GoodName::AncestralBackups | GoodName::WeatherKeys | GoodName::JurisdictionSeals
+            ) {
                 MarketLegality::Licensed
             } else {
                 MarketLegality::Legal
@@ -195,7 +204,13 @@ pub fn legality_for_good(politics: PoliticalType, good: GoodName) -> MarketLegal
         PoliticalType::CovenantOfEchoes => {
             if matches!(good, GoodName::DreamResin | GoodName::JurisdictionSeals) {
                 MarketLegality::Prohibited
-            } else if matches!(good, GoodName::BurialSunstone | GoodName::PilgrimMaps | GoodName::OathFilaments | GoodName::ImpossibleSeeds) {
+            } else if matches!(
+                good,
+                GoodName::BurialSunstone
+                    | GoodName::PilgrimMaps
+                    | GoodName::OathFilaments
+                    | GoodName::ImpossibleSeeds
+            ) {
                 MarketLegality::Licensed
             } else {
                 MarketLegality::Legal
@@ -204,7 +219,10 @@ pub fn legality_for_good(politics: PoliticalType, good: GoodName) -> MarketLegal
         PoliticalType::WoundTithe => {
             if matches!(good, GoodName::PilgrimMaps) {
                 MarketLegality::Prohibited
-            } else if matches!(good, GoodName::WeatherKeys | GoodName::GraviticBone | GoodName::ReactorSalt) {
+            } else if matches!(
+                good,
+                GoodName::WeatherKeys | GoodName::GraviticBone | GoodName::ReactorSalt
+            ) {
                 MarketLegality::Licensed
             } else {
                 MarketLegality::Legal
@@ -292,20 +310,28 @@ fn listing_probability(economy: EconomyType, good: GoodName) -> f64 {
     (0.16 + rarity_discount + abundance_bonus).clamp(0.10, 0.82)
 }
 
-fn compute_price(
-    rng: &mut PRNG,
-    good: GoodName,
+struct PriceContext<'a> {
     economy: EconomyType,
     politics_mod: f64,
     luxury_mod: f64,
-    tech_bonus: &[GoodName],
+    tech_bonus: &'a [GoodName],
     anarchy_variance: bool,
     choice_mod: f64,
-) -> i32 {
+}
+
+fn compute_price(rng: &mut Prng, good: GoodName, ctx: &PriceContext) -> i32 {
+    let PriceContext {
+        economy,
+        politics_mod,
+        luxury_mod,
+        tech_bonus,
+        anarchy_variance,
+        choice_mod,
+    } = ctx;
     let base = base_price(good);
-    let econ_mod = economy_modifier(economy, good);
+    let econ_mod = economy_modifier(*economy, good);
     let spread = volatility(good);
-    let variance = if anarchy_variance {
+    let variance = if *anarchy_variance {
         rng.float(-spread * 1.8, spread * 1.8)
     } else {
         rng.float(-spread, spread)
@@ -322,7 +348,7 @@ fn compute_price(
     (price as f64 * choice_mod).round().max(1.0) as i32
 }
 
-fn pick_missing(listed: &mut Vec<GoodName>, candidates: &[GoodName], rng: &mut PRNG) {
+fn pick_missing(listed: &mut Vec<GoodName>, candidates: &[GoodName], rng: &mut Prng) {
     let mut missing: Vec<GoodName> = candidates
         .iter()
         .copied()
@@ -343,7 +369,7 @@ pub fn get_market(
     player_cargo: Option<&HashMap<GoodName, u32>>,
 ) -> Vec<MarketEntry> {
     let era = civ_state.map_or(0, |c| c.era);
-    let mut rng = PRNG::from_index(
+    let mut rng = Prng::from_index(
         CLUSTER_SEED,
         system_id
             .wrapping_mul(53)
@@ -355,11 +381,15 @@ pub fn get_market(
     let choice_banned: Vec<GoodName> = system_choices.map_or(vec![], |c| c.banned_goods.clone());
     let politics = civ_state.map(|c| c.politics);
 
-    let politics_mod = civ_state.map_or(1.0, |c| c.price_modifier);
-    let luxury_mod = civ_state.map_or(1.0, |c| c.luxury_mod);
     let tech_bonus: Vec<GoodName> = civ_state.map_or(vec![], |c| c.tech_bonus.clone());
-    let anarchy_variance = civ_state.map_or(false, |c| c.anarchy_variance);
-    let choice_mod = system_choices.map_or(1.0, |c| c.price_modifier);
+    let price_ctx = PriceContext {
+        economy,
+        politics_mod: civ_state.map_or(1.0, |c| c.price_modifier),
+        luxury_mod: civ_state.map_or(1.0, |c| c.luxury_mod),
+        tech_bonus: &tech_bonus,
+        anarchy_variance: civ_state.is_some_and(|c| c.anarchy_variance),
+        choice_mod: system_choices.map_or(1.0, |c| c.price_modifier),
+    };
     let rep_bonus = system_choices.map_or(1.0, |c| {
         1.0 + c.trading_reputation as f64 * REPUTATION_SELL_BONUS
     });
@@ -393,16 +423,7 @@ pub fn get_market(
             civ_legality
         };
 
-        let price = compute_price(
-            &mut rng,
-            good,
-            economy,
-            politics_mod,
-            luxury_mod,
-            &tech_bonus,
-            anarchy_variance,
-            choice_mod,
-        );
+        let price = compute_price(&mut rng, good, &price_ctx);
 
         let sell_price = match legality {
             MarketLegality::Prohibited => 0,
@@ -437,7 +458,8 @@ pub fn get_market(
                 continue;
             }
 
-            let civ_legality = politics.map_or(MarketLegality::Legal, |p| legality_for_good(p, good));
+            let civ_legality =
+                politics.map_or(MarketLegality::Legal, |p| legality_for_good(p, good));
             let banned = civ_banned.contains(&good) || choice_banned.contains(&good);
             let legality = if banned {
                 MarketLegality::Prohibited
@@ -448,16 +470,7 @@ pub fn get_market(
                 continue;
             }
 
-            let price = compute_price(
-                &mut rng,
-                good,
-                economy,
-                politics_mod,
-                luxury_mod,
-                &tech_bonus,
-                anarchy_variance,
-                choice_mod,
-            );
+            let price = compute_price(&mut rng, good, &price_ctx);
             let sell_price = (price as f64 * 0.72 * rep_bonus).round().max(1.0) as i32;
 
             entries.push(MarketEntry {
@@ -521,13 +534,7 @@ mod tests {
 
         let mut found = false;
         for system_id in 0..60 {
-            let market = get_market(
-                system_id,
-                EconomyType::Tithe,
-                None,
-                None,
-                Some(&cargo),
-            );
+            let market = get_market(system_id, EconomyType::Tithe, None, None, Some(&cargo));
             if market.iter().any(|entry| {
                 entry.good == GoodName::ImpossibleSeeds
                     && entry.listing_mode == MarketListingMode::SellOnly

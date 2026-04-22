@@ -1,7 +1,7 @@
 use wasm_bindgen::prelude::*;
 
-use crate::types::*;
 use crate::api_state::with_engine_mut;
+use crate::types::*;
 
 #[wasm_bindgen]
 pub fn trade_buy(good_json: &str, qty: u32, price: i32) -> Result<String, JsValue> {
@@ -23,7 +23,10 @@ pub fn trade_buy(good_json: &str, qty: u32, price: i32) -> Result<String, JsValu
         let old_qty = *ps.cargo.get(&good).unwrap_or(&0);
         let old_basis = *ps.cargo_cost_basis.get(&good).unwrap_or(&0.0);
         let new_qty = old_qty + qty;
-        ps.cargo_cost_basis.insert(good, (old_basis * old_qty as f64 + price as f64 * qty as f64) / new_qty as f64);
+        ps.cargo_cost_basis.insert(
+            good,
+            (old_basis * old_qty as f64 + price as f64 * qty as f64) / new_qty as f64,
+        );
         ps.cargo.insert(good, new_qty);
 
         serde_json::to_string(&*ps)

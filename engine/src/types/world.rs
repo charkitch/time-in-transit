@@ -34,42 +34,56 @@ pub enum StarType {
     F,
     A,
     #[serde(rename = "WD")]
-    WD,
+    WhiteDwarf,
     #[serde(rename = "NS")]
-    NS,
+    NeutronStar,
     #[serde(rename = "PU")]
-    PU,
+    Pulsar,
     #[serde(rename = "XB")]
-    XB,
+    XrayBinary,
     #[serde(rename = "MG")]
-    MG,
+    Magnetar,
     #[serde(rename = "BH")]
-    BH,
+    BlackHole,
     #[serde(rename = "XBB")]
-    XBB,
+    XrayBurster,
     #[serde(rename = "MQ")]
-    MQ,
+    Microquasar,
     #[serde(rename = "SGR")]
-    SGR,
+    GammaRepeater,
     #[serde(rename = "IRON")]
     Iron,
 }
 
 impl StarType {
     pub const ALL: &'static [StarType] = &[
-        StarType::G, StarType::K, StarType::M, StarType::F, StarType::A,
-        StarType::WD, StarType::NS, StarType::PU, StarType::XB,
-        StarType::MG, StarType::BH, StarType::XBB, StarType::MQ, StarType::SGR,
+        StarType::G,
+        StarType::K,
+        StarType::M,
+        StarType::F,
+        StarType::A,
+        StarType::WhiteDwarf,
+        StarType::NeutronStar,
+        StarType::Pulsar,
+        StarType::XrayBinary,
+        StarType::Magnetar,
+        StarType::BlackHole,
+        StarType::XrayBurster,
+        StarType::Microquasar,
+        StarType::GammaRepeater,
         // StarType::Iron is hand-placed, not randomly generated
     ];
     pub const WEIGHTS: &'static [f64] = &[
-        0.16, 0.13, 0.11, 0.07, 0.05,
-        0.08, 0.07, 0.06, 0.05, 0.06,
-        0.05, 0.07, 0.01, 0.13,
+        0.16, 0.13, 0.11, 0.07, 0.05, 0.08, 0.07, 0.06, 0.05, 0.06, 0.05, 0.07, 0.01, 0.13,
     ];
 
     pub const COMMON: &'static [StarType] = &[
-        StarType::G, StarType::K, StarType::M, StarType::F, StarType::A, StarType::WD,
+        StarType::G,
+        StarType::K,
+        StarType::M,
+        StarType::F,
+        StarType::A,
+        StarType::WhiteDwarf,
     ];
 
     pub fn is_exotic(self) -> bool {

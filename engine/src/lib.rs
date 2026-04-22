@@ -1,37 +1,37 @@
+mod civilization;
+mod climate;
+mod cluster_generator;
+mod content;
+mod dyson_generator;
+mod events;
+mod factions;
 #[cfg(test)]
 mod noise;
 mod prng;
-mod types;
-mod cluster_generator;
+mod simulation;
 mod star_properties;
-mod system_profiles;
-mod dyson_generator;
-mod topopolis_generator;
-mod climate;
 mod station_archetypes;
 mod system_generator;
-mod civilization;
-mod factions;
-mod trading;
-mod events;
-mod simulation;
-mod content;
-mod world_interaction_field;
 mod system_payload;
+mod system_profiles;
+mod topopolis_generator;
+mod trading;
+mod types;
+mod world_interaction_field;
 
-mod api_state;
-mod api_init;
-mod api_flight;
-mod api_trading;
 mod api_events;
+mod api_flight;
+mod api_init;
 mod api_query;
+mod api_state;
 mod api_station;
+mod api_trading;
 
 #[cfg(test)]
 mod tests {
-    use crate::types::*;
     use crate::cluster_generator::generate_cluster;
     use crate::system_payload::{build_system_payload, jump_years_elapsed, ship_years_elapsed};
+    use crate::types::*;
     use std::collections::HashMap;
 
     fn test_player_state(galaxy_year: u32) -> PlayerState {
@@ -58,18 +58,18 @@ mod tests {
     #[test]
     fn jump_years_elapsed_linear_with_accel_overhead() {
         // 10-year accel/decel overhead + 14 years per galaxy unit (~10 ly/unit at 0.93c)
-        assert_eq!(jump_years_elapsed(1.0), 24);   // 10 + 14
-        assert_eq!(jump_years_elapsed(8.0), 122);  // 10 + 112
+        assert_eq!(jump_years_elapsed(1.0), 24); // 10 + 14
+        assert_eq!(jump_years_elapsed(8.0), 122); // 10 + 112
         assert_eq!(jump_years_elapsed(25.0), 360); // 10 + 350
-        // Fractional distances floor the cruise portion
-        assert_eq!(jump_years_elapsed(1.5), 31);   // 10 + floor(21)
+                                                   // Fractional distances floor the cruise portion
+        assert_eq!(jump_years_elapsed(1.5), 31); // 10 + floor(21)
     }
 
     #[test]
     fn ship_years_less_than_external_years() {
         // At 0.93c, Lorentz factor ≈ 0.3676 — ship ages ~37% of external time
-        let ext_8 = jump_years_elapsed(8.0);   // 122
-        let ship_8 = ship_years_elapsed(8.0);  // 122 * 0.3676 ≈ 44.8
+        let ext_8 = jump_years_elapsed(8.0); // 122
+        let ship_8 = ship_years_elapsed(8.0); // 122 * 0.3676 ≈ 44.8
         assert!(ship_8 > 44.0 && ship_8 < 46.0);
         assert!(ship_8 < ext_8 as f64);
 
@@ -136,14 +136,7 @@ mod tests {
         let star = &cluster[0];
         let player = test_player_state(GALAXY_YEAR_START);
 
-        let payload = build_system_payload(
-            star,
-            GALAXY_YEAR_START,
-            &player,
-            None,
-            None,
-            None,
-        );
+        let payload = build_system_payload(star, GALAXY_YEAR_START, &player, None, None, None);
 
         assert!(!payload
             .system_entry_lines

@@ -146,6 +146,7 @@ export interface GameActions {
   setShields: (v: number) => void;
   setFuel: (v: number) => void;
   setHeat: (v: number) => void;
+  setCredits: (v: number) => void;
   setUIMode: (mode: UIMode) => void;
   setCurrentSystemPayload: (id: SystemId, payload: SystemPayload) => void;
   setCurrentSystemMarket: (market: MarketEntry[]) => void;

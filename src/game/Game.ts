@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SceneRenderer, type SceneEntity } from './rendering/SceneRenderer';
+import { SceneRenderer } from './rendering/SceneRenderer';
 import { FlightModel } from './flight/FlightModel';
 import { InputSystem } from './input/InputSystem';
 import { DockingSystem } from './mechanics/DockingSystem';
@@ -148,7 +148,7 @@ export class Game {
       this.flightModel.setVelocity(velocity.x, velocity.y, velocity.z);
     } else {
       placeShipNearMainStation(this.sceneRenderer, systemData);
-      this.flightModel.reset(this.sceneRenderer.shipGroup.position);
+      this.flightModel.reset();
     }
 
     state.setUIMode('flight');
@@ -235,7 +235,7 @@ export class Game {
     if (uiMode === 'flight') {
       this.updateFlight(dt, state);
     } else if (uiMode === 'hyperspace') {
-      this.updateHyperspace(dt, state);
+      this.updateHyperspace(dt);
       this.jump.checkSafetyTimeout();
     }
     if (uiMode !== 'flight') {
@@ -394,7 +394,7 @@ export class Game {
     state.setHyperspaceCountdown(0);
     state.setAlert(null);
     state.setDeathMessage(deathMessage);
-    this.flightModel.reset(this.sceneRenderer.shipGroup.position);
+    this.flightModel.reset();
     state.setUIMode('dead');
   }
 
@@ -475,7 +475,7 @@ export class Game {
     }
   }
 
-  private updateHyperspace(dt: number, _state: ReturnType<typeof useGameState.getState>): void {
+  private updateHyperspace(dt: number): void {
     this.sceneRenderer.updateHyperspace(dt);
   }
 

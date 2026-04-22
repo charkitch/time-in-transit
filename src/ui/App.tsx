@@ -99,8 +99,8 @@ export function App() {
     gameRef.current = game;
     game.start();
     if (import.meta.env.DEV) {
-      (window as any).__GAME__ = game;
-      (window as any).__STORE__ = useGameState;
+      (window as unknown as Record<string, unknown>).__GAME__ = game;
+      (window as unknown as Record<string, unknown>).__STORE__ = useGameState;
     }
 
     return () => {

@@ -158,10 +158,6 @@ export class FlightModel {
         const closest = _collisionVec.copy(a).addScaledVector(ab, segT);
         nearest = shipPos.distanceTo(closest);
 
-        // Refined curve t — sub-sample precision using the segment projection
-        const maxIdx = Math.max(1, sampleCount - 1);
-        const curveT = (nearestIdx + segT * (neighborIdx - nearestIdx)) / maxIdx;
-
         // Skip collision if ship is near a gate opening (3D distance check).
         // Gate surface positions are on the outward tube surface where gates are,
         // so only ships approaching the correct side will be close enough.
@@ -234,7 +230,7 @@ export class FlightModel {
     return hitEntity;
   }
 
-  reset(position: THREE.Vector3) {
+  reset() {
     this.velocity.set(0, 0, 0);
   }
 

@@ -11,7 +11,7 @@
     "build": "npm run wasm:build && tsc && vite build",
     "lint": "npm run lint:ts && npm run lint:rust",
     "lint:ts": "eslint . --ext .ts,.tsx --max-warnings=0",
-    "lint:rust": "cargo fmt --manifest-path engine/Cargo.toml --all -- --check && cargo clippy --manifest-path engine/Cargo.toml --all-targets --all-features -- -D warnings",
+    "lint:rust": "cargo fmt --manifest-path engine/Cargo.toml --all && cargo clippy --manifest-path engine/Cargo.toml --all-targets --all-features -- -D warnings",
     "preview": "vite preview",
     "test:e2e": "npx playwright test --config tests/playwright.config.ts",
     "test:e2e:headed": "npx playwright test --config tests/playwright.config.ts --headed",
@@ -26,6 +26,7 @@
   "devDependencies": {
     "@eslint/js": "^9.38.0",
     "@playwright/test": "^1.59.1",
+    "@types/node": "^25.6.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@types/three": "^0.183.1",

@@ -1,6 +1,6 @@
-use crate::prng::PRNG;
-use crate::types::*;
 use crate::civilization::political_clusters;
+use crate::prng::Prng;
+use crate::types::*;
 
 const FACTION_COLORS: &[u32] = &[
     0xFF4444, // red
@@ -15,12 +15,16 @@ const PREFIXES: &[&str] = &["Kor", "Vel", "Ash", "Dra", "Sol", "Nyx"];
 const SUFFIXES: &[&str] = &["athi", "eron", "undi", "imar", "ossa", "enth"];
 
 fn generate_factions() -> Vec<Faction> {
-    let mut rng = PRNG::from_index(CLUSTER_SEED, 0xFAC710);
+    let mut rng = Prng::from_index(CLUSTER_SEED, 0xFAC710);
     let clusters = political_clusters();
     let mut factions: Vec<Faction> = (0..6usize)
         .map(|i| {
             let name = format!("{}{}", PREFIXES[i], SUFFIXES[i]);
-            let cluster_idx = if i < clusters.len() { i } else { rng.int(0, clusters.len() as i32 - 1) as usize };
+            let cluster_idx = if i < clusters.len() {
+                i
+            } else {
+                rng.int(0, clusters.len() as i32 - 1) as usize
+            };
             let political_affinity = clusters[cluster_idx].to_vec();
             Faction {
                 id: format!("faction-{}", i),
@@ -63,17 +67,27 @@ pub fn get_system_faction_state(
     let factions = all_factions();
     let clusters = political_clusters();
 
-    let mut rng = PRNG::from_index(
-        CLUSTER_SEED ^ system_id.wrapping_mul(0x9E3779B9) ^ era.wrapping_mul(0x517CC1B7).wrapping_add(0xFAC),
+    let mut rng = Prng::from_index(
+        CLUSTER_SEED
+            ^ system_id.wrapping_mul(0x9E3779B9)
+            ^ era.wrapping_mul(0x517CC1B7).wrapping_add(0xFAC),
         era,
     );
 
     // Score each faction
-    let mut scores: Vec<(usize, f64)> = factions.iter().enumerate().map(|(i, f)| {
-        let affinity_match = if f.political_affinity.contains(&politics) { 3.0 } else { 0.5 };
-        let noise = rng.next() * 1.5;
-        (i, affinity_match + noise)
-    }).collect();
+    let mut scores: Vec<(usize, f64)> = factions
+        .iter()
+        .enumerate()
+        .map(|(i, f)| {
+            let affinity_match = if f.political_affinity.contains(&politics) {
+                3.0
+            } else {
+                0.5
+            };
+            let noise = rng.next() * 1.5;
+            (i, affinity_match + noise)
+        })
+        .collect();
 
     scores.sort_by(|a, b| b.1.total_cmp(&a.1));
     let controlling_faction = &factions[scores[0].0];
@@ -82,23 +96,35 @@ pub fn get_system_faction_state(
     let mut contest_chance = 0.25;
 
     if era > 0 {
-        let mut prev_rng = PRNG::from_index(
-            CLUSTER_SEED ^ system_id.wrapping_mul(0x9E3779B9) ^ (era - 1).wrapping_mul(0x517CC1B7).wrapping_add(0xFAC),
+        let mut prev_rng = Prng::from_index(
+            CLUSTER_SEED
+                ^ system_id.wrapping_mul(0x9E3779B9)
+                ^ (era - 1).wrapping_mul(0x517CC1B7).wrapping_add(0xFAC),
             era - 1,
         );
-        let mut prev_scores: Vec<(usize, f64)> = factions.iter().enumerate().map(|(i, f)| {
-            let affinity_match = if f.political_affinity.contains(&politics) { 3.0 } else { 0.5 };
-            let noise = prev_rng.next() * 1.5;
-            (i, affinity_match + noise)
-        }).collect();
+        let mut prev_scores: Vec<(usize, f64)> = factions
+            .iter()
+            .enumerate()
+            .map(|(i, f)| {
+                let affinity_match = if f.political_affinity.contains(&politics) {
+                    3.0
+                } else {
+                    0.5
+                };
+                let noise = prev_rng.next() * 1.5;
+                (i, affinity_match + noise)
+            })
+            .collect();
         prev_scores.sort_by(|a, b| b.1.total_cmp(&a.1));
         if factions[prev_scores[0].0].id != controlling_faction.id {
             contest_chance = 0.60;
         }
     }
 
-    let mut contest_rng = PRNG::from_index(
-        CLUSTER_SEED ^ system_id.wrapping_mul(0x9E3779B9) ^ era.wrapping_mul(0x517CC1B7).wrapping_add(0xC0E),
+    let mut contest_rng = Prng::from_index(
+        CLUSTER_SEED
+            ^ system_id.wrapping_mul(0x9E3779B9)
+            ^ era.wrapping_mul(0x517CC1B7).wrapping_add(0xC0E),
         era,
     );
     let is_contested = contest_rng.next() < contest_chance;
@@ -106,21 +132,30 @@ pub fn get_system_faction_state(
     let mut contesting_faction_id: Option<String> = None;
     if is_contested {
         let control_cluster = clusters.iter().find(|c| {
-            c.iter().any(|p| controlling_faction.political_affinity.contains(p))
+            c.iter()
+                .any(|p| controlling_faction.political_affinity.contains(p))
         });
 
-        let other_factions: Vec<&Faction> = factions.iter().filter(|f| {
-            if f.id == controlling_faction.id { return false; }
-            let f_cluster = clusters.iter().find(|c| {
-                c.iter().any(|p| f.political_affinity.contains(p))
-            });
-            f_cluster != control_cluster
-        }).collect();
+        let other_factions: Vec<&Faction> = factions
+            .iter()
+            .filter(|f| {
+                if f.id == controlling_faction.id {
+                    return false;
+                }
+                let f_cluster = clusters
+                    .iter()
+                    .find(|c| c.iter().any(|p| f.political_affinity.contains(p)));
+                f_cluster != control_cluster
+            })
+            .collect();
 
         if !other_factions.is_empty() {
             contesting_faction_id = Some(contest_rng.pick(&other_factions).id.clone());
         } else {
-            let fallback: Vec<&Faction> = factions.iter().filter(|f| f.id != controlling_faction.id).collect();
+            let fallback: Vec<&Faction> = factions
+                .iter()
+                .filter(|f| f.id != controlling_faction.id)
+                .collect();
             if !fallback.is_empty() {
                 contesting_faction_id = Some(contest_rng.pick(&fallback).id.clone());
             }

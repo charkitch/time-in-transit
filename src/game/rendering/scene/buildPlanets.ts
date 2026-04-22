@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { RENDER_CONFIG, CLUSTER_SEED } from '../../constants';
+import { RENDER_CONFIG } from '../../constants';
 import {
-  makePlanet, makeGasGiant, makeStation, makeGlowSprite,
+  makePlanet, makeGasGiant, makeStation,
   makeTexturedPlanet, makeTexturedGasGiant,
   makeRingSystem,
   addCityLights, addSunAtmosphere, addLightning, addCloudLayer,

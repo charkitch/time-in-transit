@@ -1,6 +1,5 @@
-import type { GoodName } from './constants';
 import { STARTING_CREDITS, STARTING_FUEL, STARTING_SYSTEM_ID, GALAXY_YEAR_START } from './constants';
-import type { SystemId, GalaxyYear } from './types';
+import type { SystemId } from './types';
 import type { PlayerState, GameStateData, SaveData, SystemChoices, UIMode } from './GameStateTypes';
 import { isFiniteVec3, isFiniteQuat, isOriginVec3 } from './spatialValidation';
 
@@ -170,6 +169,8 @@ export function loadFromStorage(): Partial<SaveData> {
   try {
     const raw = localStorage.getItem('space-game-save');
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch (e) {
+    console.warn('Failed to load save data from localStorage:', e);
+  }
   return {};
 }

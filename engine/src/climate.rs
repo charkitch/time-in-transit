@@ -1,4 +1,4 @@
-use crate::prng::PRNG;
+use crate::prng::Prng;
 use crate::types::*;
 use std::collections::HashSet;
 
@@ -25,17 +25,25 @@ impl BodyIndex {
     }
 }
 
-fn base_cap_size(rng: &mut PRNG, surface: SurfaceType) -> f64 {
+fn base_cap_size(rng: &mut Prng, surface: SurfaceType) -> f64 {
     match surface {
         SurfaceType::Ice => rng.float(0.5, 1.0),
         SurfaceType::Continental | SurfaceType::Mountain => rng.float(0.0, 0.6),
         SurfaceType::Ocean => rng.float(0.0, 0.4),
         SurfaceType::ForestMoon | SurfaceType::Marsh => rng.float(0.0, 0.3),
         SurfaceType::Desert | SurfaceType::Barren => {
-            if rng.next() < 0.4 { rng.float(0.1, 0.4) } else { 0.0 }
+            if rng.next() < 0.4 {
+                rng.float(0.1, 0.4)
+            } else {
+                0.0
+            }
         }
         SurfaceType::Volcanic => {
-            if rng.next() < 0.2 { rng.float(0.05, 0.2) } else { 0.0 }
+            if rng.next() < 0.2 {
+                rng.float(0.05, 0.2)
+            } else {
+                0.0
+            }
         }
         SurfaceType::Venus => 0.0,
     }
@@ -61,7 +69,7 @@ pub(crate) fn derive_climate(
     surface: SurfaceType,
     flags: Option<&HashSet<String>>,
 ) -> (ClimateState, f64, f64) {
-    let mut rng = PRNG::from_index(
+    let mut rng = Prng::from_index(
         CLUSTER_SEED,
         system_id
             .wrapping_mul(311)
@@ -73,15 +81,18 @@ pub(crate) fn derive_climate(
     // and strip_prefix to avoid per-check format!() allocations.
     let prefix = body.flag_prefix();
     let climate = flags
-        .and_then(|f| f.iter().find_map(|flag| {
-            flag.strip_prefix(prefix.as_str()).and_then(|suffix| match suffix {
-                "nuclear" => Some(ClimateState::NuclearWinter),
-                "ice_age" => Some(ClimateState::IceAge),
-                "warming" => Some(ClimateState::Warming),
-                "toxic" => Some(ClimateState::ToxicBloom),
-                _ => None,
+        .and_then(|f| {
+            f.iter().find_map(|flag| {
+                flag.strip_prefix(prefix.as_str())
+                    .and_then(|suffix| match suffix {
+                        "nuclear" => Some(ClimateState::NuclearWinter),
+                        "ice_age" => Some(ClimateState::IceAge),
+                        "warming" => Some(ClimateState::Warming),
+                        "toxic" => Some(ClimateState::ToxicBloom),
+                        _ => None,
+                    })
             })
-        }))
+        })
         .unwrap_or_else(|| pick_climate(&mut rng, surface));
 
     // Intensity 0–1: how far along the climate shift is.
@@ -111,7 +122,7 @@ pub(crate) fn derive_climate(
     (climate, intensity, cap_size)
 }
 
-fn pick_climate(rng: &mut PRNG, surface: SurfaceType) -> ClimateState {
+fn pick_climate(rng: &mut Prng, surface: SurfaceType) -> ClimateState {
     let roll = rng.next();
     let candidate = if roll < 0.70 {
         ClimateState::Stable
@@ -124,5 +135,9 @@ fn pick_climate(rng: &mut PRNG, surface: SurfaceType) -> ClimateState {
     } else {
         ClimateState::ToxicBloom
     };
-    if valid_climate_for_surface(candidate, surface) { candidate } else { ClimateState::Stable }
+    if valid_climate_for_surface(candidate, surface) {
+        candidate
+    } else {
+        ClimateState::Stable
+    }
 }

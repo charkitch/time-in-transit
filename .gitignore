@@ -1,3 +1,5 @@
 node_modules
 dist/
 engine/target
+test-results/
+tests/playwright-report/

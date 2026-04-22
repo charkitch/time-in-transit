@@ -51,6 +51,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   setShields: (v) => set(s => ({ player: { ...s.player, shields: Math.max(0, Math.min(100, v)) } })),
   setFuel: (v) => set(s => ({ player: { ...s.player, fuel: Math.max(0, Math.min(HYPERSPACE.tankSize, v)) } })),
   setHeat: (v) => set(s => ({ player: { ...s.player, heat: Math.max(0, Math.min(100, v)) } })),
+  setCredits: (v) => set(s => ({ player: { ...s.player, credits: Math.max(0, v) } })),
   setUIMode: (mode) => set(s => ({ ui: { ...s.ui, mode } })),
   setCurrentSystemPayload: (id, payload) => set({
     currentSystemId: id,

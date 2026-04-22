@@ -1,7 +1,7 @@
 use wasm_bindgen::prelude::*;
 
-use crate::types::*;
 use crate::api_state::with_engine_mut;
+use crate::types::*;
 
 #[wasm_bindgen]
 pub fn station_refuel() -> Result<String, JsValue> {

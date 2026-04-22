@@ -5,9 +5,9 @@ CONTAINER_NAME ?= time-in-transit-app
 PORT ?= 5173
 
 .PHONY: help setup install hooks-install hooks-run lint lint-ts lint-rust format-rust \
-	wasm-build wasm-build-dev dev build preview test-e2e test-e2e-headed test-e2e-ui \
-	playwright-install audit audit-prod clean-node docker-build docker-run docker-stop \
-	docker-rm docker-logs docker-compose-up docker-compose-down docker-compose-logs
+	wasm-build wasm-build-dev dev build preview test test-rust test-e2e test-e2e-headed \
+	test-e2e-ui playwright-install audit audit-prod clean-node docker-build docker-run \
+	docker-stop docker-rm docker-logs docker-compose-up docker-compose-down docker-compose-logs
 
 help: ## Show all available targets
 	@echo "Available targets:"
@@ -50,6 +50,11 @@ build: ## Build app for production
 
 preview: ## Preview production build
 	npm run preview
+
+test: test-rust test-e2e ## Run all tests (Rust unit + E2E)
+
+test-rust: ## Run Rust unit tests
+	cargo test --manifest-path engine/Cargo.toml
 
 playwright-install: ## Install Playwright Chromium
 	npx playwright install chromium

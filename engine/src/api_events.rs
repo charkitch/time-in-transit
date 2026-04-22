@@ -1,11 +1,11 @@
 use wasm_bindgen::prelude::*;
 
-use crate::types::*;
 use crate::api_state::with_engine;
 use crate::civilization::get_civ_state;
-use crate::system_generator::generate_solar_system;
-use crate::events::{select_game_event, EventContext, EventPool};
 use crate::content;
+use crate::events::{select_game_event, EventContext, EventPool};
+use crate::system_generator::generate_solar_system;
+use crate::types::*;
 
 /// Strip internal-only `requires` conditions before sending events to the TS side.
 fn strip_requires(event: &mut GameEvent) {
@@ -32,7 +32,10 @@ pub fn get_game_event(
         let star = &engine.cluster[system_id as usize];
         let civ_state = get_civ_state(system_id, player_state.galaxy_year, star.economy);
         let system_choices = player_state.player_choices.get(&system_id);
-        let event_seed = player_state.galaxy_year.wrapping_mul(31337).wrapping_add(system_id.wrapping_mul(1009));
+        let event_seed = player_state
+            .galaxy_year
+            .wrapping_mul(31337)
+            .wrapping_add(system_id.wrapping_mul(1009));
         let triggers = content::all_triggers();
 
         let pool = match context {
@@ -69,8 +72,16 @@ pub fn get_game_event(
         } else {
             serde_json::from_str::<SurfaceType>(&format!("\"{}\"", surface)).ok()
         };
-        let site_class = if site_class.is_empty() { None } else { Some(site_class) };
-        let host_type = if host_type.is_empty() { None } else { Some(host_type) };
+        let site_class = if site_class.is_empty() {
+            None
+        } else {
+            Some(site_class)
+        };
+        let host_type = if host_type.is_empty() {
+            None
+        } else {
+            Some(host_type)
+        };
 
         let ctx = EventContext {
             civ_state: &civ_state,
@@ -84,8 +95,10 @@ pub fn get_game_event(
             current_system_id: system_id,
         };
 
-        let event = select_game_event(pool, &ctx, event_seed)
-            .map(|mut e| { strip_requires(&mut e); e });
+        let event = select_game_event(pool, &ctx, event_seed).map(|mut e| {
+            strip_requires(&mut e);
+            e
+        });
 
         serde_json::to_string(&event)
             .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
@@ -93,9 +106,6 @@ pub fn get_game_event(
 }
 
 #[wasm_bindgen]
-pub fn get_landing_event(
-    system_id: u32,
-    secret_base_id: &str,
-) -> Result<String, JsValue> {
+pub fn get_landing_event(system_id: u32, secret_base_id: &str) -> Result<String, JsValue> {
     get_game_event(system_id, "landing", secret_base_id, "", "", "")
 }

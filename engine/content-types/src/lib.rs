@@ -56,7 +56,14 @@ pub enum GoodName {
 
 impl GoodName {
     pub fn harvest_only(self) -> bool {
-        matches!(self, GoodName::RelativisticAsh | GoodName::PulsarSilk | GoodName::CombatIntelligence | GoodName::QuasarGlass | GoodName::TransferPlasma)
+        matches!(
+            self,
+            GoodName::RelativisticAsh
+                | GoodName::PulsarSilk
+                | GoodName::CombatIntelligence
+                | GoodName::QuasarGlass
+                | GoodName::TransferPlasma
+        )
     }
 
     pub const ALL: &'static [GoodName] = &[
@@ -169,7 +176,9 @@ pub struct ChoiceEffect {
     pub galaxy_years_advance: u32,
 }
 
-fn default_price_mod() -> f64 { 1.0 }
+fn default_price_mod() -> f64 {
+    1.0
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -217,17 +226,14 @@ pub enum EventCondition {
     GalacticFlagNotSet(String),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Repeatability {
+    #[default]
     Unique,
     Rare,
     Uncommon,
     Common,
-}
-
-impl Default for Repeatability {
-    fn default() -> Self { Repeatability::Unique }
 }
 
 impl Repeatability {

@@ -2,6 +2,14 @@ import * as THREE from 'three';
 import { PALETTE } from '../constants';
 import { PRNG } from '../generation/prng';
 
+interface BattlePointsData {
+  battleData: BattleProjectileData;
+  shipsA: THREE.Vector3[];
+  shipsB: THREE.Vector3[];
+}
+
+const battlePointsStore = new WeakMap<THREE.Points, BattlePointsData>();
+
 /** Create hyperspace tunnel: 1000 streaks rushing toward camera */
 export function createHyperspaceTunnel(scene: THREE.Scene): THREE.Points {
   const count = 1000;
@@ -193,9 +201,7 @@ export function createBattleProjectiles(
 
   const points = new THREE.Points(geo, mat);
 
-  (points as any)._battleData = data;
-  (points as any)._shipsA = shipsA;
-  (points as any)._shipsB = shipsB;
+  battlePointsStore.set(points, { battleData: data, shipsA, shipsB });
 
   scene.add(points);
   return points;
@@ -206,10 +212,9 @@ export function updateBattleProjectiles(
   dt: number,
   explosions: BattleExplosions | null,
 ): void {
-  const data: BattleProjectileData = (points as any)._battleData;
-  const shipsA: THREE.Vector3[] = (points as any)._shipsA;
-  const shipsB: THREE.Vector3[] = (points as any)._shipsB;
-  if (!data) return;
+  const stored = battlePointsStore.get(points);
+  if (!stored) return;
+  const { battleData: data, shipsA, shipsB } = stored;
 
   const positions = points.geometry.attributes.position as THREE.BufferAttribute;
   const arr = positions.array as Float32Array;

@@ -1,11 +1,11 @@
 use wasm_bindgen::prelude::*;
 
-use crate::types::*;
-use crate::api_state::{ENGINE_STATE, EngineState};
+use crate::api_state::{EngineState, ENGINE_STATE};
 use crate::cluster_generator::generate_cluster;
-use crate::simulation::init_galaxy_state;
-use crate::system_payload::{build_system_payload, build_cluster_summary, compute_chain_targets};
 use crate::content;
+use crate::simulation::init_galaxy_state;
+use crate::system_payload::{build_cluster_summary, build_system_payload, compute_chain_targets};
+use crate::types::*;
 
 #[wasm_bindgen]
 pub fn init_game(player_state_json: &str) -> Result<String, JsValue> {
@@ -50,7 +50,9 @@ pub fn init_game(player_state_json: &str) -> Result<String, JsValue> {
     let cluster_summary = build_cluster_summary(&cluster, player_state.galaxy_year);
     let sim_state_snapshot = galaxy_state.systems.clone();
 
-    let mut state = ENGINE_STATE.lock().map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let mut state = ENGINE_STATE
+        .lock()
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
     *state = Some(EngineState {
         cluster: cluster.clone(),
         galaxy_state,

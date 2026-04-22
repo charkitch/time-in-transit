@@ -1,4 +1,4 @@
-use crate::prng::PRNG;
+use crate::prng::Prng;
 use crate::types::*;
 use crate::world_interaction_field::build_dyson_shell_interaction_field;
 use std::f64::consts::PI;
@@ -13,7 +13,7 @@ pub fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData
     const MINI_STAR_PHASES: &[f64] = &[0.0, 0.25, 0.5, 0.75, 1.0];
 
     // Separate RNG stream so adding Dyson shells does not perturb existing system generation.
-    let mut rng = PRNG::from_index(0xD150_0001, star.id.wrapping_mul(31337).wrapping_add(911));
+    let mut rng = Prng::from_index(0xD150_0001, star.id.wrapping_mul(31337).wrapping_add(911));
     let mut shells: Vec<DysonShellSegmentData> = Vec::new();
 
     let band_count = 2;
@@ -29,7 +29,8 @@ pub fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData
 
         for segment in 0..segment_count {
             let phase_jitter = rng.float(-0.08, 0.08);
-            let orbit_phase = ((segment as f64 / segment_count as f64) * TAU + phase_jitter + TAU) % TAU;
+            let orbit_phase =
+                ((segment as f64 / segment_count as f64) * TAU + phase_jitter + TAU) % TAU;
 
             // Sector-mixed weather on a single shell segment.
             let cut_a = rng.float(0.22, 0.40) * TAU;
@@ -63,9 +64,9 @@ pub fn generate_dyson_shells(star: &StarSystemData) -> Vec<DysonShellSegmentData
 
             const BIOME_PROFILES: &[(DysonBiomeProfile, f64)] = &[
                 (DysonBiomeProfile::Continental, 0.45),
-                (DysonBiomeProfile::Mixed,       0.25),
-                (DysonBiomeProfile::Desert,      0.15),
-                (DysonBiomeProfile::Arctic,      0.15),
+                (DysonBiomeProfile::Mixed, 0.25),
+                (DysonBiomeProfile::Desert, 0.15),
+                (DysonBiomeProfile::Arctic, 0.15),
             ];
             let mut biome_roll = rng.next();
             let biome_profile = {

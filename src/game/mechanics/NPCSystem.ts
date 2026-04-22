@@ -33,7 +33,7 @@ export interface NPCShipState {
   visualSeed: number;
 }
 
-export interface NPCShipSpawnData extends NPCShipState {}
+export type NPCShipSpawnData = NPCShipState;
 
 const HUMAN_NAMES = [
   'Calypso Drift', 'Iron Meridian', 'Pale Coronal', 'Sonder Transit', 'Hecate Run',

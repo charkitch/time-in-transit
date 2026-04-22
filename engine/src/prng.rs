@@ -1,10 +1,10 @@
 /// Mulberry32 — fast, deterministic 32-bit PRNG.
 /// Exact port of src/game/generation/prng.ts to produce identical sequences.
-pub struct PRNG {
+pub struct Prng {
     state: u32,
 }
 
-impl PRNG {
+impl Prng {
     pub fn new(seed: u32) -> Self {
         Self { state: seed }
     }
@@ -42,8 +42,8 @@ impl PRNG {
     }
 
     /// Deterministically seed from an index
-    pub fn from_index(base_seed: u32, index: u32) -> PRNG {
-        PRNG::new(base_seed ^ index.wrapping_mul(0x9E3779B9))
+    pub fn from_index(base_seed: u32, index: u32) -> Prng {
+        Prng::new(base_seed ^ index.wrapping_mul(0x9E3779B9))
     }
 }
 
@@ -53,8 +53,8 @@ mod tests {
 
     #[test]
     fn deterministic_sequence() {
-        let mut a = PRNG::new(12345);
-        let mut b = PRNG::new(12345);
+        let mut a = Prng::new(12345);
+        let mut b = Prng::new(12345);
         for _ in 0..100 {
             assert_eq!(a.next(), b.next());
         }
@@ -62,19 +62,19 @@ mod tests {
 
     #[test]
     fn range_bounds() {
-        let mut rng = PRNG::new(42);
+        let mut rng = Prng::new(42);
         for _ in 0..1000 {
             let v = rng.next();
-            assert!(v >= 0.0 && v < 1.0);
+            assert!((0.0..1.0).contains(&v));
         }
     }
 
     #[test]
     fn int_bounds() {
-        let mut rng = PRNG::new(42);
+        let mut rng = Prng::new(42);
         for _ in 0..1000 {
             let v = rng.int(3, 7);
-            assert!(v >= 3 && v <= 7);
+            assert!((3..=7).contains(&v));
         }
     }
 }

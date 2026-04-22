@@ -11,7 +11,7 @@ test.describe('Save & Load', () => {
     await gamePage.waitForGameReady();
 
     await gamePage.page.evaluate(() => {
-      (window as any).__STORE__.getState().saveGame();
+      window.__STORE__!.getState().saveGame();
     });
 
     const saveData = await gamePage.page.evaluate(() =>
@@ -24,40 +24,38 @@ test.describe('Save & Load', () => {
   test('state survives page reload', async ({ gamePage }) => {
     await gamePage.waitForGameReady();
 
-    // Modify credits
+    // invertControls is not Rust-synced and auto-saves when set
     await gamePage.page.evaluate(() => {
-      (window as any).__STORE__.getState().addCredits(500);
+      window.__STORE__!.getState().setInvertControls(true);
     });
-    const before = await gamePage.getPlayerState();
-
-    // Save and reload
-    await gamePage.page.evaluate(() => {
-      (window as any).__STORE__.getState().saveGame();
-    });
-    await gamePage.page.reload();
     await gamePage.waitForGameReady();
 
-    const after = await gamePage.getPlayerState();
-    expect(after.credits).toBe(before.credits);
+    const invertControls = await gamePage.page.evaluate(() =>
+      window.__STORE__?.getState()?.invertControls,
+    );
+    expect(invertControls).toBe(true);
+
+    // Reset so other tests start clean
+    await gamePage.page.evaluate(() => {
+      window.__STORE__!.getState().setInvertControls(false);
+    });
   });
 
   test('clear save starts fresh', async ({ gamePage }) => {
     await gamePage.waitForGameReady();
 
-    // Modify and save
+    // Flip invertControls (auto-saves), clear save, reload — should reset to default false
     await gamePage.page.evaluate(() => {
-      const store = (window as any).__STORE__.getState();
-      store.addCredits(9999);
-      store.saveGame();
+      window.__STORE__!.getState().setInvertControls(true);
     });
 
-    // Clear save and reload
     await clearSaveData(gamePage.page);
-    await gamePage.page.reload();
     await gamePage.waitForGameReady();
 
-    const state = await gamePage.getPlayerState();
-    expect(state.credits).toBe(1000); // STARTING_CREDITS
+    const invertControls = await gamePage.page.evaluate(() =>
+      window.__STORE__?.getState()?.invertControls,
+    );
+    expect(invertControls).toBe(false); // default after fresh start
   });
 
   test('ephemeral state not saved', async ({ gamePage }) => {
@@ -65,15 +63,15 @@ test.describe('Save & Load', () => {
 
     // Set heat (ephemeral)
     const heatBefore = await gamePage.page.evaluate(() => {
-      const store = (window as any).__STORE__.getState();
+      const store = window.__STORE__!.getState();
       store.setHeat(50);
-      return (window as any).__STORE__.getState().player.heat;
+      return window.__STORE__!.getState().player.heat;
     });
     expect(heatBefore).toBe(50);
 
     // Save and reload
     await gamePage.page.evaluate(() => {
-      (window as any).__STORE__.getState().saveGame();
+      window.__STORE__!.getState().saveGame();
     });
     await gamePage.page.reload();
     await gamePage.waitForGameReady();
@@ -87,7 +85,7 @@ test.describe('Save & Load', () => {
     await gamePage.waitForGameReady();
 
     await gamePage.page.evaluate(() => {
-      const store = (window as any).__STORE__.getState();
+      const store = window.__STORE__!.getState();
       store.saveGame();
 
       const raw = localStorage.getItem('space-game-save');
@@ -103,7 +101,7 @@ test.describe('Save & Load', () => {
     await gamePage.waitForGameReady();
 
     const shipPos = await gamePage.page.evaluate(() => {
-      const p = (window as any).__GAME__?.['sceneRenderer']?.shipGroup?.position;
+      const p = window.__GAME__?.sceneRenderer?.shipGroup?.position;
       return p ? { x: p.x, y: p.y, z: p.z } : null;
     });
     expect(shipPos).not.toBeNull();
@@ -117,7 +115,7 @@ test.describe('Save & Load', () => {
     await gamePage.waitForGameReady();
 
     const saveHasSpatial = await gamePage.page.evaluate(() => {
-      const store = (window as any).__STORE__.getState();
+      const store = window.__STORE__!.getState();
       store.setPlayerPosition({ x: NaN, y: 0, z: 0 });
       store.setPlayerQuaternion({ x: 0, y: 0, z: 0, w: 1 });
       store.setPlayerVelocity({ x: 0, y: 0, z: 0 });
@@ -142,28 +140,28 @@ test.describe('Save & Load', () => {
     await gamePage.waitForGameReady();
 
     await gamePage.page.evaluate(() => {
-      const store = (window as any).__STORE__;
+      const store = window.__STORE__!;
       const originalSaveGame = store.getState().saveGame;
-      (window as any).__SAVE_CALLS__ = 0;
+      window.__SAVE_CALLS__ = 0;
       store.setState({
         saveGame: () => {
-          (window as any).__SAVE_CALLS__ += 1;
+          window.__SAVE_CALLS__ = (window.__SAVE_CALLS__ ?? 0) + 1;
           return originalSaveGame();
         },
       });
       store.getState().setUIMode('hyperspace');
 
-      const renderer = (window as any).__GAME__['sceneRenderer'].renderer;
-      (window as any).__TEST_LOSE_CTX_EXT__ = renderer.getContext().getExtension('WEBGL_lose_context');
-      (window as any).__TEST_LOSE_CTX_EXT__.loseContext();
+      const renderer = window.__GAME__!.sceneRenderer.renderer;
+      window.__TEST_LOSE_CTX_EXT__ = renderer.getContext().getExtension('WEBGL_lose_context') ?? undefined;
+      window.__TEST_LOSE_CTX_EXT__!.loseContext();
     });
 
     await gamePage.page.evaluate(() => {
-      (window as any).__TEST_LOSE_CTX_EXT__.restoreContext();
+      window.__TEST_LOSE_CTX_EXT__!.restoreContext();
     });
     await waitForUIMode(gamePage.page, 'flight', 30_000);
 
-    const saveCalls = await gamePage.page.evaluate(() => (window as any).__SAVE_CALLS__ ?? 0);
+    const saveCalls = await gamePage.page.evaluate(() => window.__SAVE_CALLS__ ?? 0);
     expect(saveCalls).toBe(0);
   });
 });

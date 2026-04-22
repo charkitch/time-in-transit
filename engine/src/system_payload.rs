@@ -1,36 +1,42 @@
-use crate::types::*;
-use crate::system_generator::generate_solar_system;
-use crate::climate::{derive_climate, BodyIndex};
 use crate::civilization::get_civ_state;
-use crate::factions::{get_faction, get_system_faction_state};
-use crate::trading::get_market;
-use crate::events::{select_game_event, EventContext, EventPool};
+use crate::climate::{derive_climate, BodyIndex};
 use crate::content;
+use crate::events::{select_game_event, EventContext, EventPool};
+use crate::factions::{get_faction, get_system_faction_state};
+use crate::system_generator::generate_solar_system;
+use crate::trading::get_market;
+use crate::types::*;
 
-pub fn build_cluster_summary(cluster: &[StarSystemData], galaxy_year: u32) -> Vec<ClusterSystemSummary> {
-    cluster.iter().map(|star| {
-        let mut civ = get_civ_state(star.id, galaxy_year, star.economy);
-        if star.special_kind == SpecialSystemKind::TheCrown {
-            civ.politics = PoliticalType::CrownPatchwork;
-            civ.economy = EconomyType::Everything;
-        }
-        let faction = get_system_faction_state(star.id, galaxy_year, civ.politics);
-        ClusterSystemSummary {
-            id: star.id,
-            name: star.name.clone(),
-            x: star.x,
-            y: star.y,
-            star_type: star.star_type,
-            special_kind: star.special_kind,
-            politics: civ.politics,
-            economy: civ.economy,
-            controlling_faction_id: faction.controlling_faction_id,
-            contesting_faction_id: faction.contesting_faction_id,
-            is_contested: faction.is_contested,
-            tech_level: star.tech_level,
-            population: star.population,
-        }
-    }).collect()
+pub fn build_cluster_summary(
+    cluster: &[StarSystemData],
+    galaxy_year: u32,
+) -> Vec<ClusterSystemSummary> {
+    cluster
+        .iter()
+        .map(|star| {
+            let mut civ = get_civ_state(star.id, galaxy_year, star.economy);
+            if star.special_kind == SpecialSystemKind::TheCrown {
+                civ.politics = PoliticalType::CrownPatchwork;
+                civ.economy = EconomyType::Everything;
+            }
+            let faction = get_system_faction_state(star.id, galaxy_year, civ.politics);
+            ClusterSystemSummary {
+                id: star.id,
+                name: star.name.clone(),
+                x: star.x,
+                y: star.y,
+                star_type: star.star_type,
+                special_kind: star.special_kind,
+                politics: civ.politics,
+                economy: civ.economy,
+                controlling_faction_id: faction.controlling_faction_id,
+                contesting_faction_id: faction.contesting_faction_id,
+                is_contested: faction.is_contested,
+                tech_level: star.tech_level,
+                population: star.population,
+            }
+        })
+        .collect()
 }
 
 pub fn compute_chain_targets(
@@ -39,7 +45,10 @@ pub fn compute_chain_targets(
 ) -> Vec<ChainTarget> {
     let mut targets = Vec::new();
     let any_flag = |flag: &str| -> bool {
-        player_state.player_choices.values().any(|c| c.flags.contains(flag))
+        player_state
+            .player_choices
+            .values()
+            .any(|c| c.flags.contains(flag))
     };
 
     for chain in content::story_chains() {
@@ -61,13 +70,17 @@ pub fn compute_chain_targets(
         let stage = &chain.stages[stage_idx];
 
         // Check if already have a target for this chain at this stage
-        if player_state.chain_targets.iter().any(|ct| {
-            ct.chain_id == chain.chain_id && ct.stage == stage.stage_label
-        }) {
+        if player_state
+            .chain_targets
+            .iter()
+            .any(|ct| ct.chain_id == chain.chain_id && ct.stage == stage.stage_label)
+        {
             // Keep existing target
-            if let Some(existing) = player_state.chain_targets.iter().find(|ct| {
-                ct.chain_id == chain.chain_id && ct.stage == stage.stage_label
-            }) {
+            if let Some(existing) = player_state
+                .chain_targets
+                .iter()
+                .find(|ct| ct.chain_id == chain.chain_id && ct.stage == stage.stage_label)
+            {
                 targets.push(existing.clone());
             }
             continue;
@@ -89,7 +102,11 @@ pub fn compute_chain_targets(
             }
             if let Some(required_base) = chain.required_base_type {
                 let sys = generate_solar_system(star);
-                if !sys.secret_bases.iter().any(|b| b.base_type == required_base) {
+                if !sys
+                    .secret_bases
+                    .iter()
+                    .any(|b| b.base_type == required_base)
+                {
                     continue;
                 }
             }
@@ -101,7 +118,10 @@ pub fn compute_chain_targets(
         }
 
         // Deterministic pick based on chain_id + stage
-        let seed = chain.chain_id.bytes().fold(0u32, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u32))
+        let seed = chain
+            .chain_id
+            .bytes()
+            .fold(0u32, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u32))
             .wrapping_add(stage_idx as u32 * 7919);
         let idx = (seed as usize) % candidates.len();
 
@@ -128,26 +148,40 @@ pub fn build_system_payload(
 
     // Apply dynamic climate state to each planet and its moons
     // Home planet (system 0, planet 0) stays cap-free — it's the first thing the player sees.
-    system.planets.iter_mut().enumerate().for_each(|(pi, planet)| {
-        let pi = pi as u32;
-        if planet.planet_type == PlanetType::Rocky && !(star.id == 0 && pi == 0) {
-            let (climate, intensity, cap) = derive_climate(
-                star.id, BodyIndex::Planet(pi), galaxy_year, planet.surface_type, system_flags,
-            );
-            planet.climate_state = climate;
-            planet.climate_intensity = intensity;
-            planet.polar_cap_size = cap;
-        }
-        planet.moons.iter_mut().enumerate().for_each(|(mi, moon)| {
-            let (climate, intensity, cap) = derive_climate(
-                star.id, BodyIndex::Moon { planet: pi, moon: mi as u32 },
-                galaxy_year, moon.surface_type, system_flags,
-            );
-            moon.climate_state = climate;
-            moon.climate_intensity = intensity;
-            moon.polar_cap_size = cap;
+    system
+        .planets
+        .iter_mut()
+        .enumerate()
+        .for_each(|(pi, planet)| {
+            let pi = pi as u32;
+            if planet.planet_type == PlanetType::Rocky && !(star.id == 0 && pi == 0) {
+                let (climate, intensity, cap) = derive_climate(
+                    star.id,
+                    BodyIndex::Planet(pi),
+                    galaxy_year,
+                    planet.surface_type,
+                    system_flags,
+                );
+                planet.climate_state = climate;
+                planet.climate_intensity = intensity;
+                planet.polar_cap_size = cap;
+            }
+            planet.moons.iter_mut().enumerate().for_each(|(mi, moon)| {
+                let (climate, intensity, cap) = derive_climate(
+                    star.id,
+                    BodyIndex::Moon {
+                        planet: pi,
+                        moon: mi as u32,
+                    },
+                    galaxy_year,
+                    moon.surface_type,
+                    system_flags,
+                );
+                moon.climate_state = climate;
+                moon.climate_intensity = intensity;
+                moon.polar_cap_size = cap;
+            });
         });
-    });
 
     let mut civ_state = get_civ_state(star.id, galaxy_year, star.economy);
     if star.special_kind == SpecialSystemKind::TheCrown {
@@ -168,7 +202,9 @@ pub fn build_system_payload(
     let triggers = content::all_triggers();
 
     // Select event for this payload context
-    let event_seed = galaxy_year.wrapping_mul(31337).wrapping_add(star.id.wrapping_mul(1009));
+    let event_seed = galaxy_year
+        .wrapping_mul(31337)
+        .wrapping_add(star.id.wrapping_mul(1009));
     let ctx = EventContext {
         civ_state: &civ_state,
         player_state,
@@ -181,7 +217,9 @@ pub fn build_system_payload(
         current_system_id: star.id,
     };
     let game_event = if let Some(base_id) = secret_base_id {
-        let base_type = system.secret_bases.iter()
+        let base_type = system
+            .secret_bases
+            .iter()
             .find(|b| b.id == base_id)
             .map(|b| b.base_type);
         let pool = match base_type {
@@ -203,7 +241,9 @@ pub fn build_system_payload(
     if let Some(prev_era) = pre_jump_era {
         if current_era != prev_era {
             lines.push(format!("— GALAXY YEAR {} —", galaxy_year));
-            lines.push("Centuries have passed. Empires have risen and fallen in your absence.".to_string());
+            lines.push(
+                "Centuries have passed. Empires have risen and fallen in your absence.".to_string(),
+            );
             lines.push(String::new());
         }
     }
@@ -211,18 +251,26 @@ pub fn build_system_payload(
     lines.push(format!("ENTERING {}", star.name.to_uppercase()));
     if let Some(years) = jump_years_in_transit {
         let ship_time = years as f64 * LORENTZ_FACTOR;
-        lines.push(format!("+{} YEARS IN TRANSIT ({} SHIP TIME)",
-            years, format_duration(ship_time)));
+        lines.push(format!(
+            "+{} YEARS IN TRANSIT ({} SHIP TIME)",
+            years,
+            format_duration(ship_time)
+        ));
     }
 
     let control_faction = get_faction(&faction_state.controlling_faction_id);
-    let contest_faction = faction_state.contesting_faction_id.as_ref()
+    let contest_faction = faction_state
+        .contesting_faction_id
+        .as_ref()
         .and_then(|id| get_faction(id));
 
     if faction_state.is_contested {
         if let (Some(ctrl), Some(cont)) = (control_faction, contest_faction) {
-            lines.push(format!("CONTESTED — {} vs {}",
-                ctrl.name.to_uppercase(), cont.name.to_uppercase()));
+            lines.push(format!(
+                "CONTESTED — {} vs {}",
+                ctrl.name.to_uppercase(),
+                cont.name.to_uppercase()
+            ));
         }
     } else if let Some(ctrl) = control_faction {
         lines.push(format!("CONTROLLED BY {}", ctrl.name.to_uppercase()));
@@ -231,9 +279,15 @@ pub fn build_system_payload(
     // Secret base hints
     for base in &system.secret_bases {
         match base.base_type {
-            SecretBaseType::Asteroid => lines.push("FAINT SIGNAL DETECTED IN ASTEROID BELT".to_string()),
-            SecretBaseType::OortCloud => lines.push("ANOMALOUS BEACON — EXTREME OUTER SYSTEM".to_string()),
-            SecretBaseType::MaximumSpace => lines.push("UNKNOWN TRANSMISSION FROM BEYOND SYSTEM EDGE".to_string()),
+            SecretBaseType::Asteroid => {
+                lines.push("FAINT SIGNAL DETECTED IN ASTEROID BELT".to_string())
+            }
+            SecretBaseType::OortCloud => {
+                lines.push("ANOMALOUS BEACON — EXTREME OUTER SYSTEM".to_string())
+            }
+            SecretBaseType::MaximumSpace => {
+                lines.push("UNKNOWN TRANSMISSION FROM BEYOND SYSTEM EDGE".to_string())
+            }
         }
     }
 
@@ -241,19 +295,28 @@ pub fn build_system_payload(
     if let Some(memory) = player_state.faction_memory.get(&star.id) {
         if memory.faction_id != faction_state.controlling_faction_id {
             if let Some(old_faction) = get_faction(&memory.faction_id) {
-                lines.push(format!("LAST VISIT: YEAR {}. {} NO LONGER HOLDS THIS SYSTEM.",
-                    memory.galaxy_year, old_faction.name.to_uppercase()));
+                lines.push(format!(
+                    "LAST VISIT: YEAR {}. {} NO LONGER HOLDS THIS SYSTEM.",
+                    memory.galaxy_year,
+                    old_faction.name.to_uppercase()
+                ));
             }
         }
     }
 
     // Special system arrival dialogs — shown only once per save
     let system_entry_dialog = if star.special_kind == SpecialSystemKind::IronStar
-        && !player_state.seen_system_dialog_ids.iter().any(|id| id == "iron_star_arrival")
+        && !player_state
+            .seen_system_dialog_ids
+            .iter()
+            .any(|id| id == "iron_star_arrival")
     {
         Some(content::iron_star_arrival_dialog())
     } else if star.special_kind == SpecialSystemKind::TheCrown
-        && !player_state.seen_system_dialog_ids.iter().any(|id| id == "the_crown_arrival")
+        && !player_state
+            .seen_system_dialog_ids
+            .iter()
+            .any(|id| id == "the_crown_arrival")
     {
         Some(content::the_crown_arrival_dialog())
     } else {

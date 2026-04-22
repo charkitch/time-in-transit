@@ -1,19 +1,22 @@
-use crate::prng::PRNG;
+use crate::dyson_generator::generate_dyson_shells;
+use crate::prng::Prng;
+use crate::star_properties::{
+    generate_binary_companion, star_radius_range, GAS_COLORS, MOON_COLORS, ROCKY_COLORS,
+};
+use crate::station_archetypes::{
+    pick_station_archetype, ASTEROID_BASE_NAMES, MAXIMUM_SPACE_NAMES, OORT_CLOUD_BASE_NAMES,
+};
+use crate::system_profiles::{
+    generate_great_spot, generate_moon_clouds, generate_rocky_clouds, generate_rocky_moon_count,
+    generate_rocky_moon_radius, pick_weighted_surface, planet_name, system_profile_for,
+};
+use crate::topopolis_generator::generate_topopolis;
 use crate::types::*;
 use crate::world_interaction_field::build_planet_interaction_field;
-use crate::star_properties::{star_radius_range, generate_binary_companion, ROCKY_COLORS, GAS_COLORS, MOON_COLORS};
-use crate::system_profiles::{
-    system_profile_for, pick_weighted_surface, planet_name,
-    generate_rocky_moon_count, generate_rocky_moon_radius,
-    generate_moon_clouds, generate_rocky_clouds, generate_great_spot,
-};
-use crate::dyson_generator::generate_dyson_shells;
-use crate::topopolis_generator::generate_topopolis;
-use crate::station_archetypes::{pick_station_archetype, ASTEROID_BASE_NAMES, OORT_CLOUD_BASE_NAMES, MAXIMUM_SPACE_NAMES};
 use std::f64::consts::PI;
 
 pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
-    let mut rng = PRNG::from_index(CLUSTER_SEED, star.id.wrapping_mul(97).wrapping_add(13));
+    let mut rng = Prng::from_index(CLUSTER_SEED, star.id.wrapping_mul(97).wrapping_add(13));
 
     // Home system (id 0) now uses normal generation like every other system.
 
@@ -53,7 +56,8 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             let moon_orbit = moon_orbit_min + moon_radius + rng.float(20.0, 80.0);
             moon_orbit_min = moon_orbit + moon_radius;
             let moon_surface = pick_weighted_surface(&mut rng, profile.moon_weights);
-            let (moon_has_clouds, moon_cloud_density) = generate_moon_clouds(&mut rng, moon_surface);
+            let (moon_has_clouds, moon_cloud_density) =
+                generate_moon_clouds(&mut rng, moon_surface);
             moons.push(MoonData {
                 id: format!("{}-p{}-m{}", star.id, i, m),
                 surface_type: moon_surface,
@@ -144,7 +148,10 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
         None
     };
 
-    orbit_base = asteroid_belt.as_ref().map_or(belt_inner, |b| b.outer_radius) + rng.float(800.0, 1500.0);
+    orbit_base = asteroid_belt
+        .as_ref()
+        .map_or(belt_inner, |b| b.outer_radius)
+        + rng.float(800.0, 1500.0);
 
     // Outer gas giants
     for i in 0..outer_count {
@@ -154,10 +161,26 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
         let planet_radius = rng.float(180.0, 300.0);
         let has_rings = rng.next() < profile.ring_chance;
         let ring_roll = rng.next();
-        let ring_count = if !has_rings { 1 } else if ring_roll < 0.05 { 3 } else if ring_roll < 0.20 { 2 } else { 1 };
-        let ring_inclination = if has_rings { rng.float(-0.38, 0.38) } else { 0.0 };
+        let ring_count = if !has_rings {
+            1
+        } else if ring_roll < 0.05 {
+            3
+        } else if ring_roll < 0.20 {
+            2
+        } else {
+            1
+        };
+        let ring_inclination = if has_rings {
+            rng.float(-0.38, 0.38)
+        } else {
+            0.0
+        };
         let ring_outer_muls = [0.0, 2.2, 2.6, 2.8];
-        let ring_outer_edge = if has_rings { planet_radius * ring_outer_muls[ring_count as usize] } else { 0.0 };
+        let ring_outer_edge = if has_rings {
+            planet_radius * ring_outer_muls[ring_count as usize]
+        } else {
+            0.0
+        };
         let moon_count = rng.int(2, 6);
         let mut moons: Vec<MoonData> = Vec::new();
         let mut moon_orbit_min = f64::max(planet_radius * 1.5, ring_outer_edge + 40.0);
@@ -166,7 +189,8 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
             let moon_orbit = moon_orbit_min + moon_radius + rng.float(40.0, 180.0);
             moon_orbit_min = moon_orbit + moon_radius;
             let moon_surface = pick_weighted_surface(&mut rng, profile.moon_weights);
-            let (moon_has_clouds, moon_cloud_density) = generate_moon_clouds(&mut rng, moon_surface);
+            let (moon_has_clouds, moon_cloud_density) =
+                generate_moon_clouds(&mut rng, moon_surface);
             moons.push(MoonData {
                 id: format!("{}-g{}-m{}", star.id, i, m),
                 surface_type: moon_surface,
@@ -185,11 +209,18 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
         let (great_spot, great_spot_lat, great_spot_size) = generate_great_spot(&mut rng, gas_type);
         // Rare Uranus-style extreme tilt (~5% of gas giants), forked PRNG
         let axial_tilt = {
-            let mut tilt_rng = PRNG::from_index(
+            let mut tilt_rng = Prng::from_index(
                 CLUSTER_SEED,
-                star.id.wrapping_mul(199).wrapping_add(i as u32 * 59).wrapping_add(0xA71),
+                star.id
+                    .wrapping_mul(199)
+                    .wrapping_add(i as u32 * 59)
+                    .wrapping_add(0xA71),
             );
-            if tilt_rng.next() < 0.05 { tilt_rng.float(1.05, 1.71) } else { 0.0 }
+            if tilt_rng.next() < 0.05 {
+                tilt_rng.float(1.05, 1.71)
+            } else {
+                0.0
+            }
         };
         let interaction_field = build_planet_interaction_field(
             star.id,
@@ -283,7 +314,8 @@ pub fn generate_solar_system(star: &StarSystemData) -> SolarSystemData {
         });
     }
 
-    let main_station_planet_id = planets.iter()
+    let main_station_planet_id = planets
+        .iter()
         .find(|p| p.has_station)
         .or_else(|| planets.first())
         .map(|p| p.id.clone())
@@ -345,7 +377,7 @@ mod tests {
             name: "Test XB".to_string(),
             x: 0.0,
             y: 0.0,
-            star_type: StarType::XB,
+            star_type: StarType::XrayBinary,
             special_kind: SpecialSystemKind::None,
             economy: EconomyType::Synthesis,
             tech_level: 5,
@@ -353,11 +385,16 @@ mod tests {
         };
 
         let system = generate_solar_system(&xb_star);
-        let companion = system.companion.as_ref().expect("XB systems should have a companion");
+        let companion = system
+            .companion
+            .as_ref()
+            .expect("XB systems should have a companion");
         let compact_outer_edge = companion.orbit_radius * 0.4 + system.star_radius;
         let companion_outer_edge = companion.orbit_radius + companion.radius;
         let binary_outer_edge = f64::max(compact_outer_edge, companion_outer_edge);
-        let innermost_planet = system.planets.iter()
+        let innermost_planet = system
+            .planets
+            .iter()
             .map(|planet| planet.orbit_radius)
             .fold(f64::INFINITY, f64::min);
 
@@ -372,7 +409,7 @@ mod tests {
             name: "Test XBB".to_string(),
             x: 0.0,
             y: 0.0,
-            star_type: StarType::XBB,
+            star_type: StarType::XrayBurster,
             special_kind: SpecialSystemKind::None,
             economy: EconomyType::Synthesis,
             tech_level: 5,
@@ -380,15 +417,23 @@ mod tests {
         };
 
         let system = generate_solar_system(&xbb_star);
-        let companion = system.companion.as_ref().expect("XBB systems should have a companion");
+        let companion = system
+            .companion
+            .as_ref()
+            .expect("XBB systems should have a companion");
         let compact_outer_edge = companion.orbit_radius * 0.4 + system.star_radius;
         let companion_outer_edge = companion.orbit_radius + companion.radius;
         let binary_outer_edge = f64::max(compact_outer_edge, companion_outer_edge);
-        let innermost_planet = system.planets.iter()
+        let innermost_planet = system
+            .planets
+            .iter()
             .map(|planet| planet.orbit_radius)
             .fold(f64::INFINITY, f64::min);
 
-        assert!(matches!(companion.star_type, StarType::G | StarType::K | StarType::M));
+        assert!(matches!(
+            companion.star_type,
+            StarType::G | StarType::K | StarType::M
+        ));
         assert!((28.0..=48.0).contains(&system.star_radius));
         assert!(innermost_planet >= binary_outer_edge + 200.0);
     }
@@ -405,7 +450,7 @@ mod tests {
             name: "Test MQ".to_string(),
             x: 0.0,
             y: 0.0,
-            star_type: StarType::MQ,
+            star_type: StarType::Microquasar,
             special_kind: SpecialSystemKind::None,
             economy: EconomyType::Synthesis,
             tech_level: 5,
@@ -413,15 +458,23 @@ mod tests {
         };
 
         let system = generate_solar_system(&mq_star);
-        let companion = system.companion.as_ref().expect("MQ systems should have a companion");
+        let companion = system
+            .companion
+            .as_ref()
+            .expect("MQ systems should have a companion");
         let compact_outer_edge = companion.orbit_radius * 0.4 + system.star_radius;
         let companion_outer_edge = companion.orbit_radius + companion.radius;
         let binary_outer_edge = f64::max(compact_outer_edge, companion_outer_edge);
-        let innermost_planet = system.planets.iter()
+        let innermost_planet = system
+            .planets
+            .iter()
             .map(|planet| planet.orbit_radius)
             .fold(f64::INFINITY, f64::min);
 
-        assert!(matches!(companion.star_type, StarType::A | StarType::F | StarType::G));
+        assert!(matches!(
+            companion.star_type,
+            StarType::A | StarType::F | StarType::G
+        ));
         assert!((80.0..=120.0).contains(&system.star_radius));
         assert!(innermost_planet >= binary_outer_edge + 200.0);
     }
@@ -429,23 +482,35 @@ mod tests {
     #[test]
     fn iron_systems_generate_dyson_shells() {
         let cluster = generate_cluster();
-        let iron_star = cluster.iter()
+        let iron_star = cluster
+            .iter()
             .find(|star| star.star_type == StarType::Iron)
             .expect("Expected iron star in cluster");
 
         let system = generate_solar_system(iron_star);
         assert!(!system.dyson_shells.is_empty());
 
-        let mut band_ids: Vec<u32> = system.dyson_shells.iter().map(|segment| segment.band_index).collect();
+        let mut band_ids: Vec<u32> = system
+            .dyson_shells
+            .iter()
+            .map(|segment| segment.band_index)
+            .collect();
         band_ids.sort_unstable();
         band_ids.dedup();
         assert_eq!(band_ids.len(), 2);
         assert!((6..=10).contains(&system.dyson_shells.len()));
-        assert!(system.dyson_shells.iter().all(|segment| segment.weather_bands.len() == 3));
-        assert!(system.dyson_shells.iter().all(|segment| segment.interaction_mode == DysonInteractionMode::TargetableOnly));
-        assert!(system.dyson_shells.iter().all(|segment| {
-            matches!(segment.star_phase, 0.0 | 0.25 | 0.5 | 0.75 | 1.0)
-        }));
+        assert!(system
+            .dyson_shells
+            .iter()
+            .all(|segment| segment.weather_bands.len() == 3));
+        assert!(system
+            .dyson_shells
+            .iter()
+            .all(|segment| segment.interaction_mode == DysonInteractionMode::TargetableOnly));
+        assert!(system
+            .dyson_shells
+            .iter()
+            .all(|segment| { matches!(segment.star_phase, 0.0 | 0.25 | 0.5 | 0.75 | 1.0) }));
         assert!(system.dyson_shells.iter().all(|segment| {
             let field = &segment.interaction_field;
             field.width > 0
@@ -457,12 +522,12 @@ mod tests {
     #[test]
     fn non_iron_systems_do_not_generate_dyson_shells() {
         let cluster = generate_cluster();
-        let non_iron = cluster.iter()
+        let non_iron = cluster
+            .iter()
             .find(|star| star.star_type != StarType::Iron)
             .expect("Expected at least one non-iron star");
 
         let system = generate_solar_system(non_iron);
         assert!(system.dyson_shells.is_empty());
     }
-
 }

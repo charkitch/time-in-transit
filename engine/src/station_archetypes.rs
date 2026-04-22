@@ -1,24 +1,47 @@
-use crate::prng::PRNG;
+use crate::prng::Prng;
 use crate::types::*;
 
 pub(crate) const ASTEROID_BASE_NAMES: &[&str] = &[
-    "Hollowed Rock", "Cinder Station", "Belt Refuge", "The Burrow",
-    "Slag Haven", "Tumbling Dock", "Ore Shadow", "Gravel Nest",
+    "Hollowed Rock",
+    "Cinder Station",
+    "Belt Refuge",
+    "The Burrow",
+    "Slag Haven",
+    "Tumbling Dock",
+    "Ore Shadow",
+    "Gravel Nest",
 ];
 pub(crate) const OORT_CLOUD_BASE_NAMES: &[&str] = &[
-    "Frost Haven", "Deep Ice", "Outer Dark Relay", "Frozen Whisper",
-    "The Cold Cradle", "Ice Tomb Station", "Frostbite Dock", "Pale Signal",
+    "Frost Haven",
+    "Deep Ice",
+    "Outer Dark Relay",
+    "Frozen Whisper",
+    "The Cold Cradle",
+    "Ice Tomb Station",
+    "Frostbite Dock",
+    "Pale Signal",
 ];
 pub(crate) const MAXIMUM_SPACE_NAMES: &[&str] = &[
-    "The Terminus", "Void's Edge", "The Last Light", "Absolute Zero",
-    "The Final Signal", "Edge of Nothing", "The Farthest Shore", "Silence Station",
+    "The Terminus",
+    "Void's Edge",
+    "The Last Light",
+    "Absolute Zero",
+    "The Final Signal",
+    "Edge of Nothing",
+    "The Farthest Shore",
+    "Silence Station",
 ];
 
-pub(crate) fn pick_station_archetype(star: &StarSystemData, rng: &mut PRNG) -> StationArchetype {
+pub(crate) fn pick_station_archetype(star: &StarSystemData, rng: &mut Prng) -> StationArchetype {
     let is_outer_system = star.id >= 20;
     let is_weird_star = matches!(
         star.star_type,
-        StarType::PU | StarType::XB | StarType::XBB | StarType::MQ | StarType::SGR | StarType::Iron
+        StarType::Pulsar
+            | StarType::XrayBinary
+            | StarType::XrayBurster
+            | StarType::Microquasar
+            | StarType::GammaRepeater
+            | StarType::Iron
     );
     let mut alien_weight = 0.12 + f64::max(0.0, (star.tech_level - 4) as f64 * 0.05);
     if is_outer_system {

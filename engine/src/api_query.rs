@@ -1,11 +1,11 @@
 use wasm_bindgen::prelude::*;
 
-use crate::types::*;
 use crate::api_state::with_engine_mut;
 use crate::civilization::get_civ_state;
-use crate::trading::get_market;
 use crate::simulation::simulate_galaxy;
 use crate::system_payload::build_cluster_summary;
+use crate::trading::get_market;
+use crate::types::*;
 
 #[wasm_bindgen]
 pub fn get_player_state() -> Result<String, JsValue> {
@@ -69,9 +69,9 @@ pub fn apply_choice_effect(
         let ps = &mut engine.player_state;
 
         ps.credits += effect.credits_reward;
-        ps.fuel = (ps.fuel + effect.fuel_reward).max(0.0).min(MAX_FUEL);
+        ps.fuel = (ps.fuel + effect.fuel_reward).clamp(0.0, MAX_FUEL);
 
-        let choices = ps.player_choices.entry(system_id).or_insert_with(SystemChoices::default);
+        let choices = ps.player_choices.entry(system_id).or_default();
         choices.trading_reputation += effect.trading_reputation;
         for good in &effect.banned_goods {
             if !choices.banned_goods.contains(good) {
@@ -82,8 +82,15 @@ pub fn apply_choice_effect(
         if effect.faction_tag.is_some() {
             choices.faction_tag = effect.faction_tag.clone();
         }
-        let tracking_id = if root_event_id.is_empty() { event_id } else { root_event_id };
-        if !choices.completed_event_ids.contains(&tracking_id.to_string()) {
+        let tracking_id = if root_event_id.is_empty() {
+            event_id
+        } else {
+            root_event_id
+        };
+        if !choices
+            .completed_event_ids
+            .contains(&tracking_id.to_string())
+        {
             choices.completed_event_ids.push(tracking_id.to_string());
         }
         for flag in &effect.sets_flags {
@@ -104,7 +111,10 @@ pub fn apply_choice_effect(
 
         ps.player_history.completed_events.insert(
             tracking_id.to_string(),
-            CompletedEvent { system_id, galaxy_year: ps.galaxy_year },
+            CompletedEvent {
+                system_id,
+                galaxy_year: ps.galaxy_year,
+            },
         );
 
         if years_advance > 0 {

@@ -23,9 +23,18 @@ pub fn story_chains() -> Vec<StoryChainDef> {
         StoryChainDef {
             chain_id: "quasar_array",
             stages: &[
-                ChainStageDef { completion_flag: "quasar_array_stage1_done", stage_label: "stage2" },
-                ChainStageDef { completion_flag: "quasar_array_stage2_done", stage_label: "stage3" },
-                ChainStageDef { completion_flag: "quasar_array_stage3_done", stage_label: "stage4" },
+                ChainStageDef {
+                    completion_flag: "quasar_array_stage1_done",
+                    stage_label: "stage2",
+                },
+                ChainStageDef {
+                    completion_flag: "quasar_array_stage2_done",
+                    stage_label: "stage3",
+                },
+                ChainStageDef {
+                    completion_flag: "quasar_array_stage3_done",
+                    stage_label: "stage4",
+                },
             ],
             min_distance: 12.0,
             required_base_type: Some(SecretBaseType::OortCloud),
@@ -33,9 +42,18 @@ pub fn story_chains() -> Vec<StoryChainDef> {
         StoryChainDef {
             chain_id: "cartographers_wake",
             stages: &[
-                ChainStageDef { completion_flag: "cartographers_wake_stage1_done", stage_label: "stage2" },
-                ChainStageDef { completion_flag: "cartographers_wake_stage2_done", stage_label: "stage3" },
-                ChainStageDef { completion_flag: "cartographers_wake_stage3_done", stage_label: "stage4" },
+                ChainStageDef {
+                    completion_flag: "cartographers_wake_stage1_done",
+                    stage_label: "stage2",
+                },
+                ChainStageDef {
+                    completion_flag: "cartographers_wake_stage2_done",
+                    stage_label: "stage3",
+                },
+                ChainStageDef {
+                    completion_flag: "cartographers_wake_stage3_done",
+                    stage_label: "stage4",
+                },
             ],
             min_distance: 12.0,
             required_base_type: Some(SecretBaseType::Asteroid),
@@ -43,10 +61,22 @@ pub fn story_chains() -> Vec<StoryChainDef> {
         StoryChainDef {
             chain_id: "burnt_accord",
             stages: &[
-                ChainStageDef { completion_flag: "burnt_accord_stage1_done", stage_label: "stage2" },
-                ChainStageDef { completion_flag: "burnt_accord_stage2_done", stage_label: "stage3" },
-                ChainStageDef { completion_flag: "burnt_accord_stage3_done", stage_label: "stage4" },
-                ChainStageDef { completion_flag: "burnt_accord_stage4_done", stage_label: "stage5" },
+                ChainStageDef {
+                    completion_flag: "burnt_accord_stage1_done",
+                    stage_label: "stage2",
+                },
+                ChainStageDef {
+                    completion_flag: "burnt_accord_stage2_done",
+                    stage_label: "stage3",
+                },
+                ChainStageDef {
+                    completion_flag: "burnt_accord_stage3_done",
+                    stage_label: "stage4",
+                },
+                ChainStageDef {
+                    completion_flag: "burnt_accord_stage4_done",
+                    stage_label: "stage5",
+                },
             ],
             min_distance: 14.0,
             required_base_type: Some(SecretBaseType::MaximumSpace),
@@ -79,7 +109,10 @@ mod generated_content_registry {
 type EventCache = HashMap<EventPool, Vec<GameEvent>>;
 
 fn load_events(entries: &[(&str, &[u8])]) -> Vec<GameEvent> {
-    entries.iter().map(|(label, raw)| parse_event(label, raw)).collect()
+    entries
+        .iter()
+        .map(|(label, raw)| parse_event(label, raw))
+        .collect()
 }
 
 fn load_pool_events(pool: EventPool) -> Vec<GameEvent> {
@@ -98,12 +131,16 @@ fn build_event_pools() -> EventCache {
 
 pub fn refresh_event_cache() {
     let pools = build_event_pools();
-    let mut cache = EVENT_CACHE.lock().unwrap_or_else(|e| panic!("Event cache lock poisoned: {}", e));
+    let mut cache = EVENT_CACHE
+        .lock()
+        .unwrap_or_else(|e| panic!("Event cache lock poisoned: {}", e));
     *cache = Some(pools);
 }
 
 fn cached_pool_events(pool: EventPool) -> Option<Vec<GameEvent>> {
-    let cache = EVENT_CACHE.lock().unwrap_or_else(|e| panic!("Event cache lock poisoned: {}", e));
+    let cache = EVENT_CACHE
+        .lock()
+        .unwrap_or_else(|e| panic!("Event cache lock poisoned: {}", e));
     cache.as_ref().and_then(|pools| pools.get(&pool).cloned())
 }
 
@@ -154,14 +191,18 @@ mod tests {
             .unwrap_or_else(|| panic!("Missing generated entry {}", label))
     }
 
-    fn assert_yaml_fixture_matches_generated_bincode<T>(label: &str, yaml_raw: &str, bincode_raw: &[u8])
-    where
+    fn assert_yaml_fixture_matches_generated_bincode<T>(
+        label: &str,
+        yaml_raw: &str,
+        bincode_raw: &[u8],
+    ) where
         T: DeserializeOwned + serde::Serialize + PartialEq + Debug,
     {
         let from_yaml: T = serde_yaml::from_str(yaml_raw)
             .unwrap_or_else(|e| panic!("Failed to parse fixture YAML {}: {}", label, e));
-        let (from_bincode, _): (T, _) = bincode::serde::decode_from_slice(bincode_raw, bincode::config::standard())
-            .unwrap_or_else(|e| panic!("Failed to decode generated bincode {}: {}", label, e));
+        let (from_bincode, _): (T, _) =
+            bincode::serde::decode_from_slice(bincode_raw, bincode::config::standard())
+                .unwrap_or_else(|e| panic!("Failed to decode generated bincode {}: {}", label, e));
         assert_eq!(from_yaml, from_bincode, "Typed mismatch for {}", label);
     }
 
@@ -278,7 +319,10 @@ mod tests {
         assert_yaml_fixture_matches_generated_bincode::<TriggerFile>(
             "triggers/rebel_chain.yaml",
             include_str!("../content/triggers/rebel_chain.yaml"),
-            find_entry(generated_content_registry::TRIGGER_FILES, "triggers/rebel_chain.yaml"),
+            find_entry(
+                generated_content_registry::TRIGGER_FILES,
+                "triggers/rebel_chain.yaml",
+            ),
         );
     }
 
@@ -287,7 +331,10 @@ mod tests {
         assert_yaml_fixture_matches_generated_bincode::<SystemEntryDialog>(
             "dialogs/iron_star_arrival.yaml",
             include_str!("../content/dialogs/iron_star_arrival.yaml"),
-            find_entry(generated_content_registry::DIALOG_FILES, "dialogs/iron_star_arrival.yaml"),
+            find_entry(
+                generated_content_registry::DIALOG_FILES,
+                "dialogs/iron_star_arrival.yaml",
+            ),
         );
         assert_eq!(
             generated_content_registry::dialog_entry_by_label("dialogs/iron_star_arrival.yaml")

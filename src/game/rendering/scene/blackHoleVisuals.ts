@@ -269,7 +269,6 @@ export function createMicroquasarJetGroup(options: MicroquasarJetOptions): THREE
   const group = new THREE.Group();
   const jetColor = new THREE.Color(color);
   const brightJetColor = jetColor.clone().lerp(new THREE.Color(0xFFFFFF), 0.34).getHex();
-  const lobeColor = jetColor.clone().lerp(new THREE.Color(0xD5F6FF), 0.5).getHex();
 
   const outerLength = 75000;
   const plumeLength = 55000;

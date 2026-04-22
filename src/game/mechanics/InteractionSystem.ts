@@ -13,11 +13,9 @@ import {
   type GameEvent,
 } from '../engine';
 import { stationHostTypeToken } from '../archetypes';
-import { STARTING_SYSTEM_ID } from '../constants';
 import type { SystemId } from '../types';
 import { isScannableHost } from '../rendering/scene/types';
 
-const FIRST_SYSTEM_ID = STARTING_SYSTEM_ID;
 const LAND_MAX_SPEED = 55;
 
 let alertTimer: ReturnType<typeof setTimeout> | null = null;
@@ -253,7 +251,7 @@ export class InteractionSystem {
       shipPos.addScaledVector(this.dockedApproachDir, 30);
     }
 
-    this.flightModel.reset(shipPos);
+    this.flightModel.reset();
     this.dockedStationId = null;
   }
 
@@ -337,7 +335,7 @@ export class InteractionSystem {
       this.dockedShipQuaternion.copy(this.sceneRenderer.shipGroup.quaternion);
       this.dockedApproachDir.subVectors(pos, nearest.pos).normalize();
       this.sceneRenderer.shipGroup.position.copy(nearest.pos);
-      this.flightModel.reset(nearest.pos);
+      this.flightModel.reset();
 
       // Set up landing event then switch to landing mode
       this.prepareLanding(state.currentSystemId, nearest.id);

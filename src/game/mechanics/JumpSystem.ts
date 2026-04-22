@@ -173,7 +173,7 @@ export class JumpSystem {
 
       this.sceneRenderer.shipGroup.position.set(0, 0, 8000);
       this.sceneRenderer.shipGroup.rotation.set(0, 0, 0);
-      this.flightModel.reset(this.sceneRenderer.shipGroup.position);
+      this.flightModel.reset();
       this.flightModel.velocity.set(0, 0, -150);
 
       // Sync spatial state to store before saveGame() runs
