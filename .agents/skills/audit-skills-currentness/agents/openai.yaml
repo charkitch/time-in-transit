@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audit Skills Currentness"
+  short_description: "Check project skills for stale references"
+  default_prompt: "Use $audit-skills-currentness to audit repo-local Codex skills for stale paths, symbols, commands, and workflow guidance before updating skill documentation."

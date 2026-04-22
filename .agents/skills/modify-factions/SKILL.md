@@ -44,8 +44,8 @@ Each has an `id`, display name, and color.
 - Price modifiers per economy
 - Edit here to change what political systems exist or how they affect trade/events
 
-**`engine/src/types.rs`** — data enums:
-- `PoliticalType` — `Democracy`, `Theocracy`, `MilitaryDictatorship`, `Technocracy`, etc.
+**`engine/src/types/civilization.rs`** and **`engine/content-types/src/lib.rs`** — data enums:
+- `PoliticalType` — `RemembranceCompact`, `RequiemParliament`, `Murmuration`, `Kindness`, `SilenceMandate`, `Vigil`, `CovenantOfEchoes`, `WoundTithe`, `PalimpsestAuthority`, `TheAsking`, `Arrival`, `DriftSovereignty`, `CrownPatchwork`
 - `EconomyType` — economy categories per system
 - `GalaxyState` / `SystemSimState` — simulation state shapes
 - Edit here to add new political or economy types
@@ -69,7 +69,7 @@ Each has an `id`, display name, and color.
 3. Rebuild WASM: `npm run wasm:build` (or `cd engine && wasm-pack build --target web --out-dir pkg`)
 
 **Add a new political type:**
-1. `engine/src/types.rs` — add to `PoliticalType`
+1. `engine/content-types/src/lib.rs` — add to `PoliticalType`
 2. `engine/src/civilization.rs` — add derivation logic and trade effects
 3. Rebuild WASM
 

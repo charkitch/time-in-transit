@@ -11,7 +11,7 @@ Dyson shells are megastructure segments that orbit the iron star. They only appe
 
 ## Data structures
 
-**`engine/src/types.rs`** — Rust data sent over WASM boundary:
+**`engine/src/types/world.rs`** — Rust data sent over WASM boundary:
 - `DysonShellSegmentData` — full segment record: id, name, band/segment index, orbit params (`orbit_radius`, `orbit_speed`, `orbit_phase`, `orbit_inclination`, `orbit_node`), geometry (`curve_radius`, `arc_width`, `arc_height`), `color`, `interaction_mode`, `weather_bands`
 - `DysonInteractionMode` — currently only `TargetableOnly`
 - `DysonWeatherBandData` — per-band weather: `start_angle`, `end_angle`, `has_clouds`, `cloud_density`, `has_lightning`
@@ -36,14 +36,14 @@ Dyson shells are megastructure segments that orbit the iron star. They only appe
 
 ### Shell rendering (TypeScript / THREE.js)
 
-**`src/game/rendering/meshFactory.ts`** — mesh creation:
-- `makeDysonShellSegment()` (line ~578) — creates the curved shell mesh using `SphereGeometry` with `phiStart`/`phiLength`/`thetaStart`/`thetaLength` to cut a panel. Has a custom shader with procedural metallic surface using noise. The geometry is centered around phi=PI (the -Z direction in local space).
-- `addDysonWeatherLayer()` (line ~671) — adds a translucent weather overlay on the same geometry with clouds and animated lightning via shader uniforms (`uTime`, `uSeed`, band data).
+**`src/game/rendering/mesh/dyson.ts`** — mesh creation:
+- `makeDysonShellSegment()` creates the curved shell mesh using `SphereGeometry` with `phiStart`/`phiLength`/`thetaStart`/`thetaLength` to cut a panel. Has shader files under `src/game/rendering/mesh/shaders/`.
+- `addDysonWeatherLayer()` adds a translucent weather overlay on the same geometry with clouds and animated lightning.
 
-**`src/game/rendering/SceneRenderer.ts`** — placement and orbit:
-- **Initial placement** (~line 770): positions each shell in 3D using orbital mechanics (inclination + ascending node), then `lookAt(0,0,0)` + `rotateY(Math.PI)` to orient concave side toward star.
-- **Orbit update** in `updateOrbits()` (~line 1060): recomputes 3D position each frame using `computeDysonShellPosition()`, then re-orients with `lookAt` + `rotateY(Math.PI)`.
-- `computeDysonShellPosition()` — private helper that converts orbital elements (angle, radius, inclination, node) to Cartesian (x, y, z) coordinates using standard orbital mechanics formulas.
+**`src/game/rendering/scene/buildDysonShells.ts`** and **`src/game/rendering/scene/orbitAndNpcUpdates.ts`** — placement and orbit:
+- Initial placement positions each shell in 3D using orbital mechanics, then uses `lookAt(0,0,0)` plus a half-turn correction to orient the concave side toward the star.
+- Orbit updates recompute 3D position each frame using `computeDysonShellPosition()`, then re-orient with the same pattern.
+- `computeDysonShellPosition()` converts orbital elements (angle, radius, inclination, node) to Cartesian coordinates using standard orbital mechanics formulas.
 - Entity type is `'dyson_shell'` in the `SceneEntity` interface (has optional `orbitInclination` and `orbitNode` fields).
 
 ### Orientation — how it works
@@ -64,9 +64,7 @@ This distributes shells across a sphere rather than a flat ring.
 
 **`src/game/mechanics/DockingSystem.ts`** — `dyson_shell` entities count as nearby bodies for docking proximity checks.
 
-**`src/ui/HUD/Scanner.tsx`** — scanner renders shells as `#B9C2CF` colored dots, size 2.5.
-
-**`src/ui/HUD/HUD.tsx`** — when targeted, shows shell name and "DYSON SHELL" type label.
+**`src/ui/HUD/TargetInfoPanel.tsx`** and **`src/ui/HUD/HUD.tsx`** — when targeted, show shell name and "DYSON SHELL" type label.
 
 **`src/ui/SystemMap/SystemMap.tsx`** — system map draws shell orbit arcs and includes "Dyson Shell" in the legend.
 
@@ -79,10 +77,10 @@ This distributes shells across a sphere rather than a flat ring.
 2. Rebuild WASM: `cd engine && wasm-pack build --target web`
 
 **Change shell surface shader:**
-1. `src/game/rendering/meshFactory.ts` — edit the fragment shader in `makeDysonShellSegment()`
+1. `src/game/rendering/mesh/dyson.ts` and `src/game/rendering/mesh/shaders/dyson_shell*.glsl` — edit the shell mesh or shaders
 
 **Change weather/clouds/lightning:**
-1. `src/game/rendering/meshFactory.ts` — edit `addDysonWeatherLayer()` shader
+1. `src/game/rendering/mesh/dyson.ts` and `src/game/rendering/mesh/shaders/dyson_weather.frag.glsl` — edit `addDysonWeatherLayer()` shader
 2. `engine/src/system_generator.rs` — adjust `cloud_density` ranges or lightning flags
 
 **Change shell size or curvature:**
@@ -94,13 +92,13 @@ This distributes shells across a sphere rather than a flat ring.
 2. Rebuild WASM
 
 **Fix shell orientation (which side faces star):**
-1. `src/game/rendering/SceneRenderer.ts` — the `lookAt(0,0,0)` + `rotateY(Math.PI)` pattern in both initial placement and `updateOrbits()`. If shells face the wrong way, check that `rotateY(Math.PI)` follows every `lookAt` call.
+1. `src/game/rendering/scene/buildDysonShells.ts` and `src/game/rendering/scene/orbitAndNpcUpdates.ts` — check that initial placement and orbit updates both apply the same orientation correction after `lookAt`.
 
 **Change shell count or band structure:**
 1. `engine/src/system_generator.rs` — `band_count` (2–3) and `segment_count` (6–10)
 2. Rebuild WASM
 
 **Add new interaction modes:**
-1. `engine/src/types.rs` — add variant to `DysonInteractionMode`
+1. `engine/src/types/world.rs` — add variant to `DysonInteractionMode`
 2. `src/game/engine.ts` — update TS enum
 3. Handle new mode in renderer and game logic

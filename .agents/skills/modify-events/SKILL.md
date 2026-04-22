@@ -26,6 +26,8 @@ There are two types of narrative events:
 - `proximity_star/`
 - `proximity_base/`
 - `planet_landing/`
+- `dyson_landing/`
+- `topopolis_landing/`
 
 **`engine/src/content.rs`** — registers YAML files with `include_str!` for each pool. Edit this when:
 - Adding a new event file to an existing pool
@@ -35,7 +37,7 @@ There are two types of narrative events:
 - Changing availability logic (`EventCondition` behavior, trigger rules)
 - Changing cross-pool behavior (for example how triggered events are included)
 
-**`engine/src/lib.rs`** — maps runtime context to an `EventPool` in `get_game_event()`. Edit this when:
+**`engine/src/api_events.rs`** — maps runtime context to an `EventPool` in `get_game_event()`. Edit this when:
 - Adding a new event context string
 - Changing how landing context maps to secret base pools
 
@@ -56,7 +58,7 @@ There are two types of narrative events:
 
 ### Event schema
 
-**`engine/src/types.rs`** defines the YAML schema:
+**`engine/content-types/src/lib.rs`** defines the event YAML schema, with runtime player/chain types in `engine/src/types/player.rs`:
 - `GameEvent`
 - `EventChoice`
 - `EventMoment`
@@ -72,7 +74,7 @@ Touch this file (plus TS bridge/state handling) only when adding new fields or e
 
 **`src/ui/HUD/SystemEntryText.tsx`** — renders the staggered lines that appear on system entry. This is also where era-transition narration is displayed ("Centuries have passed...").
 
-**`engine/src/lib.rs`** — `build_system_payload()` assembles system entry lines. Edit here to:
+**`engine/src/system_payload.rs`** — `build_system_payload()` assembles system entry lines. Edit here to:
 - Add new entry text categories
 - Change era-crossing narration
 - Include new info in the entry summary
@@ -111,7 +113,7 @@ When the event references a specific topic (e.g., "quasar war", a faction's hist
 **Add a new landing event:**
 0. Read `story/universal_vibes.md` for tone; check `story/universal_truths/` for relevant lore
 1. Add a new YAML file under `engine/content/events/landing/`
-2. Register it in `engine/src/content.rs` inside `landing_events()`
+2. Register it in the matching loader function in `engine/src/content.rs`
 3. Rebuild WASM: `npm run wasm:build` (or `cd engine && wasm-pack build --target web --out-dir pkg`)
 4. Validate selection logic with `cd engine && cargo test events`
 
@@ -125,10 +127,10 @@ When the event references a specific topic (e.g., "quasar war", a faction's hist
 1. Only need `src/ui/LandingDialog/LandingDialog.tsx`
 
 **Change era-transition narration:**
-1. Only need `engine/src/lib.rs` — find `build_system_payload()`
+1. Only need `engine/src/system_payload.rs` — find `build_system_payload()`
 
 **Add a new choice effect type:**
-1. `engine/src/types.rs` — add field(s) on `ChoiceEffect` and serde defaults
+1. `engine/content-types/src/lib.rs` — add field(s) on `ChoiceEffect` and serde defaults
 2. Event YAMLs — use the new field in `effect`
 3. `src/game/engine.ts` — update TS type definitions if needed
 4. `src/game/Game.ts` and/or `src/game/GameState.ts` — apply the new effect in client state

@@ -37,15 +37,15 @@ Station work spans four areas:
 - `main_station_planet_id` selection
 - Edit here to change station frequency/distribution
 
-**`engine/src/types.rs`** — station-related data fields:
+**`engine/src/types/world.rs`** — station-related data fields:
 - `PlanetData.has_station`
 - `SolarSystemData.main_station_planet_id`
 
 ### Station rendering and in-system behavior
 
-**`src/game/rendering/meshFactory.ts`** — `makeStation()` mesh geometry
+**`src/game/rendering/mesh/entities.ts`** (exported through `src/game/rendering/meshFactory.ts`) — `makeStation()` mesh geometry
 
-**`src/game/rendering/SceneRenderer.ts`** — station entities:
+**`src/game/rendering/scene/buildPlanets.ts`** and **`src/game/rendering/scene/orbitAndNpcUpdates.ts`** — station entities:
 - Spawns station objects for planets with `hasStation`
 - Sets station orbit radius/speed relative to parent planet
 - Tags entities as `type: 'station'` for docking systems
@@ -71,12 +71,12 @@ Station work spans four areas:
 
 **Change how stations are distributed across planets/systems:**
 1. `engine/src/system_generator.rs`
-2. `engine/src/types.rs` (only if adding/changing station-related data shape)
+2. `engine/src/types/world.rs` (only if adding/changing station-related data shape)
 3. Rebuild WASM: `npm run wasm:build` (or `cd engine && wasm-pack build --target web --out-dir pkg`)
 
 **Change station look/shape:**
-1. `src/game/rendering/meshFactory.ts` (`makeStation`)
-2. `src/game/rendering/SceneRenderer.ts` (optional: orbit/scale/spawn behavior)
+1. `src/game/rendering/mesh/entities.ts` (`makeStation`)
+2. `src/game/rendering/scene/buildPlanets.ts` or `src/game/rendering/scene/orbitAndNpcUpdates.ts` (optional: orbit/scale/spawn behavior)
 
 **Change station interaction flow (dock -> landing -> docked -> undock):**
 1. `src/game/Game.ts` (flow control)

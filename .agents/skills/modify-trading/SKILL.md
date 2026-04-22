@@ -5,10 +5,10 @@ description: Guide for finding and modifying the trading/economy system in The Y
 
 ## Trade goods reference
 
-Current goods (in `engine/src/types.rs` as `GoodName`):
-`Food`, `Textiles`, `Radioactives`, `Liquor`, `Luxuries`, `Narcotics`, `Computers`
+Current goods (defined in `engine/content-types/src/lib.rs` as `GoodName` and re-exported through `engine/src/types/civilization.rs`):
+`StarwindRations`, `HullskinLace`, `BurialSunstone`, `RainChoirSpools`, `ReactorSalt`, `PilgrimMaps`, `WitnessInk`, `GraviticBone`, `EmbassyMasks`, `DreamResin`, `SilenceVials`, `JurisdictionSeals`, `DebtPetals`, `MemoryCaskets`, `OathFilaments`, `QuasarGlass`, `WeatherKeys`, `AncestralBackups`, `SurrenderCodes`, `ImpossibleSeeds`, `RelativisticAsh`, `PulsarSilk`, `CombatIntelligence`, `TransferPlasma`
 
-Economy types: defined in `engine/src/types.rs` as `EconomyType`.
+Economy types: defined in `engine/src/types/civilization.rs` as `EconomyType`.
 
 ---
 
@@ -22,13 +22,13 @@ Economy types: defined in `engine/src/types.rs` as `EconomyType`.
 - Which goods are available in which economies
 - Edit here to change prices, add goods, or change availability
 
-**`engine/src/types.rs`** — data structures:
+**`engine/src/types/civilization.rs`** and **`engine/content-types/src/lib.rs`** — data structures:
 - `GoodName` enum — all tradeable goods
 - `EconomyType` enum — economy categories
 - `MarketEntry` — price/quantity per good
 - Edit here to add a new good or economy type
 
-**`engine/src/civilization.rs`** — banned goods per political type. Edit here to change which goods are illegal in theocracies, dictatorships, etc.
+**`engine/src/civilization.rs`** and **`engine/src/trading.rs`** — legality and banned goods per political type. Edit here to change which goods are legal, licensed, or prohibited.
 
 ### NPC trading
 
@@ -63,7 +63,7 @@ Economy types: defined in `engine/src/types.rs` as `EconomyType`.
 2. Rebuild WASM: `npm run wasm:build` (or `cd engine && wasm-pack build --target web --out-dir pkg`)
 
 **Add a new trade good:**
-1. `engine/src/types.rs` — add to `GoodName`
+1. `engine/content-types/src/lib.rs` — add to `GoodName`
 2. `engine/src/trading.rs` — add price/availability data
 3. `engine/src/civilization.rs` — decide if it's ever banned
 4. `src/game/mechanics/NPCSystem.ts` — include in NPC cargo logic

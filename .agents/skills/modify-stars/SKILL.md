@@ -20,13 +20,13 @@ Current star types (defined as string literals): `G`, `K`, `M`, `F`, `A`, `WD` (
 - `star_radius_range()` — returns `(min, max)` radius for each type
 - These feed into the planet/system generation and are sent over the WASM boundary
 
-If the Rust colors diverge from `constants.ts`, the Rust values control what gets serialized into `SystemData`.
+If the Rust colors diverge from `src/game/constants.ts`, the Rust values control what gets serialized into `SolarSystemData`.
 
 ### Star rendering (in-system view)
 
-**`src/game/rendering/meshFactory.ts`** — primary rendering file for stars:
+**`src/game/rendering/scene/buildStar.ts`** and **`src/game/rendering/mesh/entities.ts`** — primary rendering files for stars:
 - `makeGlowSprite()` — creates the glowing star sprite seen when flying in a system
-- Star color and radius are sourced from the star's `SystemData` fields
+- Star color and radius are sourced from the star's `SolarSystemData` fields
 - Edit here to change glow size, sprite texture, additive blending, corona effects
 
 **`src/game/rendering/SceneRenderer.ts`** — places the star in the scene, sets up the point light that illuminates planets. Edit here to:
@@ -61,7 +61,7 @@ If the Rust colors diverge from `constants.ts`, the Rust values control what get
 3. Rebuild WASM: `npm run wasm:build` (or `cd engine && wasm-pack build --target web --out-dir pkg`)
 
 **Change star glow appearance:**
-1. Only `src/game/rendering/meshFactory.ts` — find `makeGlowSprite()`
+1. `src/game/rendering/mesh/entities.ts` — find `makeGlowSprite()`
 
 **Change starfield density/look:**
 1. Only `src/game/rendering/effects.ts` — find `createStarfield()`

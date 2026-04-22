@@ -5,9 +5,9 @@ description: Guide for finding and modifying ships — player ship physics, NPC 
 
 ## Ship categories in this codebase
 
-1. **Player ship** — the one the player flies; physics in `FlightModel.ts`, state in `GameState.ts`
-2. **NPC ships** — civilian/trade ships flying commerce routes; defined in `NPCSystem.ts`
-3. **Fleet battle ships** — combat ships in background faction battles; defined in `FleetBattleSystem.ts`
+1. **Player ship** — the one the player flies; physics in `src/game/flight/FlightModel.ts`, state in `src/game/GameState.ts`
+2. **NPC ships** — civilian/trade ships flying commerce routes; defined in `src/game/mechanics/NPCSystem.ts`
+3. **Fleet battle ships** — combat ships in background faction battles; defined in `src/game/mechanics/FleetBattleSystem.ts`
 
 ---
 
@@ -41,7 +41,7 @@ description: Guide for finding and modifying ships — player ship physics, NPC 
 - Trade route AI — movement between planets
 - Edit here for NPC ship count, behavior, cargo types
 
-**`src/game/rendering/SceneRenderer.ts`** — renders NPC ships via `makeNPCShipMesh()`. Also manages per-frame NPC movement.
+**`src/game/rendering/scene/buildNPCShips.ts`** and **`src/game/rendering/scene/orbitAndNpcUpdates.ts`** — render and update NPC ships via `makeNPCShipMesh()`.
 
 ### Fleet battle ships
 
@@ -52,11 +52,11 @@ description: Guide for finding and modifying ships — player ship physics, NPC 
 - Weapon range, damage, projectile speed
 - Edit here for combat AI, fleet ship stats, battle behavior
 
-**`src/game/rendering/SceneRenderer.ts`** — renders fleet ships via `makeFleetShipMesh()`. Manages fleet battle scene.
+**`src/game/rendering/scene/buildFleetBattle.ts`** and **`src/game/rendering/scene/orbitAndNpcUpdates.ts`** — render and update fleet battle ships via `makeFleetShipMesh()`.
 
 ### Ship visuals / meshes
 
-**`src/game/rendering/meshFactory.ts`** — all ship 3D geometry:
+**`src/game/rendering/mesh/entities.ts`** (exported through `src/game/rendering/meshFactory.ts`) — ship 3D geometry:
 - `makeNPCShipMesh()` — NPC civilian ship mesh
 - `makeFleetShipMesh()` — fleet combat ship mesh (varies by faction)
 - Edit here to change ship shapes, sizes, colors, materials
@@ -85,12 +85,12 @@ description: Guide for finding and modifying ships — player ship physics, NPC 
 1. `src/game/mechanics/FleetBattleSystem.ts`
 
 **Change ship 3D appearance:**
-1. `src/game/rendering/meshFactory.ts` — find `makeNPCShipMesh()` or `makeFleetShipMesh()`
+1. `src/game/rendering/mesh/entities.ts` — find `makeNPCShipMesh()` or `makeFleetShipMesh()`
 
 **Change weapon/projectile effects:**
 1. `src/game/rendering/effects.ts`
 
 **Add a new ship type:**
-1. `src/game/rendering/meshFactory.ts` — add new mesh function
+1. `src/game/rendering/mesh/entities.ts` — add new mesh function
 2. `src/game/mechanics/NPCSystem.ts` or `FleetBattleSystem.ts` — use the new mesh
-3. If the type needs Rust data: `engine/src/types.rs`, then rebuild WASM
+3. If the type needs Rust data: update the relevant module under `engine/src/types/`, then rebuild WASM

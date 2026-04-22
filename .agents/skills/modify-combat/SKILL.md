@@ -34,7 +34,7 @@ Combat in this game is primarily **fleet-vs-fleet battles** happening in the bac
 - Projectile update logic (movement, lifetime)
 - Edit here for visual changes to weapons, hits, and explosions
 
-**`src/game/rendering/SceneRenderer.ts`** — battle scene management:
+**`src/game/rendering/scene/buildFleetBattle.ts`** and **`src/game/rendering/scene/orbitAndNpcUpdates.ts`** — battle scene management:
 - Fleet ship mesh instantiation and updates
 - Integrates `FleetBattleSystem` state into the THREE.js scene
 - Handles adding/removing ships as they die
@@ -50,7 +50,7 @@ Combat in this game is primarily **fleet-vs-fleet battles** happening in the bac
 
 ### Fleet ship visuals
 
-**`src/game/rendering/meshFactory.ts`** — `makeFleetShipMesh()`:
+**`src/game/rendering/mesh/entities.ts`** (exported through `src/game/rendering/meshFactory.ts`) — `makeFleetShipMesh()`:
 - 3D geometry for combat ships
 - Faction-based color/shape variation
 - Edit here to change what combat ships look like
@@ -70,7 +70,7 @@ Combat in this game is primarily **fleet-vs-fleet battles** happening in the bac
 1. `src/game/rendering/effects.ts` — `createBattleProjectiles()` / `createBattleExplosions()`
 
 **Change combat ship visuals:**
-1. `src/game/rendering/meshFactory.ts` — `makeFleetShipMesh()`
+1. `src/game/rendering/mesh/entities.ts` — `makeFleetShipMesh()`
 
 **Change when/where battles trigger:**
 1. `src/game/Game.ts` — find proximity/trigger checks

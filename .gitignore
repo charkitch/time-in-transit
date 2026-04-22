@@ -1,5 +1,7 @@
 node_modules
 dist/
 engine/target
+__pycache__/
+*.py[cod]
 test-results/
 tests/playwright-report/
