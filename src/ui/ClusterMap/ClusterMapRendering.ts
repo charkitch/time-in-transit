@@ -49,20 +49,28 @@ export function drawClusterMap(params: DrawClusterMapParams): void {
 
   // Range ring
   const [cx, cy] = toCanvas(currentSys.x, currentSys.y, viewport);
-  const rangePixels = (HYPERSPACE.maxRange / (viewport.maxX - viewport.minX)) * MAP_W;
+  const rangePixelsX = (HYPERSPACE.maxRange / (viewport.maxX - viewport.minX)) * MAP_W;
+  const rangePixelsY = (HYPERSPACE.maxRange / (viewport.maxY - viewport.minY)) * MAP_H;
 
-  drawRangeRing(ctx, cx, cy, rangePixels);
-  drawSystems(ctx, viewport, cx, cy, params, chainTargetIds, simStateById, fontScale);
+  drawRangeRing(ctx, cx, cy, rangePixelsX, rangePixelsY);
+  drawFocusVector(ctx, viewport, cx, cy, params);
+  drawSystems(ctx, viewport, params, chainTargetIds, simStateById, fontScale);
   drawOffscreenIndicators(ctx, viewport, cluster, hyperspaceTarget, chainTargetIds, fontScale);
 }
 
-function drawRangeRing(ctx: CanvasRenderingContext2D, cx: number, cy: number, rangePixels: number): void {
+function drawRangeRing(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  rangePixelsX: number,
+  rangePixelsY: number,
+): void {
   // Soft outer glow pass
   ctx.strokeStyle = 'rgba(68, 220, 255, 0.22)';
   ctx.lineWidth = 7;
   ctx.setLineDash([]);
   ctx.beginPath();
-  ctx.arc(cx, cy, rangePixels, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy, rangePixelsX, rangePixelsY, 0, 0, Math.PI * 2);
   ctx.stroke();
 
   // Crisp primary ring pass
@@ -70,7 +78,7 @@ function drawRangeRing(ctx: CanvasRenderingContext2D, cx: number, cy: number, ra
   ctx.lineWidth = 2.5;
   ctx.setLineDash([10, 4]);
   ctx.beginPath();
-  ctx.arc(cx, cy, rangePixels, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy, rangePixelsX, rangePixelsY, 0, 0, Math.PI * 2);
   ctx.stroke();
   ctx.setLineDash([]);
 }
@@ -78,8 +86,6 @@ function drawRangeRing(ctx: CanvasRenderingContext2D, cx: number, cy: number, ra
 function drawSystems(
   ctx: CanvasRenderingContext2D,
   viewport: MapViewport,
-  cx: number,
-  cy: number,
   params: DrawClusterMapParams,
   chainTargetIds: Set<SystemId>,
   simStateById: Map<SystemId, SystemSimState>,
@@ -99,16 +105,6 @@ function drawSystems(
     const isTarget = sys.id === hyperspaceTarget;
     const isVisited = visitedSystems.has(sys.id);
     const summary = clusterSummaryById.get(sys.id);
-
-    // Line to reachable
-    if (isReachable) {
-      ctx.strokeStyle = 'rgba(51,255,136,0.15)';
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.lineTo(sx, sy);
-      ctx.stroke();
-    }
 
     const color = STAR_TYPE_COLOR[sys.starType] ?? '#FFFFFF';
     const r = isCurrent ? 7 : isTarget ? 6 : 4;
@@ -139,6 +135,8 @@ function drawSystems(
       starFill = '#33FF88';
     } else if (isTarget) {
       starFill = '#44CCFF';
+    } else if (isReachable) {
+      starFill = isVisited ? applyAlpha(color, 0.95) : applyAlpha(color, 0.9);
     } else if (isVisited) {
       const yearsSince = galaxyYear - (lastVisitYear[sys.id] ?? galaxyYear);
       const staleness = Math.max(0.3, 1 - yearsSince / 1000);
@@ -152,7 +150,11 @@ function drawSystems(
     ctx.fillStyle = starFill;
     ctx.fill();
 
-    if (!isVisited && !isReachable && !isCurrent) {
+    if (isReachable && !isCurrent && !isTarget) {
+      ctx.strokeStyle = 'rgba(102,255,204,0.65)';
+      ctx.lineWidth = 1.25;
+      ctx.stroke();
+    } else if (!isVisited && !isReachable && !isCurrent) {
       ctx.strokeStyle = 'rgba(255,255,255,0.15)';
       ctx.lineWidth = 1;
       ctx.stroke();
@@ -268,6 +270,38 @@ function drawSystems(
     ctx.font = `${Math.round(9 * fontScale)}px Courier New`;
     ctx.fillText(sys.name.toUpperCase(), sx + Math.round(8 * fontScale), sy + Math.round(4 * fontScale));
   }
+}
+
+function drawFocusVector(
+  ctx: CanvasRenderingContext2D,
+  viewport: MapViewport,
+  cx: number,
+  cy: number,
+  params: DrawClusterMapParams,
+): void {
+  const { hovered, hyperspaceTarget, currentSystemId, cluster, reachableIds } = params;
+  const hoveredReachable = hovered && hovered.id !== currentSystemId && reachableIds.has(hovered.id)
+    ? hovered
+    : null;
+  const selectedTarget = hyperspaceTarget !== null ? cluster[hyperspaceTarget] : null;
+  const focusSystem = hoveredReachable
+    ?? (selectedTarget && selectedTarget.id !== currentSystemId && reachableIds.has(selectedTarget.id)
+      ? selectedTarget
+      : null);
+  if (!focusSystem || focusSystem.id === currentSystemId || !reachableIds.has(focusSystem.id)) return;
+
+  const [fx, fy] = toCanvas(focusSystem.x, focusSystem.y, viewport);
+
+  ctx.strokeStyle = hoveredReachable?.id === focusSystem.id
+    ? 'rgba(255,255,255,0.45)'
+    : 'rgba(68,204,255,0.55)';
+  ctx.lineWidth = 1.25;
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(fx, fy);
+  ctx.stroke();
+  ctx.setLineDash([]);
 }
 
 function drawOffscreenIndicators(

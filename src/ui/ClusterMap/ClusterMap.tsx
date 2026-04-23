@@ -355,7 +355,7 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
                 </div>
               )}
               <div className={styles.hint} style={{ marginTop: recentJumps.length > 0 ? '8px' : 0 }}>
-                {isMobile ? 'Drag to pan local stars' : 'Click to select target'}<br />
+                {isMobile ? 'Drag to pan local stars' : 'Click a star inside the ring to target'}<br />
                 {isMobile ? 'Tap JUMP to initiate' : 'Click outside or ✕ to close'}
               </div>
             </div>
