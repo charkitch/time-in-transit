@@ -91,7 +91,7 @@ export function edgePointForOffscreen(x: number, y: number, pad = 16): [number, 
 export const STAR_TYPE_COLOR: Record<string, string> = {
   G: '#FFEE88', K: '#FFAA44', M: '#FF6633', F: '#FFFFFF', A: '#AABBFF',
   WD: '#F0F0FF', HE: '#88CCAA', NS: '#CCDDFF', PU: '#44AAFF', XB: '#FF6688',
-  MG: '#DD44FF', BH: '#220022', XBB: '#FF4466', MQ: '#67D8FF', SGR: '#FFAA22',
+  MG: '#DD44FF', BH: '#220022', XBB: '#FF4466', MQ: '#67D8FF',
 };
 
 export function applyAlpha(hex: string, alpha: number): string {

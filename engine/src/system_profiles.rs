@@ -42,7 +42,7 @@ const MOON_WEIGHTS_DEAD: &[(SurfaceType, f64)] = &[
     (SurfaceType::Desert, 0.06),
 ];
 
-// Harsh compact (NS, PU, MG, SGR) — radiation-flooded, no habitable worlds
+// Harsh compact (NS, PU, MG) — radiation-flooded, no habitable worlds
 const ROCKY_WEIGHTS_HARSH: &[(SurfaceType, f64)] = &[
     (SurfaceType::Barren, 0.50),
     (SurfaceType::Volcanic, 0.28),
@@ -124,17 +124,15 @@ pub fn system_profile_for(st: StarType, special: SpecialSystemKind) -> SystemPro
             asteroid_chance: 0.65,
             ring_chance: 0.50,
         },
-        StarType::NeutronStar | StarType::Pulsar | StarType::Magnetar | StarType::GammaRepeater => {
-            SystemProfile {
-                rocky_weights: ROCKY_WEIGHTS_HARSH,
-                moon_weights: MOON_WEIGHTS_HARSH,
-                gas_giant_types: GAS_HARSH,
-                inner_count: (0, 2),
-                outer_count: (1, 2),
-                asteroid_chance: 0.70,
-                ring_chance: 0.40,
-            }
-        }
+        StarType::NeutronStar | StarType::Pulsar | StarType::Magnetar => SystemProfile {
+            rocky_weights: ROCKY_WEIGHTS_HARSH,
+            moon_weights: MOON_WEIGHTS_HARSH,
+            gas_giant_types: GAS_HARSH,
+            inner_count: (0, 2),
+            outer_count: (1, 2),
+            asteroid_chance: 0.70,
+            ring_chance: 0.40,
+        },
         StarType::BlackHole
         | StarType::XrayBinary
         | StarType::XrayBurster

@@ -22,7 +22,6 @@ pub fn star_color(st: StarType) -> u32 {
         StarType::BlackHole => 0x220022,
         StarType::XrayBurster => 0xFF4466,
         StarType::Microquasar => 0x67D8FF,
-        StarType::GammaRepeater => 0xFFAA22,
         StarType::Iron => 0x2A2A2A,
     }
 }
@@ -39,7 +38,6 @@ pub fn star_radius_range(st: StarType) -> (f64, f64) {
         StarType::BlackHole => (90.0, 140.0),
         StarType::XrayBurster => (28.0, 48.0),
         StarType::Microquasar => (80.0, 120.0),
-        StarType::GammaRepeater => (8.0, 12.0),
         _ => (400.0, 600.0),
     }
 }

@@ -40,7 +40,6 @@ pub(crate) fn pick_station_archetype(star: &StarSystemData, rng: &mut Prng) -> S
             | StarType::XrayBinary
             | StarType::XrayBurster
             | StarType::Microquasar
-            | StarType::GammaRepeater
             | StarType::Iron
     );
     let mut alien_weight = 0.12 + f64::max(0.0, (star.tech_level - 4) as f64 * 0.05);

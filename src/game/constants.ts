@@ -25,7 +25,6 @@ export const PALETTE = {
   starBH:           0x220022,
   starXBB:          0xFF4466,
   starMQ:           0x67D8FF,
-  starSGR:          0xFFAA22,
   starIron:         0x2A2A2A,
   ambient:          0x112244,
   wireframe:        0x33FF88,
@@ -136,7 +135,6 @@ export const STAR_COLORS: Record<string, number> = {
   BH: PALETTE.starBH,
   XBB: PALETTE.starXBB,
   MQ: PALETTE.starMQ,
-  SGR: PALETTE.starSGR,
   IRON: PALETTE.starIron,
 };
 
@@ -164,7 +162,6 @@ export const STAR_ATTRIBUTES: Record<string, StarAttributes> = {
   BH:   { glow: true,  glowMul: 6,  stellarEffects: true  },
   XBB:  { glow: true,  glowMul: 6,  stellarEffects: true  },
   MQ:   { glow: true,  glowMul: 14, stellarEffects: true  },
-  SGR:  { glow: true,  glowMul: 6,  stellarEffects: true  },
   IRON: { glow: false, glowMul: 0,  stellarEffects: false },
 };
 
@@ -182,7 +179,6 @@ export const STAR_TYPE_DISPLAY: Record<string, string> = {
   BH: 'BLACK HOLE',
   XBB: 'X-RAY BURSTER',
   MQ: 'MICROQUASAR',
-  SGR: 'SGR',
   IRON: 'IRON STAR',
 };
 
@@ -238,10 +234,6 @@ export const STAR_DESCRIPTIONS: Record<string, { desc: string; wiki: string }> =
   MQ: {
     desc: "A Microquasar. A stellar-mass black hole feeding from a companion star and launching enormous relativistic jets.",
     wiki: "https://en.wikipedia.org/wiki/Microquasar"
-  },
-  SGR: {
-    desc: "A Soft Gamma Repeater. A magnetar that emits large bursts of gamma rays and X-rays at irregular intervals.",
-    wiki: "https://en.wikipedia.org/wiki/Soft_gamma_repeater"
   },
   IRON: {
     desc: "An Iron Star. A hypothetical type of compact star that could form in the extremely distant future via quantum tunneling.",

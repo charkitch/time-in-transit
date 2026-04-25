@@ -59,8 +59,6 @@ pub enum StarType {
     XrayBurster,
     #[serde(rename = "MQ")]
     Microquasar,
-    #[serde(rename = "SGR")]
-    GammaRepeater,
     #[serde(rename = "IRON")]
     Iron,
 }
@@ -80,11 +78,10 @@ impl StarType {
         StarType::BlackHole,
         StarType::XrayBurster,
         StarType::Microquasar,
-        StarType::GammaRepeater,
         // StarType::Iron is hand-placed, not randomly generated
     ];
     pub const WEIGHTS: &'static [f64] = &[
-        0.16, 0.13, 0.11, 0.07, 0.05, 0.08, 0.07, 0.06, 0.05, 0.06, 0.05, 0.07, 0.01, 0.13,
+        0.16, 0.13, 0.11, 0.07, 0.05, 0.08, 0.07, 0.06, 0.05, 0.06, 0.05, 0.07, 0.01,
     ];
 
     pub const COMMON: &'static [StarType] = &[

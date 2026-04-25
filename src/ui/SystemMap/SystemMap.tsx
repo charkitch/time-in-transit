@@ -81,7 +81,7 @@ const STAR_TYPE_LABELS: Record<string, string> = {
   G: 'Yellow dwarf', K: 'Orange dwarf', M: 'Red dwarf', F: 'White star',
   A: 'Blue-white star', WD: 'White dwarf', HE: 'Helium star', NS: 'Neutron star',
   PU: 'Pulsar', XB: 'X-ray binary', MG: 'Magnetar', BH: 'Black hole',
-  XBB: 'X-ray binary', MQ: 'Microquasar', SGR: 'Subgiant', IRON: 'Iron star',
+  XBB: 'X-ray binary', MQ: 'Microquasar', IRON: 'Iron star',
 };
 
 const NPC_COLOR_HUMAN = '#AADDFF';

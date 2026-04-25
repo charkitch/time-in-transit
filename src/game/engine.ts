@@ -30,7 +30,24 @@ import type { SystemId, GalaxyYear, FactionId } from './types';
 
 // ─── Types matching Rust camelCase serde output ─────────────────────────────
 
-export type StarType = 'G' | 'K' | 'M' | 'F' | 'A' | 'WD' | 'NS' | 'PU' | 'XB' | 'MG' | 'BH' | 'XBB' | 'MQ' | 'SGR' | 'IRON';
+export const STAR_TYPES = [
+  'G',
+  'K',
+  'M',
+  'F',
+  'A',
+  'WD',
+  'NS',
+  'PU',
+  'XB',
+  'MG',
+  'BH',
+  'XBB',
+  'MQ',
+  'IRON',
+] as const;
+
+export type StarType = (typeof STAR_TYPES)[number];
 
 export type SurfaceType =
   | 'continental'
@@ -538,4 +555,3 @@ export function engineStationRepair(): void {
 export function engineTickFlight(context: FlightTickContext): FlightTickResult {
   return JSON.parse(tick_flight(JSON.stringify(context)));
 }
-
