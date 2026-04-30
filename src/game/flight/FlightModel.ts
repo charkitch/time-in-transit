@@ -8,6 +8,19 @@ const _dysonLocalPos = new THREE.Vector3();
 const _dysonNormalWorld = new THREE.Vector3();
 const _dysonTargetWorld = new THREE.Vector3();
 const _topoVec = new THREE.Vector3();
+const _topoTangentVelocity = new THREE.Vector3();
+
+const TOPOPOLIS_INTERIOR_BOUNCE_RESTITUTION = 0.75;
+const TOPOPOLIS_INTERIOR_BOUNCE_TANGENTIAL_DAMPING = 0.92;
+export const TOPOPOLIS_INTERIOR_BOUNCE_SHIELD_DAMAGE = 18;
+export const TOPOPOLIS_INTERIOR_BOUNCE_HEAT_DAMAGE = 4;
+
+export interface CollisionResult {
+  entity: SceneEntity;
+  lethal: boolean;
+  shieldDamage?: number;
+  heatDamage?: number;
+}
 
 function angleDelta(a: number, b: number): number {
   return Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
@@ -106,10 +119,10 @@ export class FlightModel {
     return Math.max(0.5, Math.min(3.0, dist * HYPERSPACE.fuelPerUnit));
   }
 
-  resolveCollisions(shipGroup: THREE.Group, collidables: SceneEntity[]): SceneEntity | null {
+  resolveCollisions(shipGroup: THREE.Group, collidables: SceneEntity[]): CollisionResult | null {
     const shipPos = shipGroup.position;
     const SHIP_RADIUS = 10;
-    let hitEntity: SceneEntity | null = null;
+    let hit: CollisionResult | null = null;
     for (const body of collidables) {
       if (resolveDysonShellCollision(shipPos, body, SHIP_RADIUS, _dysonNormalWorld)) {
         const dot = this.velocity.dot(_dysonNormalWorld);
@@ -117,7 +130,7 @@ export class FlightModel {
           this.velocity.addScaledVector(_dysonNormalWorld, -dot * 1.5);
           this.velocity.multiplyScalar(0.5);
         }
-        hitEntity = body;
+        hit = { entity: body, lethal: true };
         continue;
       }
       if (body.type === 'dyson_shell') continue;
@@ -181,10 +194,21 @@ export class FlightModel {
             shipPos.copy(closest).addScaledVector(normal, tubeRadius + side * thickness);
             const dot = this.velocity.dot(normal);
             if (dot * side < 0) {
-              this.velocity.addScaledVector(normal, -dot * 1.5);
-              this.velocity.multiplyScalar(0.5);
+              if (side < 0) {
+                _topoTangentVelocity.copy(this.velocity).addScaledVector(normal, -dot);
+                this.velocity.copy(_topoTangentVelocity.multiplyScalar(TOPOPOLIS_INTERIOR_BOUNCE_TANGENTIAL_DAMPING));
+                this.velocity.addScaledVector(normal, -dot * TOPOPOLIS_INTERIOR_BOUNCE_RESTITUTION);
+              } else {
+                this.velocity.addScaledVector(normal, -dot * 1.5);
+                this.velocity.multiplyScalar(0.5);
+              }
             }
-            hitEntity = body;
+            hit = {
+              entity: body,
+              lethal: side > 0,
+              shieldDamage: side < 0 ? TOPOPOLIS_INTERIOR_BOUNCE_SHIELD_DAMAGE : undefined,
+              heatDamage: side < 0 ? TOPOPOLIS_INTERIOR_BOUNCE_HEAT_DAMAGE : undefined,
+            };
           }
         }
         continue;
@@ -203,7 +227,7 @@ export class FlightModel {
               this.velocity.addScaledVector(normal, -dot * 1.5);
               this.velocity.multiplyScalar(0.5);
             }
-            hitEntity = body;
+            hit = { entity: body, lethal: body.type !== 'station' };
             break;
           }
         }
@@ -211,7 +235,7 @@ export class FlightModel {
 
       // Central sphere — used alone for simple bodies, or as a hub fallback
       // for stations that also have ring collision samples
-      if (!hitEntity || (body.type === 'station' && hitEntity.type === 'station')) {
+      if (!hit || (body.type === 'station' && hit.entity.type === 'station')) {
         const diff = _collisionVec.copy(shipPos).sub(body.worldPos);
         const dist = diff.length();
         const minDist = body.collisionRadius;
@@ -223,11 +247,11 @@ export class FlightModel {
             this.velocity.addScaledVector(normal, -dot * 1.5);
             this.velocity.multiplyScalar(0.5);
           }
-          hitEntity = body;
+          hit = { entity: body, lethal: body.type !== 'station' };
         }
       }
     }
-    return hitEntity;
+    return hit;
   }
 
   reset() {

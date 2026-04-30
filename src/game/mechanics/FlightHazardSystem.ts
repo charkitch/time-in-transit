@@ -73,6 +73,9 @@ function pickActiveHazard(effects: HazardEffect[]): HazardType {
   for (const e of effects) {
     if (e.shieldDamageRate > 0) return e.hazardType;
   }
+  for (const e of effects) {
+    if (e.heatRate > 0 && e.hazardType !== 'None') return e.hazardType;
+  }
   return 'None';
 }
 
@@ -190,6 +193,8 @@ export class FlightHazardSystem {
     isDead: boolean,
     onDeath: (msg: string[]) => void,
     boostFuelConsumed: number,
+    collisionShieldDamage = 0,
+    collisionHeatDamage = 0,
   ): void {
     const effects: HazardEffect[] = [];
     const cargoHarvests: CargoHarvest[] = [];
@@ -481,6 +486,16 @@ export class FlightHazardSystem {
 
     // ── Aggregate into FlightTickContext ──
     const isScooping = this.scoopingFuel || this.gasGiantScoopingFuel || this.harvestingFuel;
+    if (collisionShieldDamage > 0 || collisionHeatDamage > 0) {
+      effects.push({
+        heatRate: collisionHeatDamage / Math.max(dt, 0.001),
+        shieldDamageRate: collisionShieldDamage / Math.max(dt, 0.001),
+        fuelRate: 0,
+        alert: 'TOPOPOLIS WALL IMPACT',
+        hazardType: 'TopopolisCollision',
+        zone: 'lethal',
+      });
+    }
     const heatRate = effects.reduce((sum, e) => sum + e.heatRate, 0);
     const shieldDamageRate = effects.reduce((sum, e) => sum + e.shieldDamageRate, 0);
     const fuelRate = effects.reduce((sum, e) => sum + e.fuelRate, 0)

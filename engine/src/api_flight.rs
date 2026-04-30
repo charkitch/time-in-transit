@@ -129,7 +129,11 @@ pub fn tick_flight(context_json: &str) -> Result<String, JsValue> {
 
         ps.shields -= ctx.shield_damage_rate * ctx.dt;
 
-        if !ctx.is_dead && ps.heat < REGEN_HEAT_CEIL && ps.shields < 100.0 {
+        if !ctx.is_dead
+            && ctx.active_hazard == HazardType::None
+            && ps.heat < REGEN_HEAT_CEIL
+            && ps.shields < 100.0
+        {
             ps.shields += SHIELD_REGEN_RATE * ctx.dt;
         }
 
@@ -145,9 +149,10 @@ pub fn tick_flight(context_json: &str) -> Result<String, JsValue> {
             }
         }
 
-        let dead = !ctx.is_dead
-            && ps.shields <= 0.0
-            && (ctx.shield_damage_rate > 0.0 || ps.heat >= HEAT_MAX);
+        let shield_damage_can_kill =
+            ctx.shield_damage_rate > 0.0 && ctx.active_hazard != HazardType::TopopolisCollision;
+        let dead =
+            !ctx.is_dead && ps.shields <= 0.0 && (shield_damage_can_kill || ps.heat >= HEAT_MAX);
         let death_cause = if dead {
             Some(
                 if ps.heat >= HEAT_MAX && ctx.active_hazard == HazardType::None {

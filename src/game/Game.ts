@@ -279,11 +279,13 @@ export class Game {
 
     // Collision avoidance — push ship out of celestial bodies
     const collidables = this.sceneRenderer.getCollidables();
-    const hitEntity = this.flightModel.resolveCollisions(this.sceneRenderer.shipGroup, collidables);
-    if (hitEntity && hitEntity.type !== 'station' && !this.isDead) {
-      this.triggerDeath(DEATH_MESSAGES[COLLISION_HAZARD_MAP[hitEntity.type]!] ?? DEFAULT_DEATH);
+    const collision = this.flightModel.resolveCollisions(this.sceneRenderer.shipGroup, collidables);
+    if (collision?.lethal && !this.isDead) {
+      this.triggerDeath(DEATH_MESSAGES[COLLISION_HAZARD_MAP[collision.entity.type]!] ?? DEFAULT_DEATH);
       return;
     }
+    const collisionShieldDamage = collision?.lethal || state.player.shields <= 0 ? 0 : collision?.shieldDamage ?? 0;
+    const collisionHeatDamage = collision?.lethal || state.player.shields > 0 ? 0 : collision?.heatDamage ?? 0;
 
     const pos = this.sceneRenderer.shipGroup.position;
     const quat = this.sceneRenderer.shipGroup.quaternion;
@@ -303,7 +305,7 @@ export class Game {
     this.scanning.tick(dt, state, pos);
 
     const boostFuelConsumed = INFINITE_FUEL_DEV ? 0 : fuelConsumed;
-    this.hazards.tick(dt, state, pos, this.isDead, (msg) => this.triggerDeath(msg), boostFuelConsumed);
+    this.hazards.tick(dt, state, pos, this.isDead, (msg) => this.triggerDeath(msg), boostFuelConsumed, collisionShieldDamage, collisionHeatDamage);
 
     this.tryProximityGameEvent(state, pos);
 
