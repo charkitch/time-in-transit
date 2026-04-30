@@ -5,6 +5,7 @@ import {
 import type { SolarSystemData } from '../../engine';
 import { PRNG } from '../../generation/prng';
 import type { SceneEntity } from './types';
+import { computeSecretBaseCollisionSpheres } from './buildSystemSceneUtils';
 
 // ─── Base size/collision constants ──────────────────────────────────────────
 
@@ -59,6 +60,7 @@ export function buildSecretBases(params: {
         baseGroup = makeMaximumSpaceBase(baseSize);
         break;
     }
+    const collisionSpheres = computeSecretBaseCollisionSpheres(base.type, baseSize);
     baseGroup.position.set(
       Math.cos(base.orbitPhase) * base.orbitRadius,
       0,
@@ -78,6 +80,12 @@ export function buildSecretBases(params: {
       worldPos: new THREE.Vector3(),
       collisionRadius: baseCollisionRadius,
       interactionRadius: baseSize,
+      collisionSpheresLocal: collisionSpheres,
+      collisionSpheresWorld: collisionSpheres.map(sphere => ({
+        center: sphere.center.clone(),
+        radius: sphere.radius,
+      })),
+      collisionSampleOnly: true,
       stationSpinAxis: new THREE.Vector3(0, 0, 1),
     });
 

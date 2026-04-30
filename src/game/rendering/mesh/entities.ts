@@ -334,30 +334,42 @@ export function makeGlowSprite(color: number, size: number): THREE.Sprite {
 }
 
 /** Instanced asteroid field */
+export interface AsteroidBeltMeshResult {
+  mesh: THREE.InstancedMesh;
+  collisionSpheres: Array<{ center: THREE.Vector3; radius: number }>;
+  halfHeight: number;
+  maxAsteroidRadius: number;
+}
+
 export function makeAsteroidBelt(
   innerRadius: number,
   outerRadius: number,
   count: number,
   rng: () => number,
-): THREE.InstancedMesh {
+): AsteroidBeltMeshResult {
   const geo = new THREE.IcosahedronGeometry(1, 0);
   const mat = new THREE.MeshLambertMaterial({ color: 0x888877 });
   const mesh = new THREE.InstancedMesh(geo, mat, count);
 
   const dummy = new THREE.Object3D();
+  const collisionSpheres: Array<{ center: THREE.Vector3; radius: number }> = [];
+  const halfHeight = 100;
+  let maxAsteroidRadius = 0;
   for (let i = 0; i < count; i++) {
     const angle = rng() * Math.PI * 2;
     const r = innerRadius + rng() * (outerRadius - innerRadius);
-    const y = (rng() - 0.5) * 200;
+    const y = (rng() - 0.5) * halfHeight * 2;
     const scale = 8 + rng() * 25;
     dummy.position.set(Math.cos(angle) * r, y, Math.sin(angle) * r);
     dummy.rotation.set(rng() * Math.PI * 2, rng() * Math.PI * 2, rng() * Math.PI * 2);
     dummy.scale.setScalar(scale);
     dummy.updateMatrix();
     mesh.setMatrixAt(i, dummy.matrix);
+    collisionSpheres.push({ center: dummy.position.clone(), radius: scale });
+    maxAsteroidRadius = Math.max(maxAsteroidRadius, scale);
   }
   mesh.instanceMatrix.needsUpdate = true;
-  return mesh;
+  return { mesh, collisionSpheres, halfHeight, maxAsteroidRadius };
 }
 
 function shipScale(sizeClass: NPCShipSizeClass): number {

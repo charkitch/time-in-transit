@@ -235,7 +235,21 @@ export function updateNPCShips(params: {
       }
       if (body.type === 'dyson_shell') continue;
 
-      if (body.collisionSamplesWorld && body.collisionSampleRadius) {
+      if (body.collisionSpheresWorld) {
+        let pushed = false;
+        for (const sphere of body.collisionSpheresWorld) {
+          const minDist = sphere.radius + 10;
+          const diff = _npcCollisionVec.copy(entity.group.position).sub(sphere.center);
+          const bodyDist = diff.length();
+          if (bodyDist < minDist && bodyDist > 0.001) {
+            const normal = diff.normalize();
+            entity.group.position.copy(sphere.center).addScaledVector(normal, minDist);
+            pushed = true;
+            break;
+          }
+        }
+        if (pushed || body.collisionSampleOnly) continue;
+      } else if (body.collisionSamplesWorld && body.collisionSampleRadius) {
         let pushed = false;
         const minDist = body.collisionSampleRadius + 10;
         for (const sample of body.collisionSamplesWorld) {
@@ -249,7 +263,9 @@ export function updateNPCShips(params: {
           }
         }
         if (pushed) continue;
-      } else {
+      }
+
+      if (!body.collisionSampleOnly) {
         const diff = _npcCollisionVec.copy(entity.group.position).sub(body.worldPos);
         const bodyDist = diff.length();
         const minDist = body.collisionRadius + 10;
@@ -277,6 +293,15 @@ export function updateNPCShips(params: {
 }
 
 function updateCollisionSamples(entity: SceneEntity): void {
+  if (entity.collisionSpheresLocal && entity.collisionSpheresWorld) {
+    const sphereCount = Math.min(entity.collisionSpheresLocal.length, entity.collisionSpheresWorld.length);
+    for (let i = 0; i < sphereCount; i++) {
+      _dysonSampleWorld.copy(entity.collisionSpheresLocal[i].center);
+      entity.group.localToWorld(_dysonSampleWorld);
+      entity.collisionSpheresWorld[i].center.copy(_dysonSampleWorld);
+      entity.collisionSpheresWorld[i].radius = entity.collisionSpheresLocal[i].radius;
+    }
+  }
   if (!entity.collisionSamplesLocal || !entity.collisionSamplesWorld) return;
   const count = Math.min(entity.collisionSamplesLocal.length, entity.collisionSamplesWorld.length);
   for (let i = 0; i < count; i++) {

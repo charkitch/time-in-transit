@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { StationArchetype } from '../../archetypes';
+import type { CollisionSphere } from './types';
 
 export const PLANET_COLLISION_SCALE = 1.04;
 export const GALAXY_SEED = 0x5AFEF00D;
@@ -88,84 +89,126 @@ export function computeDysonCollisionSamples(
 export function computeStationCollisionSamples(
   archetype: StationArchetype,
   size: number,
-): { local: THREE.Vector3[]; sampleRadius: number } | null {
+): { local: CollisionSphere[] } {
+  const local: CollisionSphere[] = [];
+  const addSphere = (x: number, y: number, z: number, radius: number): void => {
+    local.push({ center: new THREE.Vector3(x, y, z), radius });
+  };
+  const addRing = (ringRadius: number, sampleRadius: number, rotateX = 0, sampleCount = 32): void => {
+    for (let i = 0; i < sampleCount; i++) {
+      const a = (i / sampleCount) * Math.PI * 2;
+      const center = new THREE.Vector3(Math.cos(a) * ringRadius, Math.sin(a) * ringRadius, 0);
+      if (rotateX !== 0) center.applyAxisAngle(new THREE.Vector3(1, 0, 0), rotateX);
+      local.push({ center, radius: sampleRadius });
+    }
+  };
+  const addRadialArm = (
+    angle: number,
+    rMin: number,
+    rMax: number,
+    radius: number,
+    plane: 'xy' | 'xz',
+    steps = 6,
+  ): void => {
+    const ca = Math.cos(angle);
+    const sa = Math.sin(angle);
+    for (let j = 0; j < steps; j++) {
+      const t = steps === 1 ? 0 : j / (steps - 1);
+      const r = rMin + (rMax - rMin) * t;
+      if (plane === 'xy') addSphere(ca * r, sa * r, 0, radius);
+      else addSphere(ca * r, 0, sa * r, radius);
+    }
+  };
+
   let ringRadius = 0;
-  let tubeRadius = 0;
-  let sampleRadius = 0;
   let rotateX = 0;
 
   switch (archetype) {
-    case 'trade_hub':
+    case 'trade_hub': {
       ringRadius = size;
-      tubeRadius = size * 0.18;
-      sampleRadius = size * 0.08;
+      addRing(ringRadius, size * 0.18);
+      addSphere(0, 0, 0, size * 0.28);
       break;
-    case 'refinery_spindle':
+    }
+    case 'refinery_spindle': {
       ringRadius = size * 0.75;
-      tubeRadius = size * 0.08;
-      sampleRadius = size * 0.07;
       rotateX = Math.PI * 0.5;
+      addRing(ringRadius, size * 0.08, rotateX);
+      const spindleSteps = 8;
+      for (let i = 0; i < spindleSteps; i++) {
+        const t = i / (spindleSteps - 1);
+        addSphere(0, -size + size * 2 * t, 0, size * 0.28);
+      }
+      break;
+    }
+    case 'citadel_bastion':
+      addSphere(0, 0, 0, size * 0.58);
+      addSphere(-size * 0.48, 0, 0, size * 0.42);
+      addSphere(size * 0.48, 0, 0, size * 0.42);
+      addSphere(0, 0, -size * 0.34, size * 0.36);
+      addSphere(0, 0, size * 0.34, size * 0.36);
+      addSphere(0, -size * 0.3, 0, size * 0.28);
+      addSphere(0, size * 0.3, 0, size * 0.28);
+      break;
+    case 'alien_lattice_hive':
+      addSphere(0, 0, 0, size * 0.92);
+      addRing(size * 0.54, size * 0.1, Math.PI * 0.5, 24);
       break;
     case 'alien_orrery_reliquary':
       ringRadius = size * 1.15;
-      tubeRadius = size * 0.06;
-      sampleRadius = size * 0.055;
       rotateX = Math.PI * 0.5;
+      addSphere(0, 0, 0, size * 0.92);
+      addRing(ringRadius, size * 0.07, rotateX, 36);
       break;
-    default:
-      return null;
+    case 'alien_graveloom':
+      addSphere(0, 0, 0, size * 0.82);
+      addRing(size * 0.72, size * 0.09, Math.PI * 0.5, 30);
+      addRing(size * 0.52, size * 0.09, 0, 24);
+      break;
   }
 
-  const sampleCount = 32;
-  const local: THREE.Vector3[] = [];
-  for (let i = 0; i < sampleCount; i++) {
-    const a = (i / sampleCount) * Math.PI * 2;
-    const p = new THREE.Vector3(Math.cos(a) * ringRadius, Math.sin(a) * ringRadius, 0);
-    if (rotateX !== 0) p.applyAxisAngle(new THREE.Vector3(1, 0, 0), rotateX);
-    local.push(p);
-  }
-
-  // Add connector arm samples so spokes/trusses are also lethal.
+  // Add connector arm samples so spokes/trusses also bounce the ship.
   if (archetype === 'trade_hub') {
     const armCount = 6;
     const armLength = size * 0.74;
+    const armThickness = size * 0.08;
     const spokeRadius = size * 0.58;
     const rMin = Math.max(size * 0.16, spokeRadius - armLength * 0.5);
     const rMax = Math.min(ringRadius, spokeRadius + armLength * 0.5);
-    const spokeSteps = 5;
     for (let i = 0; i < armCount; i++) {
-      const a = (i / armCount) * Math.PI * 2;
-      const ca = Math.cos(a);
-      const sa = Math.sin(a);
-      for (let j = 0; j < spokeSteps; j++) {
-        const t = j / (spokeSteps - 1);
-        const r = rMin + (rMax - rMin) * t;
-        local.push(new THREE.Vector3(ca * r, sa * r, 0));
-      }
+      addRadialArm((i / armCount) * Math.PI * 2, rMin, rMax, armThickness * 0.75, 'xy');
     }
   } else if (archetype === 'refinery_spindle') {
     const armCount = 6;
     const armLength = size * 0.62;
+    const armThickness = size * 0.045;
     const armRadius = size * 0.36;
     const rMin = Math.max(size * 0.12, armRadius - armLength * 0.5);
     const rMax = Math.min(ringRadius, armRadius + armLength * 0.5);
-    const trussSteps = 5;
     for (let i = 0; i < armCount; i++) {
-      const a = (i / armCount) * Math.PI * 2;
-      const ca = Math.cos(a);
-      const sa = Math.sin(a);
-      for (let j = 0; j < trussSteps; j++) {
-        const t = j / (trussSteps - 1);
-        const r = rMin + (rMax - rMin) * t;
-        local.push(new THREE.Vector3(ca * r, 0, sa * r));
-      }
+      addRadialArm((i / armCount) * Math.PI * 2, rMin, rMax, armThickness * 1.3, 'xz');
     }
   }
 
-  return {
-    local,
-    sampleRadius: Math.min(tubeRadius, sampleRadius),
-  };
+  return { local };
+}
+
+export function computeSecretBaseCollisionSpheres(
+  baseType: 'asteroid' | 'oort_cloud' | 'maximum_space',
+  size: number,
+): CollisionSphere[] {
+  const spheres: CollisionSphere[] = [{ center: new THREE.Vector3(0, 0, 0), radius: size * 1.02 }];
+  if (baseType === 'asteroid') {
+    spheres.push({ center: new THREE.Vector3(size * 0.4, size * 0.4, 0), radius: size * 0.24 });
+    spheres.push({ center: new THREE.Vector3(size * 0.72, size * 0.72, 0), radius: size * 0.16 });
+  } else if (baseType === 'oort_cloud') {
+    spheres.push({ center: new THREE.Vector3(size * 0.42, 0, 0), radius: size * 0.34 });
+    spheres.push({ center: new THREE.Vector3(-size * 0.42, 0, 0), radius: size * 0.28 });
+  } else {
+    spheres.push({ center: new THREE.Vector3(0, size * 0.48, 0), radius: size * 0.34 });
+    spheres.push({ center: new THREE.Vector3(0, -size * 0.48, 0), radius: size * 0.34 });
+  }
+  return spheres;
 }
 
 export function disableFogForObject(root: THREE.Object3D): void {

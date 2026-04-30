@@ -286,6 +286,8 @@ export class Game {
     }
     const collisionShieldDamage = collision?.lethal || state.player.shields <= 0 ? 0 : collision?.shieldDamage ?? 0;
     const collisionHeatDamage = collision?.lethal || state.player.shields > 0 ? 0 : collision?.heatDamage ?? 0;
+    const collisionAlert = collision?.alert;
+    const collisionHazardType = collision?.hazardType;
 
     const pos = this.sceneRenderer.shipGroup.position;
     const quat = this.sceneRenderer.shipGroup.quaternion;
@@ -305,7 +307,18 @@ export class Game {
     this.scanning.tick(dt, state, pos);
 
     const boostFuelConsumed = INFINITE_FUEL_DEV ? 0 : fuelConsumed;
-    this.hazards.tick(dt, state, pos, this.isDead, (msg) => this.triggerDeath(msg), boostFuelConsumed, collisionShieldDamage, collisionHeatDamage);
+    this.hazards.tick(
+      dt,
+      state,
+      pos,
+      this.isDead,
+      (msg) => this.triggerDeath(msg),
+      boostFuelConsumed,
+      collisionShieldDamage,
+      collisionHeatDamage,
+      collisionAlert,
+      collisionHazardType,
+    );
 
     this.tryProximityGameEvent(state, pos);
 

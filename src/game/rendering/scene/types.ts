@@ -1,5 +1,16 @@
 import * as THREE from 'three';
 
+export interface CollisionSphere {
+  center: THREE.Vector3;
+  radius: number;
+}
+
+export interface CollisionRadialBounds {
+  innerRadius: number;
+  outerRadius: number;
+  halfHeight: number;
+}
+
 export interface SceneEntity {
   id: string;
   name: string;
@@ -13,13 +24,17 @@ export interface SceneEntity {
   shellArcWidth?: number;
   shellArcHeight?: number;
   parentId?: string;
-  type: 'planet' | 'station' | 'star' | 'moon' | 'npc_ship' | 'fleet_ship' | 'dyson_shell' | 'topopolis' | 'landing_site';
+  type: 'planet' | 'station' | 'star' | 'moon' | 'npc_ship' | 'fleet_ship' | 'dyson_shell' | 'topopolis' | 'landing_site' | 'asteroid';
   worldPos: THREE.Vector3;
   collisionRadius: number;
   interactionRadius?: number;
   collisionSampleRadius?: number;
   collisionSamplesLocal?: THREE.Vector3[];
   collisionSamplesWorld?: THREE.Vector3[];
+  collisionSpheresLocal?: CollisionSphere[];
+  collisionSpheresWorld?: CollisionSphere[];
+  collisionSampleOnly?: boolean;
+  collisionRadialBounds?: CollisionRadialBounds;
   tidalTargetId?: string;
   axialTilt?: number;
   stationSpinAxis?: THREE.Vector3;

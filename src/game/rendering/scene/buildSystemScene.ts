@@ -77,6 +77,7 @@ export function buildSystemScene(params: {
   const lightningMaterials: THREE.ShaderMaterial[] = [];
   const dysonShellMaterials: DysonShellMaterialEntry[] = [];
   const topopolisMaterials: TopopolisMaterialEntry[] = [];
+  const collisionOnlyEntities: SceneEntity[] = [];
 
   // Starfield
   const yaw = galaxyX * STARFIELD_POS_SCALE + galaxyYear * STARFIELD_YEAR_SCALE;
@@ -101,8 +102,31 @@ export function buildSystemScene(params: {
   if (data.asteroidBelt) {
     const ab = data.asteroidBelt;
     const belt = makeAsteroidBelt(ab.innerRadius, ab.outerRadius, ab.count, () => rng.next());
-    scene.add(belt);
-    systemObjects.push(belt);
+    scene.add(belt.mesh);
+    systemObjects.push(belt.mesh);
+    const beltId = 'asteroid-belt';
+    collisionOnlyEntities.push({
+      id: beltId,
+      name: 'Asteroid Belt',
+      group: belt.mesh,
+      orbitRadius: 0,
+      orbitSpeed: 0,
+      orbitPhase: 0,
+      type: 'asteroid',
+      worldPos: new THREE.Vector3(),
+      collisionRadius: ab.outerRadius + belt.maxAsteroidRadius,
+      collisionSpheresLocal: belt.collisionSpheres,
+      collisionSpheresWorld: belt.collisionSpheres.map(sphere => ({
+        center: sphere.center.clone(),
+        radius: sphere.radius,
+      })),
+      collisionSampleOnly: true,
+      collisionRadialBounds: {
+        innerRadius: ab.innerRadius,
+        outerRadius: ab.outerRadius,
+        halfHeight: belt.halfHeight,
+      },
+    });
   }
 
   // Secret bases
@@ -115,7 +139,10 @@ export function buildSystemScene(params: {
   const battleResult = buildFleetBattle({ scene, entities, systemObjects, data, systemId, galaxyYear, factionState });
 
   // Rebuild collidables
-  const collidables = [...entities.values()].filter(e => e.collisionRadius > 0);
+  const collidables = [
+    ...entities.values(),
+    ...collisionOnlyEntities,
+  ].filter(e => e.collisionRadius > 0);
 
   if (import.meta.env.DEV) {
     renderer.compile(scene, camera);

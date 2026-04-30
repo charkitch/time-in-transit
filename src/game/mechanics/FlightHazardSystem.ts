@@ -195,6 +195,8 @@ export class FlightHazardSystem {
     boostFuelConsumed: number,
     collisionShieldDamage = 0,
     collisionHeatDamage = 0,
+    collisionAlert = 'TOPOPOLIS WALL IMPACT',
+    collisionHazardType: HazardType = 'TopopolisCollision',
   ): void {
     const effects: HazardEffect[] = [];
     const cargoHarvests: CargoHarvest[] = [];
@@ -491,8 +493,8 @@ export class FlightHazardSystem {
         heatRate: collisionHeatDamage / Math.max(dt, 0.001),
         shieldDamageRate: collisionShieldDamage / Math.max(dt, 0.001),
         fuelRate: 0,
-        alert: 'TOPOPOLIS WALL IMPACT',
-        hazardType: 'TopopolisCollision',
+        alert: collisionAlert,
+        hazardType: collisionHazardType,
         zone: 'lethal',
       });
     }

@@ -152,7 +152,7 @@ export function buildPlanets(params: {
       const stationArchetype = planet.stationArchetype ?? 'trade_hub';
       const stationScale = stationArchetype === 'alien_graveloom' ? 1.35 : stationArchetype.startsWith('alien_') ? 1.15 : 1.0;
       const stationSize = 60 * stationScale;
-      const stationCollisionRadius = stationSize * 0.55;
+      const stationCollisionRadius = stationSize * 1.25;
       const ringCollision = computeStationCollisionSamples(stationArchetype, stationSize);
       const stationGroup = makeStation({
         size: stationSize,
@@ -174,9 +174,12 @@ export function buildPlanets(params: {
         worldPos: new THREE.Vector3(),
         collisionRadius: stationCollisionRadius,
         interactionRadius: stationSize,
-        collisionSampleRadius: ringCollision?.sampleRadius,
-        collisionSamplesLocal: ringCollision?.local,
-        collisionSamplesWorld: ringCollision ? ringCollision.local.map(() => new THREE.Vector3()) : undefined,
+        collisionSpheresLocal: ringCollision.local,
+        collisionSpheresWorld: ringCollision.local.map(sphere => ({
+          center: sphere.center.clone(),
+          radius: sphere.radius,
+        })),
+        collisionSampleOnly: true,
         stationSpinAxis: stationSpinAxisForArchetype(stationArchetype),
       });
     }

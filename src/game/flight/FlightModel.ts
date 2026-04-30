@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { InputState } from '../input/InputSystem';
 import type { SceneEntity } from '../rendering/SceneRenderer';
+import type { HazardType } from '../engine';
 import { FLIGHT, HYPERSPACE } from '../constants';
 
 const _collisionVec = new THREE.Vector3();
@@ -14,12 +15,16 @@ const TOPOPOLIS_INTERIOR_BOUNCE_RESTITUTION = 0.75;
 const TOPOPOLIS_INTERIOR_BOUNCE_TANGENTIAL_DAMPING = 0.92;
 export const TOPOPOLIS_INTERIOR_BOUNCE_SHIELD_DAMAGE = 18;
 export const TOPOPOLIS_INTERIOR_BOUNCE_HEAT_DAMAGE = 4;
+export const ASTEROID_BOUNCE_SHIELD_DAMAGE = 4;
+export const ASTEROID_BOUNCE_HEAT_DAMAGE = 1;
 
 export interface CollisionResult {
   entity: SceneEntity;
   lethal: boolean;
   shieldDamage?: number;
   heatDamage?: number;
+  alert?: string;
+  hazardType?: HazardType;
 }
 
 function angleDelta(a: number, b: number): number {
@@ -66,6 +71,22 @@ function resolveDysonShellCollision(
   shipPos.copy(_dysonTargetWorld);
   outNormal.transformDirection(body.group.matrixWorld).normalize();
   return true;
+}
+
+function isNonLethalBounce(type: SceneEntity['type']): boolean {
+  return type === 'station' || type === 'asteroid';
+}
+
+function nonLethalCollisionPayload(body: SceneEntity): Omit<CollisionResult, 'entity' | 'lethal'> {
+  if (body.type === 'asteroid') {
+    return {
+      shieldDamage: ASTEROID_BOUNCE_SHIELD_DAMAGE,
+      heatDamage: ASTEROID_BOUNCE_HEAT_DAMAGE,
+      alert: 'ASTEROID IMPACT',
+      hazardType: 'StationCollision',
+    };
+  }
+  return {};
 }
 
 export class FlightModel {
@@ -214,28 +235,17 @@ export class FlightModel {
         continue;
       }
 
-      if (body.collisionSamplesWorld && body.collisionSampleRadius) {
-        const minDist = body.collisionSampleRadius + SHIP_RADIUS;
-        for (const sample of body.collisionSamplesWorld) {
-          const diff = _collisionVec.copy(shipPos).sub(sample);
-          const dist = diff.length();
-          if (dist < minDist && dist > 0.001) {
-            const normal = diff.normalize();
-            shipPos.copy(sample).addScaledVector(normal, minDist);
-            const dot = this.velocity.dot(normal);
-            if (dot < 0) {
-              this.velocity.addScaledVector(normal, -dot * 1.5);
-              this.velocity.multiplyScalar(0.5);
-            }
-            hit = { entity: body, lethal: body.type !== 'station' };
-            break;
-          }
-        }
+      if (this.resolveCollisionSpheres(shipPos, body, SHIP_RADIUS)) {
+        hit = {
+          entity: body,
+          lethal: !isNonLethalBounce(body.type),
+          ...nonLethalCollisionPayload(body),
+        };
       }
 
       // Central sphere — used alone for simple bodies, or as a hub fallback
       // for stations that also have ring collision samples
-      if (!hit || (body.type === 'station' && hit.entity.type === 'station')) {
+      if (!body.collisionSampleOnly && (!hit || (body.type === 'station' && hit.entity.type === 'station'))) {
         const diff = _collisionVec.copy(shipPos).sub(body.worldPos);
         const dist = diff.length();
         const minDist = body.collisionRadius;
@@ -247,11 +257,65 @@ export class FlightModel {
             this.velocity.addScaledVector(normal, -dot * 1.5);
             this.velocity.multiplyScalar(0.5);
           }
-          hit = { entity: body, lethal: body.type !== 'station' };
+          hit = {
+            entity: body,
+            lethal: !isNonLethalBounce(body.type),
+            ...nonLethalCollisionPayload(body),
+          };
         }
       }
     }
     return hit;
+  }
+
+  private resolveCollisionSpheres(shipPos: THREE.Vector3, body: SceneEntity, shipRadius: number): boolean {
+    if (body.collisionRadialBounds) {
+      const radial = Math.hypot(shipPos.x - body.group.position.x, shipPos.z - body.group.position.z);
+      const maxSampleRadius = Math.max(0, body.collisionRadius - body.collisionRadialBounds.outerRadius);
+      const padding = shipRadius + maxSampleRadius;
+      if (
+        radial < body.collisionRadialBounds.innerRadius - padding ||
+        radial > body.collisionRadialBounds.outerRadius + padding ||
+        Math.abs(shipPos.y - body.group.position.y) > body.collisionRadialBounds.halfHeight + padding
+      ) {
+        return false;
+      }
+    }
+
+    let collided = false;
+    if (body.collisionSpheresWorld) {
+      for (const sphere of body.collisionSpheresWorld) {
+        const minDist = sphere.radius + shipRadius;
+        if (this.resolveSphereCollision(shipPos, sphere.center, minDist)) {
+          collided = true;
+          break;
+        }
+      }
+    } else if (body.collisionSamplesWorld && body.collisionSampleRadius) {
+      const minDist = body.collisionSampleRadius + shipRadius;
+      for (const sample of body.collisionSamplesWorld) {
+        if (this.resolveSphereCollision(shipPos, sample, minDist)) {
+          collided = true;
+          break;
+        }
+      }
+    }
+    return collided;
+  }
+
+  private resolveSphereCollision(shipPos: THREE.Vector3, center: THREE.Vector3, minDist: number): boolean {
+    const diff = _collisionVec.copy(shipPos).sub(center);
+    const dist = diff.length();
+    if (dist >= minDist || dist <= 0.001) return false;
+
+    const normal = diff.normalize();
+    shipPos.copy(center).addScaledVector(normal, minDist);
+    const dot = this.velocity.dot(normal);
+    if (dot < 0) {
+      this.velocity.addScaledVector(normal, -dot * 1.5);
+      this.velocity.multiplyScalar(0.5);
+    }
+    return true;
   }
 
   reset() {
