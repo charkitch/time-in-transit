@@ -58,12 +58,43 @@ fn check_condition(cond: &EventCondition, ctx: &EventContext) -> bool {
             .values()
             .any(|c| c.flags.contains(flag))
     };
+    let years_since_event = |event_id: &str| {
+        ctx.player_state
+            .player_history
+            .completed_events
+            .get(event_id)
+            .map(|completed| {
+                ctx.player_state
+                    .galaxy_year
+                    .saturating_sub(completed.galaxy_year)
+            })
+    };
     match cond {
         EventCondition::PoliticsIs(pols) => pols.contains(&ctx.civ_state.politics),
         EventCondition::SpecialSystemIs(system_kinds) => system_kinds
             .iter()
             .any(|kind| kind == ctx.current_system_special_kind.as_str()),
         EventCondition::MinGalaxyYear(y) => ctx.civ_state.galaxy_year >= *y,
+        EventCondition::MinYearsSinceEvent { event_id, years } => years_since_event(event_id)
+            .map(|elapsed| elapsed >= *years)
+            .unwrap_or(false),
+        EventCondition::MaxYearsSinceEvent { event_id, years } => years_since_event(event_id)
+            .map(|elapsed| elapsed <= *years)
+            .unwrap_or(false),
+        EventCondition::EventCompletedInCurrentSystem { event_id } => ctx
+            .player_state
+            .player_history
+            .completed_events
+            .get(event_id)
+            .map(|completed| completed.system_id == ctx.current_system_id)
+            .unwrap_or(false),
+        EventCondition::EventCompletedOutsideCurrentSystem { event_id } => ctx
+            .player_state
+            .player_history
+            .completed_events
+            .get(event_id)
+            .map(|completed| completed.system_id != ctx.current_system_id)
+            .unwrap_or(false),
         EventCondition::HasFactionTag(tag) => choices.faction_tag.as_deref() == Some(tag.as_str()),
         EventCondition::HasCargo(item) => ctx
             .player_state
@@ -269,6 +300,45 @@ mod tests {
             chain_targets: vec![],
             player_history: crate::types::PlayerHistory::default(),
             heat: 0.0,
+            ship_upgrades: vec![],
+        }
+    }
+
+    fn empty_effect() -> ChoiceEffect {
+        ChoiceEffect {
+            trading_reputation: 0,
+            banned_goods: vec![],
+            price_modifier: 1.0,
+            faction_tag: None,
+            credits_reward: 0,
+            fuel_reward: 0.0,
+            sets_flags: vec![],
+            fires: vec![],
+            sets_galactic_flags: vec![],
+            galaxy_years_advance: 0,
+            grants_upgrade: None,
+        }
+    }
+
+    fn test_event_with_requires(requires: Vec<EventCondition>) -> GameEvent {
+        GameEvent {
+            id: "TEST_EVENT".to_string(),
+            title: "Test".to_string(),
+            narrative_lines: vec!["Test.".to_string()],
+            choices: vec![EventChoice {
+                id: "ok".to_string(),
+                label: "Ok".to_string(),
+                description: "Continue".to_string(),
+                effect: empty_effect(),
+                requires: vec![],
+                requires_min_tech: None,
+                requires_credits: None,
+                next_moment: None,
+            }],
+            requires,
+            triggered_by: None,
+            triggered_only: false,
+            repeatability: Repeatability::Unique,
         }
     }
 
@@ -408,18 +478,7 @@ mod tests {
                 id: "ok".to_string(),
                 label: "Ok".to_string(),
                 description: "Continue".to_string(),
-                effect: ChoiceEffect {
-                    trading_reputation: 0,
-                    banned_goods: vec![],
-                    price_modifier: 1.0,
-                    faction_tag: None,
-                    credits_reward: 0,
-                    fuel_reward: 0.0,
-                    sets_flags: vec![],
-                    fires: vec![],
-                    sets_galactic_flags: vec![],
-                    galaxy_years_advance: 0,
-                },
+                effect: empty_effect(),
                 requires: vec![],
                 requires_min_tech: None,
                 requires_credits: None,
@@ -435,6 +494,136 @@ mod tests {
 
         assert_eq!(event_weight(&event, &matching_ctx), 1.0);
         assert_eq!(event_weight(&event, &non_matching_ctx), 0.0);
+    }
+
+    #[test]
+    fn relative_time_conditions_use_completed_event_history() {
+        let civ = test_civ();
+        let mut player = test_player();
+        player.galaxy_year = 6000;
+        player.player_history.completed_events.insert(
+            "ORIGIN_EVENT".to_string(),
+            CompletedEvent {
+                system_id: 0,
+                galaxy_year: 5500,
+            },
+        );
+        let triggers = content::all_triggers();
+        let ctx = EventContext {
+            civ_state: &civ,
+            player_state: &player,
+            system_choices: None,
+            triggers: &triggers,
+            surface: None,
+            site_class: None,
+            host_type: None,
+            current_cluster: 0,
+            current_system_id: 0,
+            current_system_special_kind: SpecialSystemKind::None,
+        };
+
+        assert_eq!(
+            event_weight(
+                &test_event_with_requires(vec![EventCondition::MinYearsSinceEvent {
+                    event_id: "ORIGIN_EVENT".to_string(),
+                    years: 500,
+                }]),
+                &ctx
+            ),
+            1.0
+        );
+        assert_eq!(
+            event_weight(
+                &test_event_with_requires(vec![EventCondition::MinYearsSinceEvent {
+                    event_id: "ORIGIN_EVENT".to_string(),
+                    years: 501,
+                }]),
+                &ctx
+            ),
+            0.0
+        );
+        assert_eq!(
+            event_weight(
+                &test_event_with_requires(vec![EventCondition::MaxYearsSinceEvent {
+                    event_id: "ORIGIN_EVENT".to_string(),
+                    years: 500,
+                }]),
+                &ctx
+            ),
+            1.0
+        );
+        assert_eq!(
+            event_weight(
+                &test_event_with_requires(vec![EventCondition::MaxYearsSinceEvent {
+                    event_id: "ORIGIN_EVENT".to_string(),
+                    years: 499,
+                }]),
+                &ctx
+            ),
+            0.0
+        );
+    }
+
+    #[test]
+    fn origin_conditions_compare_completed_event_system_to_current_system() {
+        let civ = test_civ();
+        let mut player = test_player();
+        player.player_history.completed_events.insert(
+            "ORIGIN_EVENT".to_string(),
+            CompletedEvent {
+                system_id: 7,
+                galaxy_year: 5500,
+            },
+        );
+        let triggers = content::all_triggers();
+        let ctx_at_origin = EventContext {
+            civ_state: &civ,
+            player_state: &player,
+            system_choices: None,
+            triggers: &triggers,
+            surface: None,
+            site_class: None,
+            host_type: None,
+            current_cluster: 0,
+            current_system_id: 7,
+            current_system_special_kind: SpecialSystemKind::None,
+        };
+        let ctx_elsewhere = EventContext {
+            current_system_id: 8,
+            ..ctx_at_origin
+        };
+
+        assert_eq!(
+            event_weight(
+                &test_event_with_requires(vec![EventCondition::EventCompletedInCurrentSystem {
+                    event_id: "ORIGIN_EVENT".to_string(),
+                }]),
+                &ctx_at_origin
+            ),
+            1.0
+        );
+        assert_eq!(
+            event_weight(
+                &test_event_with_requires(vec![
+                    EventCondition::EventCompletedOutsideCurrentSystem {
+                        event_id: "ORIGIN_EVENT".to_string(),
+                    }
+                ]),
+                &ctx_at_origin
+            ),
+            0.0
+        );
+        assert_eq!(
+            event_weight(
+                &test_event_with_requires(vec![
+                    EventCondition::EventCompletedOutsideCurrentSystem {
+                        event_id: "ORIGIN_EVENT".to_string(),
+                    }
+                ]),
+                &ctx_elsewhere
+            ),
+            1.0
+        );
     }
 
     #[test]

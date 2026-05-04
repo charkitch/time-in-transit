@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-use super::GoodName;
+use super::{GoodName, ShipUpgrade};
 
 // ─── Player State ────────────────────────────────────────────────────────────
 
@@ -77,6 +77,7 @@ pub struct PlayerState {
     pub player_history: PlayerHistory,
     #[serde(default)]
     pub heat: f64,
+    pub ship_upgrades: Vec<ShipUpgrade>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

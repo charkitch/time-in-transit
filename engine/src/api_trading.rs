@@ -15,7 +15,8 @@ pub fn trade_buy(good_json: &str, qty: u32, price: i32) -> Result<String, JsValu
             return Err(JsValue::from_str("Insufficient credits"));
         }
         let total_cargo: u32 = ps.cargo.values().sum();
-        if total_cargo + qty > MAX_CARGO {
+        let stats = EffectiveShipStats::compute(&ps.ship_upgrades);
+        if total_cargo + qty > stats.max_cargo {
             return Err(JsValue::from_str("Cargo hold full"));
         }
 

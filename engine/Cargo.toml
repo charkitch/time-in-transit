@@ -16,6 +16,7 @@ serde_json = "1"
 js-sys = "0.3"
 content-types = { path = "content-types" }
 bincode = { version = "2", features = ["serde"] }
+strum = { version = "0.28", features = ["derive"] }
 
 [build-dependencies]
 serde = { version = "1", features = ["derive"] }

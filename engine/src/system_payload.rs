@@ -52,6 +52,10 @@ pub fn compute_chain_targets(
     };
 
     for chain in content::story_chains() {
+        if chain.completion_flag.is_some_and(any_flag) {
+            continue;
+        }
+
         // Find which stage we're at: the last completed stage
         let mut active_stage_idx: Option<usize> = None;
         for (i, stage) in chain.stages.iter().enumerate() {
@@ -69,33 +73,34 @@ pub fn compute_chain_targets(
         };
         let stage = &chain.stages[stage_idx];
 
-        // Check if already have a target for this chain at this stage
-        if player_state
+        // Keep existing target if we already picked one for this stage
+        if let Some(existing) = player_state
             .chain_targets
             .iter()
-            .any(|ct| ct.chain_id == chain.chain_id && ct.stage == stage.stage_label)
+            .find(|ct| ct.chain_id == chain.chain_id && ct.stage == stage.stage_label)
         {
-            // Keep existing target
-            if let Some(existing) = player_state
-                .chain_targets
-                .iter()
-                .find(|ct| ct.chain_id == chain.chain_id && ct.stage == stage.stage_label)
-            {
-                targets.push(existing.clone());
-            }
+            targets.push(existing.clone());
             continue;
         }
 
-        // Pick a target system: must have the right base type & be far enough away
-        let current = &cluster[player_state.current_system_id as usize];
+        // Consequence chains radiate from where the story began;
+        // quest chains radiate from where the player is now
+        let origin = match chain.kind {
+            content::StoryChainKind::Consequence => chain
+                .start_event_id
+                .and_then(|id| player_state.player_history.completed_events.get(id))
+                .map(|ev| &cluster[ev.system_id as usize])
+                .unwrap_or(&cluster[player_state.current_system_id as usize]),
+            content::StoryChainKind::Quest => &cluster[player_state.current_system_id as usize],
+        };
         let mut candidates: Vec<&StarSystemData> = Vec::new();
 
         for star in cluster {
             if star.id == player_state.current_system_id {
                 continue;
             }
-            let dx = star.x - current.x;
-            let dy = star.y - current.y;
+            let dx = star.x - origin.x;
+            let dy = star.y - origin.y;
             let dist = (dx * dx + dy * dy).sqrt();
             if dist < chain.min_distance {
                 continue;

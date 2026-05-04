@@ -1,0 +1,32 @@
+id: HARVEST_SCAR_RETURN
+title: THE SCAR BECOMES A DOOR
+requires:
+  - !AnyFlagSet harvest_scar_stage1_done
+  - !AnyFlagNotSet harvest_scar_stage2_done
+  - !EventCompletedInCurrentSystem { event_id: HARVEST_SCAR_INITIAL }
+  - !MinYearsSinceEvent { event_id: HARVEST_SCAR_INITIAL, years: 500 }
+narrativeLines:
+  - >-
+    Five centuries have not erased the harbor. They have made it stranger. The old wall is gone,
+    or rebuilt, or preserved behind glass depending on who is telling the story. Either way,
+    people still bring children to see the place where you answered a practical question and
+    history overheard.
+  - >-
+    The inlet did not merely feed the grid. It changed the migration pattern of work, prayer,
+    weather budgeting, marriage contracts, school calendars. The city learned to measure itself
+    against a decision made by someone who left before the paint dried.
+  - >-
+    A clerk from the harbor college gives you a sealed slate. "A daughter-house in the belt has
+    split over your precedent. They asked us to send the oldest witness we had. We had you."
+choices:
+  - id: accept_slate
+    label: Take the sealed slate
+    description: "Reveal the distant consequence target"
+    effect:
+      setsFlags: [harvest_scar_stage2_done]
+  - id: take_responsibility
+    label: Add your own account before you go
+    description: "CR 300 honorarium, reveal the distant consequence target"
+    effect:
+      creditsReward: 300
+      setsFlags: [harvest_scar_stage2_done]

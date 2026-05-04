@@ -3,9 +3,18 @@ use wasm_bindgen::prelude::*;
 use crate::api_state::with_engine_mut;
 use crate::civilization::get_civ_state;
 use crate::simulation::simulate_galaxy;
-use crate::system_payload::build_cluster_summary;
+use crate::system_payload::{build_cluster_summary, compute_chain_targets};
 use crate::trading::get_market;
 use crate::types::*;
+
+#[wasm_bindgen]
+pub fn query_ship_stats() -> Result<String, JsValue> {
+    crate::api_state::with_engine(|engine| {
+        let stats = EffectiveShipStats::compute(&engine.player_state.ship_upgrades);
+        serde_json::to_string(&stats)
+            .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
+    })
+}
 
 #[wasm_bindgen]
 pub fn get_player_state() -> Result<String, JsValue> {
@@ -68,8 +77,9 @@ pub fn apply_choice_effect(
     with_engine_mut(|engine| {
         let ps = &mut engine.player_state;
 
+        let stats = EffectiveShipStats::compute(&ps.ship_upgrades);
         ps.credits += effect.credits_reward;
-        ps.fuel = (ps.fuel + effect.fuel_reward).clamp(0.0, MAX_FUEL);
+        ps.fuel = (ps.fuel + effect.fuel_reward).clamp(0.0, stats.max_fuel);
 
         let choices = ps.player_choices.entry(system_id).or_default();
         choices.trading_reputation += effect.trading_reputation;
@@ -104,6 +114,15 @@ pub fn apply_choice_effect(
             ps.player_history.galactic_flags.insert(flag.clone());
         }
 
+        if let Some(ref upgrade_id) = effect.grants_upgrade {
+            let upgrade: ShipUpgrade = upgrade_id
+                .parse()
+                .map_err(|_| JsValue::from_str(&format!("Unknown ship upgrade: {upgrade_id}")))?;
+            if !ps.ship_upgrades.contains(&upgrade) {
+                ps.ship_upgrades.push(upgrade);
+            }
+        }
+
         let years_advance = effect.galaxy_years_advance;
         if years_advance > 0 {
             ps.galaxy_year += years_advance;
@@ -125,6 +144,9 @@ pub fn apply_choice_effect(
                 years_advance,
             );
         }
+
+        engine.player_state.chain_targets =
+            compute_chain_targets(&engine.cluster, &engine.player_state);
 
         serde_json::to_string(&engine.player_state)
             .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))

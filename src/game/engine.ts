@@ -16,6 +16,7 @@ import initWasm, {
   get_player_state,
   set_player_state,
   apply_choice_effect,
+  query_ship_stats,
   trade_buy,
   trade_sell,
   tick_flight,
@@ -440,6 +441,21 @@ export interface WasmPlayerState {
     completedEvents: Record<string, { systemId: SystemId; galaxyYear: GalaxyYear }>;
     galacticFlags: string[];
   };
+  shipUpgrades: string[];
+}
+
+export interface ShipStats {
+  maxFuel: number;
+  maxShields: number;
+  maxCargo: number;
+  coolingRate: number;
+  shieldRegenRate: number;
+  heatMax: number;
+  regenHeatCeil: number;
+  overheatShieldDmg: number;
+  scanRange: number;
+  harvestEfficiency: number;
+  jumpFuelCostMod: number;
 }
 
 // ─── Engine API ─────────────────────────────────────────────────────────────
@@ -507,6 +523,10 @@ export function engineGetClusterSummary(galaxyYear: GalaxyYear): ClusterSystemSu
 
 export function engineGetPlayerState(): WasmPlayerState {
   return JSON.parse(get_player_state());
+}
+
+export function engineQueryShipStats(): ShipStats {
+  return JSON.parse(query_ship_stats());
 }
 
 export function engineSetPlayerState(playerState: WasmPlayerState): void {

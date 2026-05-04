@@ -83,6 +83,7 @@ pub fn jump_to_system(target_system_id: u32, fuel_cost: f64) -> Result<String, J
 
         let cluster_summary = build_cluster_summary(cluster, new_galaxy_year);
         let chain_targets = compute_chain_targets(cluster, &engine.player_state);
+        engine.player_state.chain_targets = chain_targets.clone();
 
         let result = JumpResult {
             system_payload,
@@ -114,33 +115,34 @@ pub fn tick_flight(context_json: &str) -> Result<String, JsValue> {
 
     with_engine_mut(|engine| {
         let ps = &mut engine.player_state;
+        let stats = EffectiveShipStats::compute(&ps.ship_upgrades);
 
-        ps.fuel = (ps.fuel + ctx.fuel_rate * ctx.dt).clamp(0.0, MAX_FUEL);
+        ps.fuel = (ps.fuel + ctx.fuel_rate * ctx.dt).clamp(0.0, stats.max_fuel);
 
         ps.heat += ctx.heat_rate * ctx.dt;
         if ctx.cooling_active && ps.heat > 0.0 {
-            ps.heat -= COOLING_RATE * ctx.dt;
+            ps.heat -= stats.cooling_rate * ctx.dt;
         }
-        ps.heat = ps.heat.clamp(0.0, HEAT_MAX);
+        ps.heat = ps.heat.clamp(0.0, stats.heat_max);
 
-        if ps.heat >= HEAT_MAX {
-            ps.shields -= OVERHEAT_SHIELD_DMG * ctx.dt;
+        if ps.heat >= stats.heat_max {
+            ps.shields -= stats.overheat_shield_dmg * ctx.dt;
         }
 
         ps.shields -= ctx.shield_damage_rate * ctx.dt;
 
         if !ctx.is_dead
             && ctx.active_hazard == HazardType::None
-            && ps.heat < REGEN_HEAT_CEIL
-            && ps.shields < 100.0
+            && ps.heat < stats.regen_heat_ceil
+            && ps.shields < stats.max_shields
         {
-            ps.shields += SHIELD_REGEN_RATE * ctx.dt;
+            ps.shields += stats.shield_regen_rate * ctx.dt;
         }
 
-        ps.shields = ps.shields.clamp(0.0, 100.0);
+        ps.shields = ps.shields.clamp(0.0, stats.max_shields);
 
         let total_cargo: u32 = ps.cargo.values().sum();
-        let mut remaining_capacity = MAX_CARGO.saturating_sub(total_cargo);
+        let mut remaining_capacity = stats.max_cargo.saturating_sub(total_cargo);
         for harvest in &ctx.cargo_harvests {
             let qty = harvest.qty.min(remaining_capacity);
             if qty > 0 {
@@ -151,11 +153,12 @@ pub fn tick_flight(context_json: &str) -> Result<String, JsValue> {
 
         let shield_damage_can_kill =
             ctx.shield_damage_rate > 0.0 && ctx.active_hazard != HazardType::TopopolisCollision;
-        let dead =
-            !ctx.is_dead && ps.shields <= 0.0 && (shield_damage_can_kill || ps.heat >= HEAT_MAX);
+        let dead = !ctx.is_dead
+            && ps.shields <= 0.0
+            && (shield_damage_can_kill || ps.heat >= stats.heat_max);
         let death_cause = if dead {
             Some(
-                if ps.heat >= HEAT_MAX && ctx.active_hazard == HazardType::None {
+                if ps.heat >= stats.heat_max && ctx.active_hazard == HazardType::None {
                     HazardType::Overheat
                 } else {
                     ctx.active_hazard

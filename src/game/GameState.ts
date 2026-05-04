@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { StarSystemData } from './engine';
+import { engineQueryShipStats, type StarSystemData } from './engine';
 import { HYPERSPACE, type GoodName } from './constants';
 import { saveAutosave, buildSlotMeta } from '../ui/MainMenu/saveSlots';
 import type { SystemId, GalaxyYear } from './types';
@@ -213,6 +213,8 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       completedEvents: ps.playerHistory.completedEvents,
       galacticFlags: ps.playerHistory.galacticFlags,
     },
+    shipUpgrades: ps.shipUpgrades,
+    shipStats: engineQueryShipStats(),
   })),
   setCluster: (cluster) => {
     CLUSTER = cluster;

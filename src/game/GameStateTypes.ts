@@ -11,6 +11,7 @@ import type {
   ChainTarget,
   WasmPlayerState,
   JumpLogEntry,
+  ShipStats,
 } from './engine';
 import type { GoodName } from './constants';
 import type { NPCCargoEntry } from './mechanics/NPCSystem';
@@ -135,6 +136,10 @@ export interface GameStateData {
     completedEvents: Record<string, { systemId: SystemId; galaxyYear: GalaxyYear }>;
     galacticFlags: string[];
   };
+
+  // ── Ship progression ────────────────────────────────────────────────────
+  shipUpgrades: string[];
+  shipStats: ShipStats;
 }
 
 export interface GameActions {
@@ -220,6 +225,7 @@ export interface SaveData {
   shipPosition?: { x: number; y: number; z: number };
   shipQuaternion?: { x: number; y: number; z: number; w: number };
   shipVelocity?: { x: number; y: number; z: number };
+  shipUpgrades: string[];
 }
 
 export type { Vec3, Quat };

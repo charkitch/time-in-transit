@@ -1,7 +1,23 @@
 import { STARTING_CREDITS, STARTING_FUEL, STARTING_SYSTEM_ID, GALAXY_YEAR_START } from './constants';
 import type { SystemId } from './types';
+import type { ShipStats } from './engine';
 import type { PlayerState, GameStateData, SaveData, SystemChoices, UIMode } from './GameStateTypes';
 import { isFiniteVec3, isFiniteQuat, isOriginVec3 } from './spatialValidation';
+
+// Matches EffectiveShipStats::default() in Rust — no upgrades applied
+export const DEFAULT_SHIP_STATS: ShipStats = {
+  maxFuel: STARTING_FUEL,
+  maxShields: 100,
+  maxCargo: 20,
+  coolingRate: 10,
+  shieldRegenRate: 5,
+  heatMax: 100,
+  regenHeatCeil: 50,
+  overheatShieldDmg: 20,
+  scanRange: 0,
+  harvestEfficiency: 1,
+  jumpFuelCostMod: 1,
+};
 
 const DEFAULT_PLAYER: PlayerState = {
   position: { x: 0, y: 0, z: 8000 },
@@ -73,6 +89,10 @@ export function buildInitialState(mode: UIMode): Omit<GameStateData, 'cluster'> 
 
     // Global player history
     playerHistory: { completedEvents: {}, galacticFlags: [] },
+
+    // Ship progression
+    shipUpgrades: [],
+    shipStats: DEFAULT_SHIP_STATS,
   };
 }
 
@@ -122,6 +142,7 @@ export function buildSaveData(s: GameStateData): SaveData {
     shipPosition: hasValidSpatial ? s.player.position : undefined,
     shipQuaternion: hasValidSpatial ? s.player.quaternion : undefined,
     shipVelocity: hasValidSpatial ? s.player.velocity : undefined,
+    shipUpgrades: s.shipUpgrades,
   };
 }
 
@@ -157,6 +178,8 @@ export function applySaveFields(saved: Partial<SaveData>): Partial<GameStateData
       completedEvents: saved.playerHistory?.completedEvents ?? {},
       galacticFlags: saved.playerHistory?.galacticFlags ?? [],
     },
+    shipUpgrades: saved.shipUpgrades ?? [],
+    shipStats: DEFAULT_SHIP_STATS, // recomputed from WASM on engine sync
     // Clear transient state so nothing leaks from the previous session
     pendingGameEvent: null,
     pendingCommContext: null,

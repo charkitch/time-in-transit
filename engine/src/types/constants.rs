@@ -1,3 +1,4 @@
+// Ship stat defaults — runtime code should use EffectiveShipStats::compute()
 pub const CLUSTER_SEED: u32 = 0xDEADBEEF;
 pub const CLUSTER_SIZE: usize = 30;
 pub const GALAXY_YEAR_START: u32 = 3200;

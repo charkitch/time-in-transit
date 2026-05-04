@@ -30,6 +30,7 @@ pub fn init_game(player_state_json: &str) -> Result<String, JsValue> {
             chain_targets: vec![],
             player_history: PlayerHistory::default(),
             heat: 0.0,
+            ship_upgrades: vec![],
         }
     } else {
         serde_json::from_str(player_state_json)

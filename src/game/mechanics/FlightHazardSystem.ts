@@ -10,7 +10,6 @@ import {
   PULSAR_SILK_GOOD,
   TRANSFER_PLASMA_GOOD,
   STAR_ATTRIBUTES,
-  MAX_CARGO,
 } from '../constants';
 import type { GoodName } from '../constants';
 import { BATTLE_DANGER_RANGE } from './FleetBattleSystem';
@@ -325,7 +324,7 @@ export class FlightHazardSystem {
     const cargo = state.player.cargo;
     const cargoUsed = Object.values(cargo).reduce((sum, qty) => sum + (qty ?? 0), 0);
     const canHarvest = (good: GoodName) =>
-      cargoUsed + cargoHarvests.reduce((s, h) => s + h.qty, 0) < MAX_CARGO &&
+      cargoUsed + cargoHarvests.reduce((s, h) => s + h.qty, 0) < state.shipStats.maxCargo &&
       (cargo[good] ?? 0) + cargoHarvests.filter(h => h.good === good).reduce((s, h) => s + h.qty, 0) < HARVEST_CAP_PER_GOOD;
     let infoMessage: string | null = null;
 

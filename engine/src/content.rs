@@ -8,9 +8,18 @@ use crate::types::{GameEvent, SecretBaseType, SystemEntryDialog, Trigger, Trigge
 
 pub struct StoryChainDef {
     pub chain_id: &'static str,
+    pub kind: StoryChainKind,
+    pub start_event_id: Option<&'static str>,
+    pub completion_flag: Option<&'static str>,
     pub stages: &'static [ChainStageDef],
     pub min_distance: f64,
     pub required_base_type: Option<SecretBaseType>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StoryChainKind {
+    Quest,
+    Consequence,
 }
 
 pub struct ChainStageDef {
@@ -22,6 +31,9 @@ pub fn story_chains() -> Vec<StoryChainDef> {
     vec![
         StoryChainDef {
             chain_id: "quasar_array",
+            kind: StoryChainKind::Quest,
+            start_event_id: Some("ARRAY_OORT_BRIEFING"),
+            completion_flag: Some("quasar_array_completed"),
             stages: &[
                 ChainStageDef {
                     completion_flag: "quasar_array_stage1_done",
@@ -41,6 +53,9 @@ pub fn story_chains() -> Vec<StoryChainDef> {
         },
         StoryChainDef {
             chain_id: "cartographers_wake",
+            kind: StoryChainKind::Quest,
+            start_event_id: Some("CARTOGRAPHERS_WAKE_INTRO"),
+            completion_flag: Some("cartographers_wake_completed"),
             stages: &[
                 ChainStageDef {
                     completion_flag: "cartographers_wake_stage1_done",
@@ -60,6 +75,9 @@ pub fn story_chains() -> Vec<StoryChainDef> {
         },
         StoryChainDef {
             chain_id: "burnt_accord",
+            kind: StoryChainKind::Quest,
+            start_event_id: Some("BURNT_ACCORD_SIGNAL"),
+            completion_flag: Some("burnt_accord_completed"),
             stages: &[
                 ChainStageDef {
                     completion_flag: "burnt_accord_stage1_done",
@@ -80,6 +98,18 @@ pub fn story_chains() -> Vec<StoryChainDef> {
             ],
             min_distance: 14.0,
             required_base_type: Some(SecretBaseType::MaximumSpace),
+        },
+        StoryChainDef {
+            chain_id: "harvest_scar",
+            kind: StoryChainKind::Consequence,
+            start_event_id: Some("HARVEST_SCAR_INITIAL"),
+            completion_flag: Some("harvest_scar_completed"),
+            stages: &[ChainStageDef {
+                completion_flag: "harvest_scar_stage2_done",
+                stage_label: "stage3",
+            }],
+            min_distance: 10.0,
+            required_base_type: Some(SecretBaseType::Asteroid),
         },
     ]
 }
@@ -172,7 +202,9 @@ pub fn the_crown_arrival_dialog() -> SystemEntryDialog {
 
 #[cfg(test)]
 mod tests {
+    use crate::types::{ChoiceEffect, EventChoice, EventCondition};
     use serde::de::DeserializeOwned;
+    use std::collections::HashSet;
     use std::fmt::Debug;
 
     use super::*;
@@ -204,6 +236,53 @@ mod tests {
             bincode::serde::decode_from_slice(bincode_raw, bincode::config::standard())
                 .unwrap_or_else(|e| panic!("Failed to decode generated bincode {}: {}", label, e));
         assert_eq!(from_yaml, from_bincode, "Typed mismatch for {}", label);
+    }
+
+    fn all_events() -> Vec<GameEvent> {
+        ALL_EVENT_POOLS
+            .iter()
+            .flat_map(|pool| events_for_pool(*pool))
+            .collect()
+    }
+
+    fn collect_choice_effects(choices: &[EventChoice]) -> Vec<&ChoiceEffect> {
+        choices
+            .iter()
+            .flat_map(|choice| {
+                std::iter::once(&choice.effect).chain(
+                    choice
+                        .next_moment
+                        .iter()
+                        .flat_map(|m| collect_choice_effects(&m.choices)),
+                )
+            })
+            .collect()
+    }
+
+    fn collect_choice_conditions(choices: &[EventChoice]) -> Vec<&EventCondition> {
+        choices
+            .iter()
+            .flat_map(|choice| {
+                choice.requires.iter().chain(
+                    choice
+                        .next_moment
+                        .iter()
+                        .flat_map(|m| collect_choice_conditions(&m.choices)),
+                )
+            })
+            .collect()
+    }
+
+    fn collect_event_conditions(events: &[GameEvent]) -> Vec<&EventCondition> {
+        events
+            .iter()
+            .flat_map(|event| {
+                event
+                    .requires
+                    .iter()
+                    .chain(collect_choice_conditions(&event.choices))
+            })
+            .collect()
     }
 
     #[test]
@@ -341,5 +420,83 @@ mod tests {
                 .map(|(label, _)| label),
             Some("dialogs/iron_star_arrival.yaml")
         );
+    }
+
+    #[test]
+    fn story_chain_definitions_match_authored_events() {
+        let events = all_events();
+        let event_ids = events
+            .iter()
+            .map(|event| event.id.as_str())
+            .collect::<HashSet<_>>();
+        let effects: Vec<_> = events
+            .iter()
+            .flat_map(|event| collect_choice_effects(&event.choices))
+            .collect();
+        let authored_flags = effects
+            .iter()
+            .flat_map(|effect| effect.sets_flags.iter().map(String::as_str))
+            .collect::<HashSet<_>>();
+
+        for chain in story_chains() {
+            if let Some(start_event_id) = chain.start_event_id {
+                assert!(
+                    event_ids.contains(start_event_id),
+                    "story chain {} references missing start event {}",
+                    chain.chain_id,
+                    start_event_id
+                );
+            }
+            if let Some(completion_flag) = chain.completion_flag {
+                assert!(
+                    authored_flags.contains(completion_flag),
+                    "story chain {} references missing completion flag {}",
+                    chain.chain_id,
+                    completion_flag
+                );
+            }
+            for stage in chain.stages {
+                assert!(
+                    authored_flags.contains(stage.completion_flag),
+                    "story chain {} stage {} references missing completion flag {}",
+                    chain.chain_id,
+                    stage.stage_label,
+                    stage.completion_flag
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn event_conditions_reference_known_events_and_chains() {
+        let events = all_events();
+        let event_ids = events
+            .iter()
+            .map(|event| event.id.as_str())
+            .collect::<HashSet<_>>();
+        let chain_ids = story_chains()
+            .iter()
+            .map(|chain| chain.chain_id)
+            .collect::<HashSet<_>>();
+        let conditions = collect_event_conditions(&events);
+
+        for condition in conditions {
+            match condition {
+                EventCondition::MinYearsSinceEvent { event_id, .. }
+                | EventCondition::MaxYearsSinceEvent { event_id, .. }
+                | EventCondition::EventCompletedInCurrentSystem { event_id }
+                | EventCondition::EventCompletedOutsideCurrentSystem { event_id } => assert!(
+                    event_ids.contains(event_id.as_str()),
+                    "condition references missing event {}",
+                    event_id
+                ),
+                EventCondition::ChainTargetHere(chain_id) => assert!(
+                    chain_ids.contains(chain_id.as_str()),
+                    "condition references missing story chain {}",
+                    chain_id
+                ),
+                _ => {}
+            }
+        }
     }
 }

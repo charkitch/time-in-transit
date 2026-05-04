@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useGameState } from '../../game/GameState';
 import { engineTradeBuy, engineTradeSell, engineStationRefuel, engineStationRepair } from '../../game/engine';
-import { HYPERSPACE, MAX_CARGO, POLITICAL_TYPE_DISPLAY, ECONOMY_DESCRIPTIONS, type GoodName } from '../../game/constants';
+import { HYPERSPACE, POLITICAL_TYPE_DISPLAY, ECONOMY_DESCRIPTIONS, type GoodName } from '../../game/constants';
 import styles from './StationUI.module.css';
 
 // Mirrored in engine/src/types/constants.rs (SHIELD_REPAIR_COST_PER_POINT)
@@ -34,13 +34,14 @@ export function StationUI({ onUndock }: StationUIProps) {
   const currentSystemId = useGameState(s => s.currentSystemId);
   const currentSystemPayload = useGameState(s => s.currentSystemPayload);
   const player = useGameState(s => s.player);
+  const shipStats = useGameState(s => s.shipStats);
 
   const starData = cluster[currentSystemId];
   const civState = currentSystemPayload?.civState;
   const market = currentSystemPayload?.market;
   if (!starData || !civState || !market) return null;
   const cargoTotal = Object.values(player.cargo).reduce((sum, qty) => sum + (qty ?? 0), 0);
-  const cargoSpace = MAX_CARGO - cargoTotal;
+  const cargoSpace = shipStats.maxCargo - cargoTotal;
   const listedMarket = market.filter(entry => entry.listingMode === 'listed_buy_sell');
   const sellOnlyMarket = market.filter(
     entry => entry.listingMode === 'sell_only' && (player.cargo[entry.good] ?? 0) > 0,
@@ -333,7 +334,7 @@ export function StationUI({ onUndock }: StationUIProps) {
         {tab === 'cargo' && (
           <div className={styles.cargo}>
             <div className={styles.cargoTitle}>
-              HOLD: {cargoTotal} / {MAX_CARGO} UNITS
+              HOLD: {cargoTotal} / {shipStats.maxCargo} UNITS
             </div>
             {Object.entries(player.cargo).length === 0 ? (
               <div style={{ opacity: 0.5 }}>Empty cargo hold</div>

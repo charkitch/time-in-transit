@@ -284,7 +284,6 @@ export const MARKET_GOODS: readonly GoodName[] = BUYABLE_GOODS;
 export const ECONOMY_TYPES = ['Remnant', 'Tithe', 'Extraction', 'Tributary', 'Resonance', 'Synthesis', 'Everything'] as const;
 export type EconomyType = typeof ECONOMY_TYPES[number];
 
-export const MAX_CARGO = 20;
 export const STARTING_CREDITS = 1000;
 export const STARTING_FUEL = 7;
 

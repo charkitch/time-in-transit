@@ -1,0 +1,31 @@
+id: HARVEST_SCAR_INITIAL
+title: THE WARM INLET
+requires:
+  - !AnyFlagNotSet harvest_scar_stage1_done
+narrativeLines:
+  - >-
+    The station's outer ring is full of repair tarps and heat shimmer. A public works crew has
+    spent six years building a fuel inlet through the old harbor wall: a narrow mouth that will
+    catch starwind and condense it into reactor salt.
+  - >-
+    The problem is not engineering. The problem is memory. The harbor was built around a
+    stone-dark patch of hull plating left from the first ship that ever reached this system.
+    Children touch it before exams. Widows leave cups of water there. Nobody agrees what it
+    means, only that it means something.
+  - >-
+    The forewoman recognizes your registry age and asks for a ruling she can quote. "You have
+    crossed more centuries than our archives have survived. Is it worse to cut through a relic,
+    or worse to keep children cold beside it?"
+choices:
+  - id: endorse_inlet
+    label: Tell them to build through it
+    description: "Begin a long consequence"
+    effect:
+      tradingReputation: 1
+      setsFlags: [harvest_scar_stage1_done, harvest_scar_inlet_built]
+  - id: preserve_plating
+    label: Tell them to preserve the harbor wall
+    description: "Begin a long consequence"
+    effect:
+      tradingReputation: 1
+      setsFlags: [harvest_scar_stage1_done, harvest_scar_relic_preserved]

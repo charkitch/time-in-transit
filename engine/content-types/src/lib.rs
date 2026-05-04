@@ -174,6 +174,8 @@ pub struct ChoiceEffect {
     pub sets_galactic_flags: Vec<String>,
     #[serde(default)]
     pub galaxy_years_advance: u32,
+    #[serde(default)]
+    pub grants_upgrade: Option<String>,
 }
 
 fn default_price_mod() -> f64 {
@@ -209,6 +211,10 @@ pub enum EventCondition {
     PoliticsIs(Vec<PoliticalType>),
     SpecialSystemIs(Vec<String>),
     MinGalaxyYear(u32),
+    MinYearsSinceEvent { event_id: String, years: u32 },
+    MaxYearsSinceEvent { event_id: String, years: u32 },
+    EventCompletedInCurrentSystem { event_id: String },
+    EventCompletedOutsideCurrentSystem { event_id: String },
     HasFactionTag(String),
     HasCargo(String),
     VisitedSystem(String),

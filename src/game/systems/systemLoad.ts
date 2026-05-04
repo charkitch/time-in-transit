@@ -51,6 +51,7 @@ export function buildWasmPlayerState(
     seenSystemDialogIds: [...state.seenSystemDialogIds],
     chainTargets: state.chainTargets,
     playerHistory: state.playerHistory,
+    shipUpgrades: state.shipUpgrades,
   };
 }
 

@@ -1,0 +1,33 @@
+id: HARVEST_SCAR_DAUGHTER_HOUSE
+title: THE DAUGHTER-HOUSE
+requires:
+  - !AnyFlagSet harvest_scar_stage2_done
+  - !AnyFlagNotSet harvest_scar_completed
+  - !ChainTargetHere harvest_scar
+  - !MinYearsSinceEvent { event_id: HARVEST_SCAR_RETURN, years: 100 }
+narrativeLines:
+  - >-
+    The asteroid base is not hidden so much as undecided. Half its docking lights are civic
+    blue, half are votive amber. The same emblem is painted over both airlocks: a black mark
+    in a harbor wall, opened like an eye.
+  - >-
+    Inside, two assemblies wait in the cargo nave. One wants to cut a new inlet through a
+    memorial chamber and feed ten thousand settlers. The other wants the chamber left dark
+    until their descendants can agree without hunger speaking first.
+  - >-
+    They do not ask you to command them. They have had five hundred years of your command.
+    They ask you to sit between them while they decide whether the past is a wall, a door, or
+    only material that people keep learning how to share.
+choices:
+  - id: witness_deliberation
+    label: Sit with them until the vote is done
+    description: "CR 700, chain complete"
+    effect:
+      creditsReward: 700
+      setsFlags: [harvest_scar_completed]
+  - id: refuse_authority
+    label: Refuse the chair, but leave the slate
+    description: "+Reputation, chain complete"
+    effect:
+      tradingReputation: 2
+      setsFlags: [harvest_scar_completed]
