@@ -16,7 +16,7 @@ import type {
 import type { GoodName } from './constants';
 import type { NPCCargoEntry } from './mechanics/NPCSystem';
 import type { NPCShipArchetype } from './archetypes';
-import type { SystemId, GalaxyYear, ScannableBodyId, FactionId } from './types';
+import type { SystemId, GalaxyYear, ScannableBodyId, FactionId, CrewMemberId } from './types';
 import type { AutosaveKind } from '../ui/MainMenu/saveSlots';
 import type { Vec3, Quat } from './spatialValidation';
 
@@ -140,6 +140,7 @@ export interface GameStateData {
   // ── Ship progression ────────────────────────────────────────────────────
   shipUpgrades: string[];
   shipStats: ShipStats;
+  crew: CrewMemberId[];
 }
 
 export interface GameActions {
@@ -226,6 +227,7 @@ export interface SaveData {
   shipQuaternion?: { x: number; y: number; z: number; w: number };
   shipVelocity?: { x: number; y: number; z: number };
   shipUpgrades: string[];
+  crew: CrewMemberId[];
 }
 
 export type { Vec3, Quat };

@@ -141,6 +141,9 @@ fn check_condition(cond: &EventCondition, ctx: &EventContext) -> bool {
             .player_history
             .galactic_flags
             .contains(flag),
+        EventCondition::HasCrewMember(id) => id
+            .parse::<CrewMember>()
+            .is_ok_and(|target| ctx.player_state.crew.contains(&target)),
     }
 }
 
@@ -301,6 +304,7 @@ mod tests {
             player_history: crate::types::PlayerHistory::default(),
             heat: 0.0,
             ship_upgrades: vec![],
+            crew: vec![],
         }
     }
 
@@ -317,6 +321,7 @@ mod tests {
             sets_galactic_flags: vec![],
             galaxy_years_advance: 0,
             grants_upgrade: None,
+            recruits_crew: None,
         }
     }
 

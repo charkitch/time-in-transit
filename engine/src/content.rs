@@ -468,6 +468,22 @@ mod tests {
     }
 
     #[test]
+    fn recruits_crew_references_valid_crew_members() {
+        use crate::types::CrewMember;
+
+        all_events()
+            .iter()
+            .flat_map(|event| collect_choice_effects(&event.choices))
+            .filter_map(|e| e.recruits_crew.as_ref().cloned())
+            .for_each(|crew_id| {
+                assert!(
+                    crew_id.parse::<CrewMember>().is_ok(),
+                    "Unknown crew member in event content: {crew_id}"
+                );
+            });
+    }
+
+    #[test]
     fn event_conditions_reference_known_events_and_chains() {
         let events = all_events();
         let event_ids = events

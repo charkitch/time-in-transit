@@ -176,6 +176,8 @@ pub struct ChoiceEffect {
     pub galaxy_years_advance: u32,
     #[serde(default)]
     pub grants_upgrade: Option<String>,
+    #[serde(default)]
+    pub recruits_crew: Option<String>,
 }
 
 fn default_price_mod() -> f64 {
@@ -231,6 +233,7 @@ pub enum EventCondition {
     ChainTargetHere(String),
     GalacticFlag(String),
     GalacticFlagNotSet(String),
+    HasCrewMember(String),
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]

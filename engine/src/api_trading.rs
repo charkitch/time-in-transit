@@ -1,12 +1,11 @@
 use wasm_bindgen::prelude::*;
 
-use crate::api_state::with_engine_mut;
+use crate::api_state::{from_json, to_json, with_engine_mut};
 use crate::types::*;
 
 #[wasm_bindgen]
 pub fn trade_buy(good_json: &str, qty: u32, price: i32) -> Result<String, JsValue> {
-    let good: GoodName = serde_json::from_str(good_json)
-        .map_err(|e| JsValue::from_str(&format!("Failed to parse good: {}", e)))?;
+    let good: GoodName = from_json(good_json, "good")?;
 
     with_engine_mut(|engine| {
         let ps = &mut engine.player_state;
@@ -15,7 +14,7 @@ pub fn trade_buy(good_json: &str, qty: u32, price: i32) -> Result<String, JsValu
             return Err(JsValue::from_str("Insufficient credits"));
         }
         let total_cargo: u32 = ps.cargo.values().sum();
-        let stats = EffectiveShipStats::compute(&ps.ship_upgrades);
+        let stats = ps.effective_stats();
         if total_cargo + qty > stats.max_cargo {
             return Err(JsValue::from_str("Cargo hold full"));
         }
@@ -30,15 +29,13 @@ pub fn trade_buy(good_json: &str, qty: u32, price: i32) -> Result<String, JsValu
         );
         ps.cargo.insert(good, new_qty);
 
-        serde_json::to_string(&*ps)
-            .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
+        to_json(&*ps)
     })
 }
 
 #[wasm_bindgen]
 pub fn trade_sell(good_json: &str, qty: u32, price: i32) -> Result<String, JsValue> {
-    let good: GoodName = serde_json::from_str(good_json)
-        .map_err(|e| JsValue::from_str(&format!("Failed to parse good: {}", e)))?;
+    let good: GoodName = from_json(good_json, "good")?;
 
     with_engine_mut(|engine| {
         let ps = &mut engine.player_state;
@@ -57,7 +54,6 @@ pub fn trade_sell(good_json: &str, qty: u32, price: i32) -> Result<String, JsVal
             ps.cargo.insert(good, remaining);
         }
 
-        serde_json::to_string(&*ps)
-            .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
+        to_json(&*ps)
     })
 }

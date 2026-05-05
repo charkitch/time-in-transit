@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-use crate::api_state::with_engine_mut;
+use crate::api_state::{from_json, to_json, with_engine_mut};
 use crate::civilization::get_civ_state;
 use crate::factions;
 use crate::simulation::simulate_galaxy;
@@ -103,19 +103,17 @@ pub fn jump_to_system(target_system_id: u32, fuel_cost: f64) -> Result<String, J
             player_state: engine.player_state.clone(),
         };
 
-        serde_json::to_string(&result)
-            .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
+        to_json(&result)
     })
 }
 
 #[wasm_bindgen]
 pub fn tick_flight(context_json: &str) -> Result<String, JsValue> {
-    let ctx: FlightTickContext = serde_json::from_str(context_json)
-        .map_err(|e| JsValue::from_str(&format!("Failed to parse flight context: {}", e)))?;
+    let ctx: FlightTickContext = from_json(context_json, "flight context")?;
 
     with_engine_mut(|engine| {
         let ps = &mut engine.player_state;
-        let stats = EffectiveShipStats::compute(&ps.ship_upgrades);
+        let stats = ps.effective_stats();
 
         ps.fuel = (ps.fuel + ctx.fuel_rate * ctx.dt).clamp(0.0, stats.max_fuel);
 
@@ -178,7 +176,6 @@ pub fn tick_flight(context_json: &str) -> Result<String, JsValue> {
             cargo_full: remaining_capacity == 0,
         };
 
-        serde_json::to_string(&result)
-            .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
+        to_json(&result)
     })
 }

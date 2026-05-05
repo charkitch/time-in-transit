@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-use crate::api_state::{EngineState, ENGINE_STATE};
+use crate::api_state::{from_json, to_json, EngineState, ENGINE_STATE};
 use crate::cluster_generator::generate_cluster;
 use crate::content;
 use crate::simulation::init_galaxy_state;
@@ -31,10 +31,10 @@ pub fn init_game(player_state_json: &str) -> Result<String, JsValue> {
             player_history: PlayerHistory::default(),
             heat: 0.0,
             ship_upgrades: vec![],
+            crew: vec![],
         }
     } else {
-        serde_json::from_str(player_state_json)
-            .map_err(|e| JsValue::from_str(&format!("Failed to parse player state: {}", e)))?
+        from_json(player_state_json, "player state")?
     };
 
     let galaxy_state = init_galaxy_state(&cluster, player_state.galaxy_year);
@@ -70,6 +70,5 @@ pub fn init_game(player_state_json: &str) -> Result<String, JsValue> {
         chain_targets,
     };
 
-    serde_json::to_string(&result)
-        .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
+    to_json(&result)
 }

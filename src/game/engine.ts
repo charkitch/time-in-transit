@@ -27,7 +27,7 @@ import type { StationArchetype } from './archetypes';
 import { useGameState } from './GameState';
 
 import type { GoodName, EconomyType, PoliticalType } from './constants';
-import type { SystemId, GalaxyYear, FactionId } from './types';
+import type { SystemId, GalaxyYear, FactionId, CrewMemberId } from './types';
 
 // ─── Types matching Rust camelCase serde output ─────────────────────────────
 
@@ -442,6 +442,7 @@ export interface WasmPlayerState {
     galacticFlags: string[];
   };
   shipUpgrades: string[];
+  crew: CrewMemberId[];
 }
 
 export interface ShipStats {

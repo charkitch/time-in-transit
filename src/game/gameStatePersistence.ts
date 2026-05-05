@@ -93,6 +93,7 @@ export function buildInitialState(mode: UIMode): Omit<GameStateData, 'cluster'> 
     // Ship progression
     shipUpgrades: [],
     shipStats: DEFAULT_SHIP_STATS,
+    crew: [],
   };
 }
 
@@ -143,6 +144,7 @@ export function buildSaveData(s: GameStateData): SaveData {
     shipQuaternion: hasValidSpatial ? s.player.quaternion : undefined,
     shipVelocity: hasValidSpatial ? s.player.velocity : undefined,
     shipUpgrades: s.shipUpgrades,
+    crew: s.crew,
   };
 }
 
@@ -180,6 +182,7 @@ export function applySaveFields(saved: Partial<SaveData>): Partial<GameStateData
     },
     shipUpgrades: saved.shipUpgrades ?? [],
     shipStats: DEFAULT_SHIP_STATS, // recomputed from WASM on engine sync
+    crew: saved.crew,
     // Clear transient state so nothing leaks from the previous session
     pendingGameEvent: null,
     pendingCommContext: null,

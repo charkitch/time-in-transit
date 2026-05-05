@@ -1,6 +1,9 @@
-use crate::types::*;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use std::sync::Mutex;
 use wasm_bindgen::JsValue;
+
+use crate::types::*;
 
 pub(crate) static ENGINE_STATE: Mutex<Option<EngineState>> = Mutex::new(None);
 
@@ -34,4 +37,14 @@ where
         .as_mut()
         .ok_or_else(|| JsValue::from_str("Engine not initialized"))?;
     f(engine)
+}
+
+pub(crate) fn to_json<T: Serialize>(value: &T) -> Result<String, JsValue> {
+    serde_json::to_string(value)
+        .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {e}")))
+}
+
+pub(crate) fn from_json<T: DeserializeOwned>(json: &str, label: &str) -> Result<T, JsValue> {
+    serde_json::from_str(json)
+        .map_err(|e| JsValue::from_str(&format!("Failed to parse {label}: {e}")))
 }

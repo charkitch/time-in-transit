@@ -65,19 +65,21 @@ choices:
             setsFlags: [burnt_accord_completed, hadiq_ally, korathi_accord, ashundi_distrust]
         - id: side_ashundi
           label: Back Renn and the Ashundi — they were the first victims of this lie
-          description: "Ashundi alliance. Renn becomes a contact. Korathi trust broken."
+          description: "Ashundi alliance. Recruit Renn. Korathi trust broken."
           effect:
             factionTag: "faction-2"
             tradingReputation: 2
             creditsReward: 500
             setsFlags: [burnt_accord_completed, renn_ally, ashundi_accord, korathi_distrust]
+            recruitsCrew: Renn
         - id: expose_draimar
           label: Turn on Seval — present the combined evidence to the whole room and burn the Draimar lie
-          description: "No faction — but both sides respect you. Draimar become hostile. Tessaly is your friend."
+          description: "No faction — both sides respect you. Recruit Tessaly. Draimar become hostile."
           effect:
             tradingReputation: 3
             creditsReward: 200
             setsFlags: [burnt_accord_completed, tessaly_friend, draimar_exposed, thennic_peace]
+            recruitsCrew: TessalyVane
         - id: sell_to_draimar
           label: You've seen the inside of this. Seval is going to win. Take her offer.
           description: "Draimar alliance. Big payout. Tessaly is captured. Renn and Hadiq are finished."
@@ -88,11 +90,12 @@ choices:
             setsFlags: [burnt_accord_completed, seval_ally, tessaly_captured, renn_captured, hadiq_captured]
         - id: help_tessaly_escape
           label: Grab Tessaly and run — blow the docking clamps and get out before the shooting starts
-          description: "Save Tessaly. No faction change. The war goes on, but you saved a good person."
+          description: "Recruit Tessaly. No faction change. The war goes on, but you saved a good person."
           effect:
             fuelReward: -0.3
             creditsReward: 0
             setsFlags: [burnt_accord_completed, tessaly_friend, accord_collapsed]
+            recruitsCrew: TessalyVane
   - id: stay_back
     label: This isn't your fight. Stay by the door.
     description: No effect

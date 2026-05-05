@@ -21,6 +21,13 @@ choices:
       tradingReputation: 1
       creditsReward: -200
     requiresCredits: 200
+  - id: invite_abbot
+    label: "Ask the abbot if stillness travels"
+    description: "Recruit the Abbot as crew — engineering bonus"
+    effect:
+      tradingReputation: 1
+      fuelReward: 1.0
+      recruitsCrew: IceMonksAbbot
   - id: decline_monks
     label: Decline gracefully
     description: No effect

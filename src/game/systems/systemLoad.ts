@@ -52,6 +52,7 @@ export function buildWasmPlayerState(
     chainTargets: state.chainTargets,
     playerHistory: state.playerHistory,
     shipUpgrades: state.shipUpgrades,
+    crew: state.crew,
   };
 }
 

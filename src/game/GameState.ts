@@ -215,6 +215,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
     },
     shipUpgrades: ps.shipUpgrades,
     shipStats: engineQueryShipStats(),
+    crew: ps.crew,
   })),
   setCluster: (cluster) => {
     CLUSTER = cluster;

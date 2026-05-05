@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-use super::{GoodName, ShipUpgrade};
+use super::{CrewMember, EffectiveShipStats, GoodName, ShipUpgrade};
 
 // ─── Player State ────────────────────────────────────────────────────────────
 
@@ -78,6 +78,18 @@ pub struct PlayerState {
     #[serde(default)]
     pub heat: f64,
     pub ship_upgrades: Vec<ShipUpgrade>,
+    pub crew: Vec<CrewMember>,
+}
+
+impl PlayerState {
+    pub(crate) fn effective_stats(&self) -> EffectiveShipStats {
+        EffectiveShipStats::compute(
+            self.ship_upgrades
+                .iter()
+                .map(|u| u.bonuses())
+                .chain(self.crew.iter().map(|c| c.bonuses())),
+        )
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

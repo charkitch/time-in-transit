@@ -20,6 +20,13 @@ choices:
       creditsReward: -300
       fuelReward: 1.0
     requiresCredits: 300
+  - id: invite_aboard
+    label: "Ask if she'd like to hear what's out there from a moving ship"
+    description: "Recruit The Listener as crew — scanner bonus"
+    effect:
+      tradingReputation: 1
+      fuelReward: 1.0
+      recruitsCrew: TheListener
   - id: leave_listener
     label: Leave her to her vigil
     description: No effect

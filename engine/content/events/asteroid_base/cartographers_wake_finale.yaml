@@ -54,19 +54,21 @@ choices:
       choices:
         - id: accept_final_chart
           label: Accept Enne's chart of the next seed-stars
-          description: "CR 800, +Reputation, chain complete"
+          description: "CR 800, +Reputation, recruit Enne, chain complete"
           effect:
             creditsReward: 800
             tradingReputation: 2
             setsFlags: [cartographers_wake_completed]
+            recruitsCrew: Enne
         - id: ask_about_gardener
           label: Ask Enne what kind of thing gardens a galaxy
-          description: "CR 600, fuel bonus, chain complete"
+          description: "CR 600, fuel bonus, recruit Enne, chain complete"
           effect:
             creditsReward: 600
             fuelReward: 0.8
             tradingReputation: 1
             setsFlags: [cartographers_wake_completed]
+            recruitsCrew: Enne
         - id: leave_enne
           label: Thank Enne but decline the chart
           description: No effect

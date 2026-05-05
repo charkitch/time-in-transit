@@ -20,5 +20,6 @@ pub fn test_player_state(galaxy_year: u32) -> PlayerState {
         player_history: PlayerHistory::default(),
         heat: 0.0,
         ship_upgrades: vec![],
+        crew: vec![],
     }
 }

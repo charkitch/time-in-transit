@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumString};
+use strum::{Display, EnumIter, EnumString};
 
 use super::constants::*;
 
 // ─── Ship Upgrades ──────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Display, EnumString, EnumIter,
+)]
 pub enum ShipUpgrade {
     ReinforcedHull,
     ExtendedTank,
@@ -18,7 +20,7 @@ pub enum ShipUpgrade {
 }
 
 impl ShipUpgrade {
-    fn bonuses(self) -> StatBonuses {
+    pub(crate) fn bonuses(self) -> StatBonuses {
         match self {
             ShipUpgrade::ReinforcedHull => StatBonuses {
                 max_shields: 20.0,
@@ -56,18 +58,18 @@ impl ShipUpgrade {
     }
 }
 
-// ─── Stat Bonuses (internal) ────────────────────────────────────────────────
+// ─── Stat Bonuses ───────────────────────────────────────────────────────────
 
 #[derive(Default)]
-struct StatBonuses {
-    max_fuel: f64,
-    max_shields: f64,
-    max_cargo: u32,
-    cooling_rate: f64,
-    shield_regen_rate: f64,
-    scan_range: f64,
-    harvest_efficiency: f64,
-    jump_fuel_cost_mod: f64,
+pub(crate) struct StatBonuses {
+    pub max_fuel: f64,
+    pub max_shields: f64,
+    pub max_cargo: u32,
+    pub cooling_rate: f64,
+    pub shield_regen_rate: f64,
+    pub scan_range: f64,
+    pub harvest_efficiency: f64,
+    pub jump_fuel_cost_mod: f64,
 }
 
 // ─── Effective Ship Stats ───────────────────────────────────────────────────
@@ -107,9 +109,8 @@ impl Default for EffectiveShipStats {
 }
 
 impl EffectiveShipStats {
-    pub fn compute(upgrades: &[ShipUpgrade]) -> Self {
-        upgrades.iter().fold(Self::default(), |mut stats, upgrade| {
-            let b = upgrade.bonuses();
+    pub(crate) fn compute(bonuses: impl Iterator<Item = StatBonuses>) -> Self {
+        bonuses.fold(Self::default(), |mut stats, b| {
             stats.max_fuel += b.max_fuel;
             stats.max_shields += b.max_shields;
             stats.max_cargo += b.max_cargo;
@@ -117,7 +118,7 @@ impl EffectiveShipStats {
             stats.shield_regen_rate += b.shield_regen_rate;
             stats.scan_range += b.scan_range;
             stats.harvest_efficiency += b.harvest_efficiency;
-            stats.jump_fuel_cost_mod += b.jump_fuel_cost_mod;
+            stats.jump_fuel_cost_mod = (stats.jump_fuel_cost_mod + b.jump_fuel_cost_mod).max(0.1);
             stats
         })
     }
@@ -126,11 +127,12 @@ impl EffectiveShipStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use strum::IntoEnumIterator;
 
     #[test]
-    fn empty_upgrades_match_defaults() {
+    fn empty_bonuses_match_defaults() {
         assert_eq!(
-            EffectiveShipStats::compute(&[]),
+            EffectiveShipStats::compute(std::iter::empty()),
             EffectiveShipStats::default()
         );
     }
@@ -150,18 +152,20 @@ mod tests {
 
     #[test]
     fn single_upgrade_applies_bonus() {
-        let stats = EffectiveShipStats::compute(&[ShipUpgrade::ExtendedTank]);
+        let upgrades = [ShipUpgrade::ExtendedTank];
+        let stats = EffectiveShipStats::compute(upgrades.iter().map(|u| u.bonuses()));
         assert_eq!(stats.max_fuel, MAX_FUEL + 2.0);
         assert_eq!(stats.max_shields, MAX_SHIELDS); // unchanged
     }
 
     #[test]
     fn multiple_upgrades_stack() {
-        let stats = EffectiveShipStats::compute(&[
+        let upgrades = [
             ShipUpgrade::ExtendedTank,
             ShipUpgrade::ReinforcedHull,
             ShipUpgrade::CargoExpansion,
-        ]);
+        ];
+        let stats = EffectiveShipStats::compute(upgrades.iter().map(|u| u.bonuses()));
         assert_eq!(stats.max_fuel, MAX_FUEL + 2.0);
         assert_eq!(stats.max_shields, MAX_SHIELDS + 20.0);
         assert_eq!(stats.max_cargo, MAX_CARGO + 5);
@@ -169,25 +173,24 @@ mod tests {
 
     #[test]
     fn from_str_round_trips() {
-        let variants = [
-            ShipUpgrade::ReinforcedHull,
-            ShipUpgrade::ExtendedTank,
-            ShipUpgrade::CargoExpansion,
-            ShipUpgrade::ImprovedCooling,
-            ShipUpgrade::ShieldBooster,
-            ShipUpgrade::AdvancedScanner,
-            ShipUpgrade::EfficientScoops,
-            ShipUpgrade::FuelInjectors,
-        ];
-        for variant in variants {
-            let s = variant.to_string();
-            let parsed: ShipUpgrade = s.parse().unwrap();
+        ShipUpgrade::iter().for_each(|variant| {
+            let parsed: ShipUpgrade = variant.to_string().parse().unwrap();
             assert_eq!(parsed, variant);
-        }
+        });
     }
 
     #[test]
     fn from_str_rejects_unknown() {
         assert!("Nonexistent".parse::<ShipUpgrade>().is_err());
+    }
+
+    #[test]
+    fn jump_fuel_cost_mod_has_floor() {
+        let bonuses = (0..20).map(|_| StatBonuses {
+            jump_fuel_cost_mod: -0.1,
+            ..Default::default()
+        });
+        let stats = EffectiveShipStats::compute(bonuses);
+        assert_eq!(stats.jump_fuel_cost_mod, 0.1);
     }
 }

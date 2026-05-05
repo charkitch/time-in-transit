@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-use crate::api_state::with_engine_mut;
+use crate::api_state::{from_json, to_json, with_engine_mut};
 use crate::civilization::get_civ_state;
 use crate::simulation::simulate_galaxy;
 use crate::system_payload::{build_cluster_summary, compute_chain_targets};
@@ -9,25 +9,17 @@ use crate::types::*;
 
 #[wasm_bindgen]
 pub fn query_ship_stats() -> Result<String, JsValue> {
-    crate::api_state::with_engine(|engine| {
-        let stats = EffectiveShipStats::compute(&engine.player_state.ship_upgrades);
-        serde_json::to_string(&stats)
-            .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
-    })
+    crate::api_state::with_engine(|engine| to_json(&engine.player_state.effective_stats()))
 }
 
 #[wasm_bindgen]
 pub fn get_player_state() -> Result<String, JsValue> {
-    crate::api_state::with_engine(|engine| {
-        serde_json::to_string(&engine.player_state)
-            .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
-    })
+    crate::api_state::with_engine(|engine| to_json(&engine.player_state))
 }
 
 #[wasm_bindgen]
 pub fn set_player_state(json: &str) -> Result<(), JsValue> {
-    let player_state: PlayerState = serde_json::from_str(json)
-        .map_err(|e| JsValue::from_str(&format!("Failed to parse player state: {}", e)))?;
+    let player_state: PlayerState = from_json(json, "player state")?;
 
     with_engine_mut(|engine| {
         engine.player_state = player_state;
@@ -50,17 +42,14 @@ pub fn get_system_market(system_id: u32) -> Result<String, JsValue> {
             Some(&ps.cargo),
         );
 
-        serde_json::to_string(&market)
-            .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
+        to_json(&market)
     })
 }
 
 #[wasm_bindgen]
 pub fn get_cluster_summary(galaxy_year: u32) -> Result<String, JsValue> {
     crate::api_state::with_engine(|engine| {
-        let summary = build_cluster_summary(&engine.cluster, galaxy_year);
-        serde_json::to_string(&summary)
-            .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
+        to_json(&build_cluster_summary(&engine.cluster, galaxy_year))
     })
 }
 
@@ -71,13 +60,12 @@ pub fn apply_choice_effect(
     root_event_id: &str,
     choice_effect_json: &str,
 ) -> Result<String, JsValue> {
-    let effect: ChoiceEffect = serde_json::from_str(choice_effect_json)
-        .map_err(|e| JsValue::from_str(&format!("Failed to parse choice effect: {}", e)))?;
+    let effect: ChoiceEffect = from_json(choice_effect_json, "choice effect")?;
 
     with_engine_mut(|engine| {
         let ps = &mut engine.player_state;
 
-        let stats = EffectiveShipStats::compute(&ps.ship_upgrades);
+        let stats = ps.effective_stats();
         ps.credits += effect.credits_reward;
         ps.fuel = (ps.fuel + effect.fuel_reward).clamp(0.0, stats.max_fuel);
 
@@ -123,6 +111,15 @@ pub fn apply_choice_effect(
             }
         }
 
+        if let Some(ref crew_id) = effect.recruits_crew {
+            let member: CrewMember = crew_id
+                .parse()
+                .map_err(|_| JsValue::from_str(&format!("Unknown crew member: {crew_id}")))?;
+            if !ps.crew.contains(&member) {
+                ps.crew.push(member);
+            }
+        }
+
         let years_advance = effect.galaxy_years_advance;
         if years_advance > 0 {
             ps.galaxy_year += years_advance;
@@ -148,7 +145,6 @@ pub fn apply_choice_effect(
         engine.player_state.chain_targets =
             compute_chain_targets(&engine.cluster, &engine.player_state);
 
-        serde_json::to_string(&engine.player_state)
-            .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
+        to_json(&engine.player_state)
     })
 }

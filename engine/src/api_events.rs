@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-use crate::api_state::with_engine;
+use crate::api_state::{to_json, with_engine};
 use crate::civilization::get_civ_state;
 use crate::content;
 use crate::events::{select_game_event, EventContext, EventPool};
@@ -101,8 +101,7 @@ pub fn get_game_event(
             e
         });
 
-        serde_json::to_string(&event)
-            .map_err(|e| JsValue::from_str(&format!("Failed to serialize: {}", e)))
+        to_json(&event)
     })
 }
 
