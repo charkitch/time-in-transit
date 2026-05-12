@@ -77,7 +77,9 @@ pub struct PlayerState {
     pub player_history: PlayerHistory,
     #[serde(default)]
     pub heat: f64,
+    #[serde(default)]
     pub ship_upgrades: Vec<ShipUpgrade>,
+    #[serde(default)]
     pub crew: Vec<CrewMember>,
 }
 
