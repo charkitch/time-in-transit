@@ -36,7 +36,7 @@ export const PALETTE = {
 export const FLIGHT = {
   maxSpeed:       500,
   boostMultiplier: 3,
-  boostFuelRate:  0.5,   // units/s
+  boostFuelRate:  0.25,  // units/s
   drag:           0.97,
   pitchRate:      1.2,
   yawRate:        0.8,
