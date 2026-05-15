@@ -151,15 +151,19 @@ pub fn build_system_payload(
     let mut system = generate_solar_system(star);
     let system_flags = player_state.player_choices.get(&star.id).map(|c| &c.flags);
 
-    // Apply dynamic climate state to each planet and its moons
-    // Home planet (system 0, planet 0) stays cap-free — it's the first thing the player sees.
+    // Apply dynamic climate state to each planet and its moons.
+    // Planets with skip_climate in their override stay pristine (e.g. homeworld).
     system
         .planets
         .iter_mut()
         .enumerate()
         .for_each(|(pi, planet)| {
             let pi = pi as u32;
-            if planet.planet_type == PlanetType::Rocky && !(star.id == 0 && pi == 0) {
+            let skip = star
+                .planet_overrides
+                .iter()
+                .any(|o| o.planet_index == pi && o.skip_climate);
+            if planet.planet_type == PlanetType::Rocky && !skip {
                 let (climate, intensity, cap) = derive_climate(
                     star.id,
                     BodyIndex::Planet(pi),

@@ -95,12 +95,22 @@ pub fn generate_cluster() -> Vec<StarSystemData> {
             economy,
             tech_level,
             population: sys_rng.int(10, 10000),
+            planet_overrides: vec![],
         });
     }
 
     // Home system gets a familiar sun-like star
     if !systems.is_empty() {
         systems[0].star_type = StarType::G;
+        systems[0].special_kind = SpecialSystemKind::Home;
+        systems[0].planet_overrides.push(PlanetOverride {
+            planet_index: 0,
+            surface: SurfaceType::Continental,
+            clouds: Some((true, 0.45)),
+            name: None,
+            station_archetype: Some(StationArchetype::TradeHub),
+            skip_climate: true,
+        });
     }
 
     // Place IRON and Crown.
@@ -144,6 +154,14 @@ pub fn generate_cluster() -> Vec<StarSystemData> {
             systems[crown_idx].star_type = StarType::G;
             systems[crown_idx].special_kind = SpecialSystemKind::TheCrown;
             systems[crown_idx].name = "The Crown".to_string();
+            systems[crown_idx].planet_overrides.push(PlanetOverride {
+                planet_index: 0,
+                surface: SurfaceType::Continental,
+                clouds: Some((true, 0.58)),
+                name: Some("Sunmere".to_string()),
+                station_archetype: None,
+                skip_climate: false,
+            });
         }
     }
 
@@ -344,8 +362,8 @@ mod tests {
             .collect();
         assert_eq!(
             non_special.len(),
-            28,
-            "Expected 28 non-special systems (30 - iron - crown)"
+            27,
+            "Expected 27 non-special systems (30 - home - iron - crown)"
         );
     }
 }

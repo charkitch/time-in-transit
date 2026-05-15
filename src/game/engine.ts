@@ -65,8 +65,8 @@ export type SurfaceType =
 export type DysonBiomeProfile = 'continental' | 'mixed' | 'desert' | 'arctic';
 
 export type GasGiantType = 'jovian' | 'saturnian' | 'neptunian' | 'inferno' | 'chromatic' | 'helium';
-export type ClimateState = 'stable' | 'ice_age' | 'warming' | 'nuclear_winter' | 'toxic_bloom';
-export type SpecialSystemKind = 'none' | 'iron_star' | 'the_crown';
+export type ClimateState = 'stable' | 'ice_age' | 'warming' | 'nuclear_winter' | 'toxic_bloom' | 'tidally_locked';
+export type SpecialSystemKind = 'none' | 'home' | 'iron_star' | 'the_crown';
 export type InteractionTopology = 'sphere' | 'shell_patch' | 'helix_tube';
 export type InteractionProfile = 'rocky' | 'gas_giant' | 'dyson_shell' | 'topopolis';
 export type TopopolisBiome = 'continental' | 'ocean' | 'desert' | 'alien' | 'forest' | 'ice';

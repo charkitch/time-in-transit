@@ -12,6 +12,60 @@ pub enum ClimateState {
     Warming,
     NuclearWinter,
     ToxicBloom,
+    TidallyLocked,
+}
+
+// ─── Planet Overrides ───────────────────────────────────────────────────────
+
+/// Declarative override for a planet's procedural surface and cloud rolls.
+/// Any source (anomaly, special system, homeworld) produces one of these;
+/// the generator applies it without knowing *why*.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanetOverride {
+    pub planet_index: u32,
+    pub surface: SurfaceType,
+    #[serde(default)]
+    pub clouds: Option<(bool, f64)>,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub station_archetype: Option<StationArchetype>,
+    #[serde(default)]
+    pub skip_climate: bool,
+}
+
+// ─── Zone Anomalies ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ZoneAnomaly {
+    /// Moon kept warm by gravitational flexing (Europa-like).
+    TidalHeating,
+    /// Volcanic world with subsurface liquid water.
+    GeothermalDeep,
+    /// Ancient engineered atmosphere that shouldn't still exist.
+    RelicAtmosphere,
+    /// Unexplained magnetic field shielding from stellar radiation.
+    MagnetosphereAnomaly,
+}
+
+impl ZoneAnomaly {
+    pub fn to_override(self, planet_index: u32) -> PlanetOverride {
+        let surface = match self {
+            ZoneAnomaly::TidalHeating => SurfaceType::Ocean,
+            ZoneAnomaly::GeothermalDeep => SurfaceType::Volcanic,
+            ZoneAnomaly::RelicAtmosphere => SurfaceType::Continental,
+            ZoneAnomaly::MagnetosphereAnomaly => SurfaceType::Continental,
+        };
+        PlanetOverride {
+            planet_index,
+            surface,
+            clouds: None,
+            name: None,
+            station_archetype: None,
+            skip_climate: false,
+        }
+    }
 }
 
 // ─── Special System Kinds ───────────────────────────────────────────────────
@@ -20,6 +74,7 @@ pub enum ClimateState {
 #[serde(rename_all = "snake_case")]
 pub enum SpecialSystemKind {
     None,
+    Home,
     IronStar,
     TheCrown,
 }
@@ -28,6 +83,7 @@ impl SpecialSystemKind {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::None => "none",
+            Self::Home => "home",
             Self::IronStar => "iron_star",
             Self::TheCrown => "the_crown",
         }
@@ -109,7 +165,7 @@ pub enum DysonBiomeProfile {
     Arctic,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, strum::EnumCount)]
 #[serde(rename_all = "snake_case")]
 pub enum GasGiantType {
     Jovian,
@@ -118,17 +174,6 @@ pub enum GasGiantType {
     Inferno,
     Chromatic,
     Helium,
-}
-
-impl GasGiantType {
-    pub const ALL: &'static [GasGiantType] = &[
-        GasGiantType::Jovian,
-        GasGiantType::Saturnian,
-        GasGiantType::Neptunian,
-        GasGiantType::Inferno,
-        GasGiantType::Chromatic,
-        // GasGiantType::Helium is reserved for the Iron star system profile
-    ];
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -205,6 +250,8 @@ pub struct StarSystemData {
     pub economy: EconomyType,
     pub tech_level: i32,
     pub population: i32,
+    #[serde(default)]
+    pub planet_overrides: Vec<PlanetOverride>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

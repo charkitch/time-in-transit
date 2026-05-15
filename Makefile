@@ -6,8 +6,9 @@ PORT ?= 5173
 
 .PHONY: help setup install hooks-install hooks-run lint lint-ts lint-rust format-rust \
 	wasm-build wasm-build-dev dev build preview test test-rust test-e2e test-e2e-headed \
-	test-e2e-ui playwright-install audit audit-prod clean-node docker-build docker-run \
-	docker-stop docker-rm docker-logs docker-compose-up docker-compose-down docker-compose-logs
+	test-e2e-ui test-e2e-docker test-e2e-docker-build playwright-install audit audit-prod \
+	clean-node docker-build docker-run docker-stop docker-rm docker-logs \
+	docker-compose-up docker-compose-down docker-compose-logs
 
 help: ## Show all available targets
 	@echo "Available targets:"
@@ -51,7 +52,7 @@ build: ## Build app for production
 preview: ## Preview production build
 	npm run preview
 
-test: test-rust test-e2e ## Run all tests (Rust unit + E2E)
+test: test-rust test-e2e-docker ## Run all tests (Rust unit + E2E via Docker)
 
 test-rust: ## Run Rust unit tests
 	cargo test --manifest-path engine/Cargo.toml
@@ -67,6 +68,12 @@ test-e2e-headed: ## Run headed E2E tests
 
 test-e2e-ui: ## Open Playwright UI
 	npm run test:e2e:ui
+
+test-e2e-docker: ## Run E2E tests in Docker
+	docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from e2e
+
+test-e2e-docker-build: ## Build E2E Docker image only
+	docker compose -f docker-compose.test.yml build
 
 audit: ## Audit all dependencies
 	npm audit
