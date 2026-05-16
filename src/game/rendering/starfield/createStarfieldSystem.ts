@@ -5,6 +5,8 @@ import {
 } from './createGalacticBackground';
 import { createStarPoints } from './starPointMaterial';
 import { projectStarView } from './projectStarView';
+import { createSimpleStarfield } from './createSimpleStarfield';
+import { isSoftwareRenderer } from './detectSoftwareRenderer';
 import type { StarVolume } from './starfieldConstants';
 
 export interface StarfieldSystem {
@@ -22,7 +24,12 @@ export function createStarfieldSystem(
   galaxyY: number,
   pixelRatio: number,
   camera: THREE.PerspectiveCamera,
+  renderer: THREE.WebGLRenderer,
 ): StarfieldSystem {
+  if (isSoftwareRenderer(renderer)) {
+    return createSimpleStarfield(starVolume, galaxyX, galaxyY);
+  }
+
   const view = projectStarView(starVolume, galaxyX, galaxyY);
   const starPoints = createStarPoints(view.positions, view.colors, view.sizes, pixelRatio);
   const backgroundQuad = createGalacticBackground(galaxyX, galaxyY, camera);

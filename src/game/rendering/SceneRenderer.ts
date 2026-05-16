@@ -88,7 +88,7 @@ export class SceneRenderer {
     this.scene.add(this.shipGroup);
 
     this.starVolume = generateStarVolume();
-    this.starfieldSystem = createStarfieldSystem(this.starVolume, 0, 0, this.getPixelRatio(), this.camera);
+    this.starfieldSystem = createStarfieldSystem(this.starVolume, 0, 0, this.getPixelRatio(), this.camera, this.renderer);
     this.scene.add(this.starfieldSystem.backgroundQuad);
     this.scene.add(this.starfieldSystem.starPoints);
 

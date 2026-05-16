@@ -85,7 +85,7 @@ export function buildSystemScene(params: {
   const collisionOnlyEntities: SceneEntity[] = [];
 
   // Starfield
-  const starfieldSystem = createStarfieldSystem(starVolume, galaxyX, galaxyY, pixelRatio, camera);
+  const starfieldSystem = createStarfieldSystem(starVolume, galaxyX, galaxyY, pixelRatio, camera, renderer);
   scene.add(starfieldSystem.backgroundQuad);
   scene.add(starfieldSystem.starPoints);
 
