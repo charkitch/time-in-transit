@@ -1,9 +1,12 @@
 import * as THREE from 'three';
 import { PALETTE } from '../constants';
 import {
-  createStarfield, createHyperspaceTunnel, updateHyperspaceTunnel,
+  createHyperspaceTunnel, updateHyperspaceTunnel,
   createHyperspaceGrid, updateHyperspaceGrid,
 } from './effects';
+import { generateStarVolume } from './starfield/generateStarVolume';
+import { createStarfieldSystem, type StarfieldSystem } from './starfield/createStarfieldSystem';
+import type { StarVolume } from './starfield/starfieldConstants';
 import { disposeAll as disposeTextureCache } from './textureCache';
 import type { SolarSystemData, SystemFactionState } from '../engine';
 import type { SystemId, GalaxyYear } from '../types';
@@ -13,7 +16,7 @@ import type { SceneEntity } from './scene/types';
 import type { RuntimeProfile } from '../../runtime/runtimeProfile';
 import { LandingSiteManager } from './scene/LandingSiteManager';
 import { tickSceneAnimations } from './scene/tickSceneAnimations';
-import { buildSystemScene, type SystemSceneState, GALAXY_SEED } from './scene/buildSystemScene';
+import { buildSystemScene, type SystemSceneState } from './scene/buildSystemScene';
 export type { SceneEntity } from './scene/types';
 
 export class SceneRenderer {
@@ -22,7 +25,8 @@ export class SceneRenderer {
   camera: THREE.PerspectiveCamera;
   shipGroup: THREE.Group;
 
-  private starfield: THREE.Points;
+  private starfieldSystem: StarfieldSystem;
+  private starVolume: StarVolume;
   private entities: Map<string, SceneEntity> = new Map();
   private npcShips: Map<string, NPCShipState> = new Map();
   private hyperspacePoints: THREE.Points | null = null;
@@ -83,8 +87,10 @@ export class SceneRenderer {
     this.shipGroup.add(this.camera);
     this.scene.add(this.shipGroup);
 
-    this.starfield = createStarfield(GALAXY_SEED);
-    this.scene.add(this.starfield);
+    this.starVolume = generateStarVolume();
+    this.starfieldSystem = createStarfieldSystem(this.starVolume, 0, 0, this.getPixelRatio(), this.camera);
+    this.scene.add(this.starfieldSystem.backgroundQuad);
+    this.scene.add(this.starfieldSystem.starPoints);
 
     this.landingSites = new LandingSiteManager(this.entities);
 
@@ -158,14 +164,14 @@ export class SceneRenderer {
     this.landingSites.resetCounter();
 
     // Dispose old starfield
-    this.scene.remove(this.starfield);
-    this.starfield.geometry.dispose();
-    (this.starfield.material as THREE.Material).dispose();
+    this.scene.remove(this.starfieldSystem.backgroundQuad);
+    this.scene.remove(this.starfieldSystem.starPoints);
+    this.starfieldSystem.dispose();
 
     // Remove old starLight from scene if present
     if (this.systemState.starLight) this.scene.remove(this.systemState.starLight);
 
-    const { state, starfield } = buildSystemScene({
+    const { state, starfieldSystem } = buildSystemScene({
       scene: this.scene,
       camera: this.camera,
       renderer: this.renderer,
@@ -180,10 +186,12 @@ export class SceneRenderer {
       factionState,
       galaxyX,
       galaxyY,
+      starVolume: this.starVolume,
+      pixelRatio: this.getPixelRatio(),
     });
 
     this.systemState = state;
-    this.starfield = starfield;
+    this.starfieldSystem = starfieldSystem;
   }
 
   getLandingSiteStatsForHost(hostId: string): { total: number; discovered: number } {
@@ -285,7 +293,7 @@ export class SceneRenderer {
 
   render(): void {
     if (this.contextLost) return;
-    this.camera.getWorldPosition(this.starfield.position);
+    this.starfieldSystem.updatePerFrame(this.camera);
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -305,6 +313,7 @@ export class SceneRenderer {
     this.canvas.removeEventListener('webglcontextlost', this.handleContextLost);
     this.canvas.removeEventListener('webglcontextrestored', this.handleContextRestored);
     for (const obj of this.systemState.systemObjects) this.disposeObject3D(obj);
+    this.starfieldSystem.dispose();
     disposeTextureCache();
     this.renderer.dispose();
   }

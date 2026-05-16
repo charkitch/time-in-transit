@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { createStarfield } from '../effects';
 import { makeAsteroidBelt } from '../meshFactory';
 import type { SolarSystemData, SystemFactionState } from '../../engine';
 import type { NPCShipState } from '../../mechanics/NPCSystem';
@@ -13,7 +12,6 @@ import type { BattleExplosions } from '../effects';
 import type { FleetBattle } from '../../mechanics/FleetBattleSystem';
 import type { XRayTransferStream } from './types';
 
-import { GALAXY_SEED, STARFIELD_POS_SCALE, STARFIELD_YEAR_SCALE } from './buildSystemSceneUtils';
 import { buildStar } from './buildStar';
 import { buildPlanets } from './buildPlanets';
 import { buildDysonShells } from './buildDysonShells';
@@ -21,9 +19,10 @@ import { buildTopopolisCoils } from './buildTopopolisCoils';
 import { buildSecretBases } from './buildSecretBases';
 import { buildNPCShips } from './buildNPCShips';
 import { buildFleetBattle } from './buildFleetBattle';
+import { createStarfieldSystem, type StarfieldSystem } from '../starfield/createStarfieldSystem';
+import type { StarVolume } from '../starfield/starfieldConstants';
 
-// Re-export for external consumers
-export { GALAXY_SEED, STARFIELD_POS_SCALE, STARFIELD_YEAR_SCALE } from './buildSystemSceneUtils';
+export { GALAXY_SEED } from './buildSystemSceneUtils';
 export { hashString32 } from './buildSystemSceneUtils';
 
 export interface SystemSceneState {
@@ -62,7 +61,9 @@ export function buildSystemScene(params: {
   factionState?: SystemFactionState;
   galaxyX?: number;
   galaxyY?: number;
-}): { state: SystemSceneState; starfield: THREE.Points } {
+  starVolume: StarVolume;
+  pixelRatio: number;
+}): { state: SystemSceneState; starfieldSystem: StarfieldSystem } {
   const {
     scene, camera, renderer, runtimeProfile,
     entities, npcShips, landingSites,
@@ -72,6 +73,8 @@ export function buildSystemScene(params: {
     factionState,
     galaxyX = 0,
     galaxyY = 0,
+    starVolume,
+    pixelRatio,
   } = params;
 
   const systemObjects: THREE.Object3D[] = [];
@@ -82,10 +85,9 @@ export function buildSystemScene(params: {
   const collisionOnlyEntities: SceneEntity[] = [];
 
   // Starfield
-  const yaw = galaxyX * STARFIELD_POS_SCALE + galaxyYear * STARFIELD_YEAR_SCALE;
-  const pitch = galaxyY * STARFIELD_POS_SCALE;
-  const starfield = createStarfield(GALAXY_SEED, yaw, pitch);
-  scene.add(starfield);
+  const starfieldSystem = createStarfieldSystem(starVolume, galaxyX, galaxyY, pixelRatio, camera);
+  scene.add(starfieldSystem.backgroundQuad);
+  scene.add(starfieldSystem.starPoints);
 
   // Star
   const starResult = buildStar({ scene, camera, entities, systemObjects, data, systemName });
@@ -190,5 +192,5 @@ export function buildSystemScene(params: {
     starLight: starResult.starLight,
   };
 
-  return { state, starfield };
+  return { state, starfieldSystem };
 }

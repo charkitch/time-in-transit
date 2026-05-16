@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PALETTE } from '../constants';
-import { PRNG } from '../generation/prng';
+
 
 interface BattlePointsData {
   battleData: BattleProjectileData;
@@ -364,32 +364,3 @@ export function updateBattleExplosions(pool: BattleExplosions, dt: number): void
   }
 }
 
-/** Starfield: 2000 stars on a large sphere */
-export function createStarfield(seed: number, yaw = 0, pitch = 0): THREE.Points {
-  const rng = new PRNG(seed);
-  const count = 2000;
-  const positions = new Float32Array(count * 3);
-
-  for (let i = 0; i < count; i++) {
-    const theta = rng.next() * Math.PI * 2;
-    const phi = Math.acos(2 * rng.next() - 1);
-    const r = 40000;
-    positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
-    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    positions[i * 3 + 2] = r * Math.cos(phi);
-  }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geo.rotateX(pitch);
-  geo.rotateY(yaw);
-
-  const mat = new THREE.PointsMaterial({
-    color: 0xFFFFFF,
-    size: 2,
-    sizeAttenuation: false,
-    fog: false,
-  });
-
-  return new THREE.Points(geo, mat);
-}
