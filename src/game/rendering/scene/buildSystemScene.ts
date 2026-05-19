@@ -20,7 +20,7 @@ import { buildSecretBases } from './buildSecretBases';
 import { buildNPCShips } from './buildNPCShips';
 import { buildFleetBattle } from './buildFleetBattle';
 import { createStarfieldSystem, type StarfieldSystem } from '../starfield/createStarfieldSystem';
-import type { StarVolume } from '../starfield/starfieldConstants';
+import type { StarVolume, NebulaDescriptor } from '../starfield/starfieldConstants';
 
 export { GALAXY_SEED } from './buildSystemSceneUtils';
 export { hashString32 } from './buildSystemSceneUtils';
@@ -62,6 +62,7 @@ export function buildSystemScene(params: {
   galaxyX?: number;
   galaxyY?: number;
   starVolume: StarVolume;
+  nebulaCatalog: NebulaDescriptor[];
   pixelRatio: number;
 }): { state: SystemSceneState; starfieldSystem: StarfieldSystem } {
   const {
@@ -74,6 +75,7 @@ export function buildSystemScene(params: {
     galaxyX = 0,
     galaxyY = 0,
     starVolume,
+    nebulaCatalog,
     pixelRatio,
   } = params;
 
@@ -85,8 +87,9 @@ export function buildSystemScene(params: {
   const collisionOnlyEntities: SceneEntity[] = [];
 
   // Starfield
-  const starfieldSystem = createStarfieldSystem(starVolume, galaxyX, galaxyY, pixelRatio, camera, renderer);
+  const starfieldSystem = createStarfieldSystem(starVolume, nebulaCatalog, galaxyX, galaxyY, pixelRatio, camera, renderer);
   scene.add(starfieldSystem.backgroundQuad);
+  scene.add(starfieldSystem.nebulae);
   scene.add(starfieldSystem.starPoints);
 
   // Star

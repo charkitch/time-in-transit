@@ -40,13 +40,16 @@ export function createSimpleStarfield(
   starPoints.frustumCulled = false;
   starPoints.renderOrder = STAR_POINT_RENDER_ORDER;
 
-  // Empty placeholder — no background quad in simple mode
+  // Empty placeholders — no background or nebulae in simple mode
   const backgroundQuad = new THREE.Mesh();
   backgroundQuad.visible = false;
+  const nebulae = new THREE.Mesh();
+  nebulae.visible = false;
 
   return {
     backgroundQuad,
     starPoints,
+    nebulae,
 
     updatePerFrame(camera: THREE.PerspectiveCamera) {
       camera.getWorldPosition(_cameraWorldPos);

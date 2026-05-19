@@ -5,8 +5,9 @@ import {
   createHyperspaceGrid, updateHyperspaceGrid,
 } from './effects';
 import { generateStarVolume } from './starfield/generateStarVolume';
+import { generateNebulaCatalog } from './starfield/generateNebulaCatalog';
 import { createStarfieldSystem, type StarfieldSystem } from './starfield/createStarfieldSystem';
-import type { StarVolume } from './starfield/starfieldConstants';
+import type { StarVolume, NebulaDescriptor } from './starfield/starfieldConstants';
 import { disposeAll as disposeTextureCache } from './textureCache';
 import type { SolarSystemData, SystemFactionState } from '../engine';
 import type { SystemId, GalaxyYear } from '../types';
@@ -27,6 +28,7 @@ export class SceneRenderer {
 
   private starfieldSystem: StarfieldSystem;
   private starVolume: StarVolume;
+  private nebulaCatalog: NebulaDescriptor[];
   private entities: Map<string, SceneEntity> = new Map();
   private npcShips: Map<string, NPCShipState> = new Map();
   private hyperspacePoints: THREE.Points | null = null;
@@ -88,8 +90,10 @@ export class SceneRenderer {
     this.scene.add(this.shipGroup);
 
     this.starVolume = generateStarVolume();
-    this.starfieldSystem = createStarfieldSystem(this.starVolume, 0, 0, this.getPixelRatio(), this.camera, this.renderer);
+    this.nebulaCatalog = generateNebulaCatalog();
+    this.starfieldSystem = createStarfieldSystem(this.starVolume, this.nebulaCatalog, 0, 0, this.getPixelRatio(), this.camera, this.renderer);
     this.scene.add(this.starfieldSystem.backgroundQuad);
+    this.scene.add(this.starfieldSystem.nebulae);
     this.scene.add(this.starfieldSystem.starPoints);
 
     this.landingSites = new LandingSiteManager(this.entities);
@@ -165,6 +169,7 @@ export class SceneRenderer {
 
     // Dispose old starfield
     this.scene.remove(this.starfieldSystem.backgroundQuad);
+    this.scene.remove(this.starfieldSystem.nebulae);
     this.scene.remove(this.starfieldSystem.starPoints);
     this.starfieldSystem.dispose();
 
@@ -187,6 +192,7 @@ export class SceneRenderer {
       galaxyX,
       galaxyY,
       starVolume: this.starVolume,
+      nebulaCatalog: this.nebulaCatalog,
       pixelRatio: this.getPixelRatio(),
     });
 

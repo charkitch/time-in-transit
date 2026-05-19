@@ -1,22 +1,7 @@
 import * as THREE from 'three';
 import galacticBgVert from './shaders/galactic_bg.vert.glsl';
 import galacticBgFrag from './shaders/galactic_bg.frag.glsl';
-import {
-  DUST_NOISE_SCALE,
-  GALACTIC_BAND_FALLOFF,
-  GALACTIC_BG_RENDER_ORDER,
-  GALAXY_POSITION_NOISE_OFFSET,
-  NEBULA_COLOR_COOL,
-  NEBULA_COLOR_WARM,
-  NEBULA_NOISE_SCALE,
-} from './starfieldConstants';
-
-function galaxyOffset(galaxyX: number, galaxyY: number): THREE.Vector2 {
-  return new THREE.Vector2(
-    galaxyX * GALAXY_POSITION_NOISE_OFFSET,
-    galaxyY * GALAXY_POSITION_NOISE_OFFSET,
-  );
-}
+import { GALACTIC_BG_RENDER_ORDER } from './starfieldConstants';
 
 export function createGalacticBackground(
   galaxyX: number,
@@ -29,12 +14,7 @@ export function createGalacticBackground(
     uniforms: {
       uInvProjectionMatrix: { value: camera.projectionMatrixInverse.clone() },
       uInvViewMatrix: { value: camera.matrixWorld.clone() },
-      uGalaxyOffset: { value: galaxyOffset(galaxyX, galaxyY) },
-      uBandFalloff: { value: GALACTIC_BAND_FALLOFF },
-      uNebulaScale: { value: NEBULA_NOISE_SCALE },
-      uDustScale: { value: DUST_NOISE_SCALE },
-      uNebulaWarmColor: { value: NEBULA_COLOR_WARM.clone() },
-      uNebulaCoolColor: { value: NEBULA_COLOR_COOL.clone() },
+      uGalaxyDir: { value: new THREE.Vector2(-galaxyX, -galaxyY).normalize() },
     },
     vertexShader: galacticBgVert,
     fragmentShader: galacticBgFrag,

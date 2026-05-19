@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-
 export const BACKGROUND_STAR_COUNT = 15_000;
 export const VISIBLE_STAR_LIMIT = 8_000;
 
@@ -10,17 +8,44 @@ export const STARFIELD_SPHERE_RADIUS = 50_000;
 
 export const GALAXY_TO_VOLUME_SCALE = 3.0;
 
-export const NEBULA_NOISE_SCALE = 0.003;
-export const DUST_NOISE_SCALE = 0.005;
-export const GALACTIC_BAND_FALLOFF = 4.0;
-export const GALAXY_POSITION_NOISE_OFFSET = 0.07;
+// --- Nebula billboard system ---
 
-export const NEBULA_COLOR_WARM = new THREE.Vector3(0.4, 0.15, 0.1);
-export const NEBULA_COLOR_COOL = new THREE.Vector3(0.1, 0.12, 0.3);
+export const NEBULA_RENDER_ORDER = -998;
+export const NEBULA_MIN_COUNT = 3;
+export const NEBULA_MAX_COUNT = 7;
+export const NEBULA_MIN_ANGULAR_RADIUS = 0.02;
+export const NEBULA_MAX_ANGULAR_RADIUS = 0.09;
+export const NEBULA_MIN_SEPARATION = 0.7; // ~40° in radians
 
-export const BASE_STAR_SIZE = 4.0;
-export const MIN_STAR_SIZE = 1.0;
-export const MAX_STAR_SIZE = 12.0;
+export type Vec3Tuple = [number, number, number];
+export type ShapeWeights = [number, number, number, number]; // radial, shell, filament, absorption
+
+export interface NebulaDescriptor {
+  direction: Vec3Tuple;
+  angularRadius: number;
+  shapeWeights: ShapeWeights;
+  paletteIndex: number;
+  brightness: number;
+  seed: number;
+  elongation: number;
+  rotation: number;
+}
+
+// [primaryR, primaryG, primaryB, secondaryR, secondaryG, secondaryB]
+export const NEBULA_PALETTES: readonly [number, number, number, number, number, number][] = [
+  [1.0, 0.3, 0.2,    0.8, 0.15, 0.1],   // emission red/orange
+  [0.3, 0.5, 0.9,    0.15, 0.2, 0.6],   // reflection blue
+  [0.7, 0.2, 0.5,    0.4, 0.1, 0.3],    // magenta/purple
+  [0.2, 0.8, 0.5,    0.1, 0.5, 0.3],    // planetary teal/green
+  [0.9, 0.6, 0.2,    0.6, 0.3, 0.1],    // warm gold
+  [0.05, 0.03, 0.02,  0.1, 0.05, 0.02], // dark nebula
+  [0.4, 0.3, 0.8,    0.2, 0.15, 0.5],   // violet
+  [0.8, 0.8, 0.3,    0.5, 0.4, 0.15],   // sulfur yellow
+];
+
+export const BASE_STAR_SIZE = 10.0;
+export const MIN_STAR_SIZE = 2.5;
+export const MAX_STAR_SIZE = 30.0;
 
 export const STAR_POINT_RENDER_ORDER = -999;
 export const GALACTIC_BG_RENDER_ORDER = -1000;
