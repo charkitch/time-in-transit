@@ -41,9 +41,11 @@ export function createSimpleStarfield(
   starPoints.renderOrder = STAR_POINT_RENDER_ORDER;
 
   // Empty placeholders — no background or nebulae in simple mode
-  const backgroundQuad = new THREE.Mesh();
+  const emptyGeo = new THREE.BufferGeometry();
+  const emptyMat = new THREE.MeshBasicMaterial();
+  const backgroundQuad = new THREE.Mesh(emptyGeo, emptyMat);
   backgroundQuad.visible = false;
-  const nebulae = new THREE.Mesh();
+  const nebulae = new THREE.Mesh(emptyGeo, emptyMat);
   nebulae.visible = false;
 
   return {
@@ -59,6 +61,8 @@ export function createSimpleStarfield(
     dispose() {
       geometry.dispose();
       material.dispose();
+      emptyGeo.dispose();
+      emptyMat.dispose();
     },
   };
 }

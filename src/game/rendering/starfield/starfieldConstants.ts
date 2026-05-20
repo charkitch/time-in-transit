@@ -24,6 +24,7 @@ export interface NebulaDescriptor {
   direction: Vec3Tuple;
   angularRadius: number;
   shapeWeights: ShapeWeights;
+  presetIndex: number;
   paletteIndex: number;
   brightness: number;
   seed: number;

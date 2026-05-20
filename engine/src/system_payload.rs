@@ -153,17 +153,21 @@ pub fn build_system_payload(
 
     // Apply dynamic climate state to each planet and its moons.
     // Planets with skip_climate in their override stay pristine (e.g. homeworld).
+    // planet_overrides are keyed by rocky ordinal, not global planet index.
+    let mut rocky_index = 0u32;
     system
         .planets
         .iter_mut()
         .enumerate()
         .for_each(|(pi, planet)| {
             let pi = pi as u32;
-            let skip = star
-                .planet_overrides
-                .iter()
-                .any(|o| o.planet_index == pi && o.skip_climate);
-            if planet.planet_type == PlanetType::Rocky && !skip {
+            let is_rocky = planet.planet_type == PlanetType::Rocky;
+            let skip = is_rocky
+                && star
+                    .planet_overrides
+                    .iter()
+                    .any(|o| o.planet_index == rocky_index && o.skip_climate);
+            if is_rocky && !skip {
                 let (climate, intensity, cap) = derive_climate(
                     star.id,
                     BodyIndex::Planet(pi),
@@ -190,6 +194,9 @@ pub fn build_system_payload(
                 moon.climate_intensity = intensity;
                 moon.polar_cap_size = cap;
             });
+            if is_rocky {
+                rocky_index += 1;
+            }
         });
 
     let mut civ_state = get_civ_state(star.id, galaxy_year, star.economy);

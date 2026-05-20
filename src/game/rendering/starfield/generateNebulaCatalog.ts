@@ -32,17 +32,24 @@ const SHAPE_PRESETS: readonly ShapeWeights[] = [
   PLANETARY_BASE,
 ];
 
+const SHAPE_PRESET_INDICES = SHAPE_PRESETS.map((_, i) => i);
+
 // Palette indices suited to each shape type
 const EMISSION_PALETTES = [0, 2, 4, 7];   // red, magenta, gold, sulfur
 const REFLECTION_PALETTES = [1, 6];        // blue, violet
 const DARK_PALETTES = [5];                 // dark
 const PLANETARY_PALETTES = [3, 6];         // teal, violet
 
-function paletteForPreset(preset: ShapeWeights, rng: PRNG): number {
-  if (preset === DARK_BASE) return rng.pick(DARK_PALETTES);
-  if (preset === REFLECTION_BASE) return rng.pick(REFLECTION_PALETTES);
-  if (preset === PLANETARY_BASE) return rng.pick(PLANETARY_PALETTES);
-  return rng.pick(EMISSION_PALETTES);
+function palettesForPreset(preset: ShapeWeights): readonly number[] {
+  if (preset === DARK_BASE) return DARK_PALETTES;
+  if (preset === REFLECTION_BASE) return REFLECTION_PALETTES;
+  if (preset === PLANETARY_BASE) return PLANETARY_PALETTES;
+  return EMISSION_PALETTES;
+}
+
+function pickAvoiding<T>(arr: readonly T[], avoid: T, rng: PRNG): T {
+  const filtered = arr.filter((v) => v !== avoid);
+  return rng.pick(filtered.length > 0 ? filtered : arr);
 }
 
 function uniformSphereDirection(rng: PRNG): Vec3Tuple {
@@ -78,30 +85,20 @@ export function generateNebulaCatalog(): NebulaDescriptor[] {
     const direction = uniformSphereDirection(rng);
 
     // Reject if too close to any existing nebula
-    const nearest = nebulae.reduce<{ dot: number; preset: ShapeWeights | null; palette: number }>(
+    const nearest = nebulae.reduce<{ dot: number; presetIndex: number; palette: number }>(
       (best, existing) => {
         const d = dot3(direction, existing.direction);
-        return d > best.dot ? { dot: d, preset: existing.shapeWeights, palette: existing.paletteIndex } : best;
+        return d > best.dot ? { dot: d, presetIndex: existing.presetIndex, palette: existing.paletteIndex } : best;
       },
-      { dot: -2, preset: null, palette: -1 },
+      { dot: -2, presetIndex: -1, palette: -1 },
     );
     if (nearest.dot > Math.cos(NEBULA_MIN_SEPARATION)) continue;
 
-    // Pick a shape preset that differs from the nearest neighbor
-    let basePreset = rng.pick(SHAPE_PRESETS);
-    if (nearest.preset !== null) {
-      for (let retry = 0; retry < 5 && basePreset === nearest.preset; retry++) {
-        basePreset = rng.pick(SHAPE_PRESETS);
-      }
-    }
+    const presetIdx = pickAvoiding(SHAPE_PRESET_INDICES, nearest.presetIndex, rng);
+    const basePreset = SHAPE_PRESETS[presetIdx];
 
-    // Pick a palette that differs from the nearest neighbor
-    let paletteIndex = paletteForPreset(basePreset, rng);
-    if (nearest.palette >= 0) {
-      for (let retry = 0; retry < 5 && paletteIndex === nearest.palette; retry++) {
-        paletteIndex = paletteForPreset(basePreset, rng);
-      }
-    }
+    const palettes = palettesForPreset(basePreset);
+    const paletteIndex = pickAvoiding(palettes, nearest.palette, rng);
 
     const shapeWeights = perturbWeights(basePreset, rng);
 
@@ -109,6 +106,7 @@ export function generateNebulaCatalog(): NebulaDescriptor[] {
       direction,
       angularRadius: rng.float(NEBULA_MIN_ANGULAR_RADIUS, NEBULA_MAX_ANGULAR_RADIUS),
       shapeWeights,
+      presetIndex: presetIdx,
       paletteIndex: Math.min(paletteIndex, NEBULA_PALETTES.length - 1),
       brightness: rng.float(0.08, 0.4),
       seed: rng.float(0, 1000),
