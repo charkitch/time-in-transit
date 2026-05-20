@@ -4,8 +4,6 @@ import type { CollisionSphere } from './types';
 
 export const PLANET_COLLISION_SCALE = 1.04;
 export const GALAXY_SEED = 0x5AFEF00D;
-export const STARFIELD_POS_SCALE = (Math.PI / 2) / 100;
-export const STARFIELD_YEAR_SCALE = 0.0002;
 
 export function hashString32(input: string): number {
   let h = 0x811c9dc5;

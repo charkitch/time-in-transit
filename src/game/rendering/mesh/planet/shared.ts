@@ -59,6 +59,7 @@ export const CLIMATE_STATE_INDEX: Record<ClimateState, number> = {
   warming: 2,
   nuclear_winter: 3,
   toxic_bloom: 4,
+  tidally_locked: 5,
 };
 
 export function withSurfaceTypeShaderDefines(fragmentShader: string): string {

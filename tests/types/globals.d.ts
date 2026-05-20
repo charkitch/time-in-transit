@@ -8,6 +8,8 @@ interface TestVec3 {
   x: number;
   y: number;
   z: number;
+  set(x: number, y: number, z: number): TestVec3;
+  clone(): TestVec3;
   distanceTo(other: TestVec3): number;
 }
 
@@ -41,6 +43,21 @@ interface TestSceneRenderer {
   getAllEntities?(): Map<string, TestEntity>;
 }
 
+interface TestFlightModel {
+  setVelocity(x: number, y: number, z: number): void;
+  getVelocity(): TestVec3;
+  resolveCollisions(
+    shipGroup: { position: TestVec3 },
+    collidables: Array<Record<string, unknown>>,
+  ): {
+    lethal: boolean;
+    shieldDamage?: number;
+    heatDamage?: number;
+    alert?: string;
+    entity: { type: string };
+  } | null;
+}
+
 interface TestInteraction {
   prepareLanding(systemId: number, stationId?: string): void;
 }
@@ -51,6 +68,7 @@ interface TestGame {
   requestSystemMapToggle(): void;
   triggerDeath(msg: string[]): void;
   sceneRenderer: TestSceneRenderer;
+  flightModel: TestFlightModel;
   interaction: TestInteraction;
 }
 

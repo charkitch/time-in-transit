@@ -134,7 +134,7 @@ impl PoliticalType {
 
 // ─── Surface Types ───────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, strum::EnumCount)]
 #[serde(rename_all = "snake_case")]
 pub enum SurfaceType {
     Continental,

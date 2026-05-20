@@ -55,7 +55,7 @@ fn valid_climate_for_surface(climate: ClimateState, surface: SurfaceType) -> boo
         ClimateState::Warming => !matches!(surface, SurfaceType::Venus | SurfaceType::Volcanic),
         ClimateState::NuclearWinter => !matches!(surface, SurfaceType::Venus | SurfaceType::Barren),
         ClimateState::ToxicBloom => !matches!(surface, SurfaceType::Venus | SurfaceType::Ice),
-        ClimateState::Stable => true,
+        ClimateState::Stable | ClimateState::TidallyLocked => true,
     }
 }
 
@@ -99,13 +99,15 @@ pub(crate) fn derive_climate(
     // Stable planets get 0. Others get a random stage so each planet is
     // at a different point in its transition.
     let intensity = match climate {
-        ClimateState::Stable => 0.0,
+        ClimateState::Stable | ClimateState::TidallyLocked => 0.0,
         _ => rng.float(0.15, 1.0),
     };
 
     let base = base_cap_size(&mut rng, surface);
     let cap_size = match climate {
         ClimateState::Stable => base,
+        // Tidally locked: one large frozen dark-side cap
+        ClimateState::TidallyLocked => 0.45 + rng.float(0.0, 0.3),
         // Ice age: caps grow with intensity. At 0.15 ≈ slight growth, at 1.0 ≈ full glaciation
         ClimateState::IceAge => {
             let scale = 1.0 + intensity * 0.8; // 1.12x – 1.8x

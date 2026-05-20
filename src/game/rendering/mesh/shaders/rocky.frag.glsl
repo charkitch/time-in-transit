@@ -7,7 +7,7 @@ uniform int surfType;
 uniform sampler2D interactionFieldTex;
 uniform float interactionFieldBlend;
 uniform float polarCapSize;
-uniform int climateState; // 0=stable 1=ice_age 2=warming 3=nuclear 4=toxic
+uniform int climateState; // 0=stable 1=ice_age 2=warming 3=nuclear 4=toxic 5=tidally_locked
 
 void main() {
   vec3 toStar = normalize(-vWorldPosition);
@@ -144,12 +144,21 @@ void main() {
     surfaceColor *= shadow;
   }
 
-  // -- Polar caps --
+  // -- Polar caps / tidally locked dark-side ice --
   if (polarCapSize > 0.0) {
-    float lat = abs(norm.y);
-    float capStart = 1.0 - polarCapSize * 0.7;
     float edgeNoise = snoise(noisePos * 3.0) * 0.08;
-    float capMask = smoothstep(capStart - 0.05, capStart + 0.05, lat + edgeNoise);
+    float capMask;
+    if (climateState == 5) {
+      // Tidally locked: frozen dark-side hemisphere
+      float darkSide = -dot(norm, toStar);
+      float capStart = 1.0 - polarCapSize * 1.4;
+      capMask = smoothstep(capStart - 0.08, capStart + 0.08, darkSide + edgeNoise);
+    } else {
+      // Normal polar caps
+      float lat = abs(norm.y);
+      float capStart = 1.0 - polarCapSize * 0.7;
+      capMask = smoothstep(capStart - 0.05, capStart + 0.05, lat + edgeNoise);
+    }
 
     vec3 capColor;
     if (climateState == 3) {

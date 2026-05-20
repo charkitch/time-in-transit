@@ -151,15 +151,23 @@ pub fn build_system_payload(
     let mut system = generate_solar_system(star);
     let system_flags = player_state.player_choices.get(&star.id).map(|c| &c.flags);
 
-    // Apply dynamic climate state to each planet and its moons
-    // Home planet (system 0, planet 0) stays cap-free — it's the first thing the player sees.
+    // Apply dynamic climate state to each planet and its moons.
+    // Planets with skip_climate in their override stay pristine (e.g. homeworld).
+    // planet_overrides are keyed by rocky ordinal, not global planet index.
+    let mut rocky_index = 0u32;
     system
         .planets
         .iter_mut()
         .enumerate()
         .for_each(|(pi, planet)| {
             let pi = pi as u32;
-            if planet.planet_type == PlanetType::Rocky && !(star.id == 0 && pi == 0) {
+            let is_rocky = planet.planet_type == PlanetType::Rocky;
+            let skip = is_rocky
+                && star
+                    .planet_overrides
+                    .iter()
+                    .any(|o| o.planet_index == rocky_index && o.skip_climate);
+            if is_rocky && !skip {
                 let (climate, intensity, cap) = derive_climate(
                     star.id,
                     BodyIndex::Planet(pi),
@@ -186,6 +194,9 @@ pub fn build_system_payload(
                 moon.climate_intensity = intensity;
                 moon.polar_cap_size = cap;
             });
+            if is_rocky {
+                rocky_index += 1;
+            }
         });
 
     let mut civ_state = get_civ_state(star.id, galaxy_year, star.economy);

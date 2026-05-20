@@ -1,0 +1,9 @@
+node_modules
+dist
+test-results
+engine/target
+engine/pkg
+.git
+plans
+story
+*.md
