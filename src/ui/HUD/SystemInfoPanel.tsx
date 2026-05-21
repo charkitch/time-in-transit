@@ -14,6 +14,9 @@ interface SystemInfoPanelProps {
   currentFactionKnown: boolean;
   credits: number;
   isMobileHUD: boolean;
+  onClusterMap: () => void;
+  onSystemMap: () => void;
+  onControls: () => void;
 }
 
 export function SystemInfoPanel({
@@ -25,6 +28,9 @@ export function SystemInfoPanel({
   currentFactionKnown,
   credits,
   isMobileHUD,
+  onClusterMap,
+  onSystemMap,
+  onControls,
 }: SystemInfoPanelProps) {
   const starTooltip = useClickAwayTooltip();
   const econTooltip = useClickAwayTooltip();
@@ -137,9 +143,16 @@ export function SystemInfoPanel({
       )}
       {!isMobileHUD && (
         <div className={styles.controls}>
-          W/S Pitch · A/D Roll · Q/E Yaw<br />
-          SPACE Thrust · SHIFT Boost · TAB Target<br />
-          F Dock / Land · G Cluster Map · M System Map · J Jump · H Hail · V Scan
+          <button type="button" className={styles.controlsBtn} onClick={onClusterMap}>
+            J CLUSTER MAP
+          </button>
+          <button type="button" className={styles.controlsBtn} onClick={onSystemMap}>
+            M SYSTEM MAP
+          </button>
+          <br />
+          <button type="button" className={styles.controlsBtn} onClick={onControls}>
+            CONTROLS
+          </button>
         </div>
       )}
     </div>

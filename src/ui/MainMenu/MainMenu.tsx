@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { TRAVEL_TERMS } from '../../game/constants';
 import type { RuntimeProfile } from '../../runtime/runtimeProfile';
 import type { AutosaveKind, SlotMeta } from './saveSlots';
 import { readAllSlotMetas, readAutosaveMetas } from './saveSlots';
@@ -21,7 +20,7 @@ interface MainMenuProps {
   onToggleInvertControls: () => void;
   buildLabel: string;
   runtimeProfile: RuntimeProfile;
-  initialView?: 'main' | 'load';
+  initialView?: 'main' | 'load' | 'controls';
 }
 
 export function MainMenu({
@@ -172,20 +171,20 @@ export function MainMenu({
               <span className={styles.action}>DOCK / LAND</span>
             </div>
             <div className={styles.controlRow}>
-              <span className={styles.key}>G</span>
+              <span className={styles.key}>J</span>
               <span className={styles.action}>CLUSTER MAP</span>
             </div>
             <div className={styles.controlRow}>
-              <span className={styles.key}>1</span>
+              <span className={styles.key}>M</span>
               <span className={styles.action}>SYSTEM MAP</span>
-            </div>
-            <div className={styles.controlRow}>
-              <span className={styles.key}>J</span>
-              <span className={styles.action}>{TRAVEL_TERMS.modeNameUpper} JUMP</span>
             </div>
             <div className={styles.controlRow}>
               <span className={styles.key}>H</span>
               <span className={styles.action}>HAIL / COMMUNICATE</span>
+            </div>
+            <div className={styles.controlRow}>
+              <span className={styles.key}>V</span>
+              <span className={styles.action}>SCAN</span>
             </div>
             <div className={styles.controlRow}>
               <span className={styles.key}>ESC</span>

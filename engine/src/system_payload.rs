@@ -153,7 +153,6 @@ pub fn build_system_payload(
 
     // Apply dynamic climate state to each planet and its moons.
     // Planets with skip_climate in their override stay pristine (e.g. homeworld).
-    // planet_overrides are keyed by rocky ordinal, not global planet index.
     let mut rocky_index = 0u32;
     system
         .planets

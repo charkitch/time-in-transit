@@ -287,6 +287,26 @@
   line-height: 1.6;
 }
 
+.controlsBtn {
+  display: inline-block;
+  margin: 2px 4px 2px 0;
+  padding: 1px 6px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--font-hud);
+  font-size: 9px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.2s ease;
+}
+
+.controlsBtn:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.8);
+}
+
 .mobile .topLeft {
   max-width: min(62vw, 420px);
 }

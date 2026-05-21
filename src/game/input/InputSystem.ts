@@ -8,8 +8,6 @@ export interface InputState {
   clusterMap: boolean;
   systemMap: boolean;
   cycleTarget: boolean;
-  jumpRequest: boolean;
-  confirmJump: boolean;
 }
 
 const KEYS = new Set<string>();
@@ -28,7 +26,6 @@ export class InputSystem {
   private onClusterMap?: () => void;
   private onSystemMap?: () => void;
   private onCycleTarget?: () => void;
-  private onJumpRequest?: () => void;
   private onHail?: () => void;
   private onScan?: () => void;
   private onEscape?: () => void;
@@ -43,10 +40,9 @@ export class InputSystem {
     KEYS.add(e.code);
     // one-shot actions
     if (e.code === 'KeyF' && !e.repeat) this.onDock?.();
-    if (e.code === 'KeyG' && !e.repeat) this.onClusterMap?.();
+    if (e.code === 'KeyJ' && !e.repeat) this.onClusterMap?.();
     if (e.code === 'KeyM' && !e.repeat) this.onSystemMap?.();
     if (e.code === 'Tab') { e.preventDefault(); if (!e.repeat) this.onCycleTarget?.(); }
-    if (e.code === 'KeyJ' && !e.repeat) this.onJumpRequest?.();
     if (e.code === 'KeyH' && !e.repeat) this.onHail?.();
     if (e.code === 'KeyV' && !e.repeat) this.onScan?.();
     if (e.code === 'Escape' && !e.repeat) this.onEscape?.();
@@ -82,8 +78,6 @@ export class InputSystem {
       clusterMap:  false,
       systemMap:   false,
       cycleTarget: false,
-      jumpRequest: false,
-      confirmJump: isDown('KeyJ'),
     };
   }
 
@@ -107,7 +101,6 @@ export class InputSystem {
   triggerClusterMapToggle() { this.onClusterMap?.(); }
   triggerSystemMapToggle() { this.onSystemMap?.(); }
   triggerCycleTargetEvent() { this.onCycleTarget?.(); }
-  triggerJumpRequestEvent() { this.onJumpRequest?.(); }
   triggerHailRequest() { this.onHail?.(); }
   triggerScanRequest() { this.onScan?.(); }
   triggerEscapeEvent() { this.onEscape?.(); }
@@ -116,7 +109,6 @@ export class InputSystem {
   onClusterMapToggle(fn: () => void) { this.onClusterMap = fn; }
   onSystemMapToggle(fn: () => void) { this.onSystemMap = fn; }
   onCycleTargetEvent(fn: () => void) { this.onCycleTarget = fn; }
-  onJumpRequestEvent(fn: () => void) { this.onJumpRequest = fn; }
   onHailRequest(fn: () => void) { this.onHail = fn; }
   onScanRequest(fn: () => void) { this.onScan = fn; }
   onEscapeEvent(fn: () => void) { this.onEscape = fn; }

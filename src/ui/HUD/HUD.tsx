@@ -29,6 +29,7 @@ interface HUDProps {
   onClusterMap: () => void;
   onSystemMap: () => void;
   onMenu: () => void;
+  onControls: () => void;
 }
 
 export function HUD({
@@ -46,6 +47,7 @@ export function HUD({
   onClusterMap,
   onSystemMap,
   onMenu,
+  onControls,
 }: HUDProps) {
   // Per-frame: only the player fields this component reads
   const { targetId, credits, speed } = useGameState(
@@ -157,6 +159,9 @@ export function HUD({
         currentFactionKnown={Boolean(currentFactionKnown)}
         credits={credits}
         isMobileHUD={isMobileHUD}
+        onClusterMap={onClusterMap}
+        onSystemMap={onSystemMap}
+        onControls={onControls}
       />
 
       <TargetInfoPanel

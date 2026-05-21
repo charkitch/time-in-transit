@@ -50,6 +50,7 @@ export function App() {
   const [flashPhase, setFlashPhase] = useState<'none' | 'entry' | 'exit' | 'loadFade'>('none');
   const loadingSlotRef = useRef(false);
   const menuFromDeathRef = useRef(false);
+  const menuInitialViewRef = useRef<'main' | 'load' | 'controls'>('main');
   const [runtimeProfile, setRuntimeProfile] = useState<RuntimeProfile | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
   const [contextLossNotice, setContextLossNotice] = useState<string | null>(null);
@@ -127,6 +128,7 @@ export function App() {
     }
     if (prev === 'menu') {
       menuFromDeathRef.current = false;
+      menuInitialViewRef.current = 'main';
     }
     prevUiModeRef.current = uiMode;
   }, [uiMode]);
@@ -254,6 +256,10 @@ export function App() {
   const handleTouchClusterMap = () => gameRef.current?.requestClusterMapToggle();
   const handleTouchSystemMap = () => gameRef.current?.requestSystemMapToggle();
   const handleTouchMenu = () => setUIMode('menu');
+  const handleOpenControls = () => {
+    menuInitialViewRef.current = 'controls';
+    setUIMode('menu');
+  };
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
@@ -288,6 +294,7 @@ export function App() {
           onClusterMap={handleTouchClusterMap}
           onSystemMap={handleTouchSystemMap}
           onMenu={handleTouchMenu}
+          onControls={handleOpenControls}
         />
       )}
 
@@ -344,7 +351,7 @@ export function App() {
             onToggleInvertControls={handleToggleInvertControls}
             buildLabel={BUILD_TAG_LABEL}
             runtimeProfile={runtimeProfile!}
-            initialView={menuFromDeathRef.current ? 'load' : 'main'}
+            initialView={menuFromDeathRef.current ? 'load' : menuInitialViewRef.current}
           />
       )}
 

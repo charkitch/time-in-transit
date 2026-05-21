@@ -97,7 +97,6 @@ export class Game {
     this.input.onClusterMapToggle(() => this.toggleClusterMap());
     this.input.onSystemMapToggle(() => this.toggleSystemMap());
     this.input.onCycleTargetEvent(() => this.targeting.cycleTarget());
-    this.input.onJumpRequestEvent(() => this.jump.tryJump());
     this.input.onHailRequest(() => this.interaction.tryHail());
     this.input.onScanRequest(() => this.scanning.tryScan());
     this.input.onEscapeEvent(() => this.handleEscape());
@@ -174,7 +173,7 @@ export class Game {
     this.rafId = requestAnimationFrame(this.loop);
   }
 
-  /** Allows UI actions (e.g. map button) to trigger the same jump path as the J key. */
+  /** Triggers a jump from the cluster map UI. */
   requestJump(): void {
     this.jump.tryJump();
   }

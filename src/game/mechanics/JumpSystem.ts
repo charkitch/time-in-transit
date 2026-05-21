@@ -6,7 +6,7 @@ import type { FlightHazardSystem } from './FlightHazardSystem';
 import { useGameState } from '../GameState';
 import { HYPERSPACE } from '../constants';
 import { engineJumpToSystem, type SystemPayload, type WasmPlayerState } from '../engine';
-import { canJump, jumpCost } from './hyperspaceCalc';
+import { jumpCost } from './hyperspaceCalc';
 
 const INFINITE_FUEL_DEV = import.meta.env.DEV;
 import { STARTING_SYSTEM_ID } from '../constants';
@@ -33,31 +33,13 @@ export class JumpSystem {
     },
   ) {}
 
+  /** Called from the cluster map UI after it has already validated the target and fuel. */
   tryJump(): void {
     const state = useGameState.getState();
-    const mode = state.ui.mode;
-    if (mode !== 'flight' && mode !== 'cluster_map') return;
-
-    // Close cluster map if open so we return to flight
-    if (mode === 'cluster_map') state.setUIMode('flight');
-
-    if (state.ui.hyperspaceTarget === null) {
-      state.setAlert('Open cluster map (G) to select jump target');
-      setTimeout(() => useGameState.getState().setAlert(null), 2000);
-      return;
-    }
     if (state.ui.hyperspaceCountdown > 0) return;
+    if (state.ui.hyperspaceTarget === null) return;
 
-    const currentSys = state.cluster[state.currentSystemId];
-    const targetSys = state.cluster[state.ui.hyperspaceTarget];
-    const availableFuel = INFINITE_FUEL_DEV ? HYPERSPACE.tankSize : state.player.fuel;
-    const check = canJump(currentSys, targetSys, availableFuel);
-    if (!check.ok) {
-      state.setAlert(check.reason ?? 'Cannot jump');
-      setTimeout(() => useGameState.getState().setAlert(null), 2000);
-      return;
-    }
-
+    state.setUIMode('flight');
     state.setHyperspaceCountdown(HYPERSPACE.countdown);
   }
 
