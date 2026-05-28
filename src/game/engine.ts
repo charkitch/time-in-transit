@@ -322,7 +322,13 @@ export interface SystemPayload {
   market: MarketEntry[];
   gameEvent: GameEvent | null;
   systemEntryLines: string[];
+  crewNarration: CrewNarrationLine[];
   systemEntryDialog: SystemEntryDialog | null;
+}
+
+export interface CrewNarrationLine {
+  speaker: string;
+  text: string;
 }
 
 export interface JumpLogEntry {

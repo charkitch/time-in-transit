@@ -2,6 +2,7 @@ mod civilization;
 mod climate;
 pub mod cluster_generator;
 mod content;
+mod crew_narration;
 mod dyson_generator;
 mod events;
 mod factions;

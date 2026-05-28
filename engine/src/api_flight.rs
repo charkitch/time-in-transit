@@ -6,7 +6,7 @@ use crate::factions;
 use crate::simulation::simulate_galaxy;
 use crate::system_payload::{
     build_cluster_summary, build_system_payload, compute_chain_targets, jump_years_elapsed,
-    ship_years_elapsed,
+    ship_years_elapsed, ArrivalContext,
 };
 use crate::types::*;
 
@@ -44,12 +44,25 @@ pub fn jump_to_system(target_system_id: u32, fuel_cost: f64) -> Result<String, J
             new_galaxy_year,
             target_civ.politics,
         );
+
+        let prior_memory = ps.faction_memory.get(&target_system_id).cloned();
+
+        let stability_band = engine
+            .galaxy_state
+            .systems
+            .iter()
+            .find(|s| s.system_id == target_system_id)
+            .map(|s| crate::crew_narration::stability_band(s.stability))
+            .unwrap_or(1);
+
         ps.faction_memory.insert(
             target_system_id,
             FactionMemoryEntry {
                 faction_id: faction_state.controlling_faction_id.clone(),
                 contesting_faction_id: faction_state.contesting_faction_id.clone(),
                 galaxy_year: new_galaxy_year,
+                politics: Some(target_civ.politics),
+                stability_band: Some(stability_band),
             },
         );
         if !ps
@@ -76,9 +89,13 @@ pub fn jump_to_system(target_system_id: u32, fuel_cost: f64) -> Result<String, J
             target,
             new_galaxy_year,
             &engine.player_state,
-            None,
-            Some(pre_jump_era),
-            Some(years_elapsed),
+            prior_memory.as_ref(),
+            Some(&engine.galaxy_state.systems),
+            &ArrivalContext {
+                secret_base_id: None,
+                pre_jump_era: Some(pre_jump_era),
+                jump_years_in_transit: Some(years_elapsed),
+            },
         );
 
         let cluster_summary = build_cluster_summary(cluster, new_galaxy_year);

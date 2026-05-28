@@ -99,6 +99,7 @@ export class Game {
     this.input.onCycleTargetEvent(() => this.targeting.cycleTarget());
     this.input.onHailRequest(() => this.interaction.tryHail());
     this.input.onScanRequest(() => this.scanning.tryScan());
+    this.input.onCrewRosterToggle(() => useGameState.getState().toggleCrewRoster());
     this.input.onEscapeEvent(() => this.handleEscape());
 
     // Load save, then initialize engine and first system
@@ -125,7 +126,7 @@ export class Game {
     state.setCurrentSystemPayload(state.currentSystemId, result.systemPayload);
     state.markVisited(state.currentSystemId);
     state.addKnownFaction(result.systemPayload.factionState.controllingFactionId);
-    state.setSystemEntryLines(result.systemPayload.systemEntryLines);
+    state.setSystemEntryLines(result.systemPayload.systemEntryLines, result.systemPayload.crewNarration);
 
     const starData = result.cluster[state.currentSystemId];
     this.sceneRenderer.loadSystem(
@@ -472,6 +473,10 @@ export class Game {
 
   private handleEscape(): void {
     const state = useGameState.getState();
+    if (state.ui.crewRosterOpen) {
+      state.toggleCrewRoster();
+      return;
+    }
     if (state.ui.mode === 'menu') {
       state.setUIMode('flight');
       return;

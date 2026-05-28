@@ -60,6 +60,7 @@ export function buildInitialState(mode: UIMode): Omit<GameStateData, 'cluster'> 
       canLandNow: false,
       canScanNow: false,
       canHailNow: false,
+      crewRosterOpen: false,
     },
     time: 0,
 
@@ -77,6 +78,7 @@ export function buildInitialState(mode: UIMode): Omit<GameStateData, 'cluster'> 
     pendingTransitYears: null,
     pendingShipYears: null,
     systemEntryLines: null,
+    crewNarration: null,
     pendingSystemEntryDialog: null,
     seenSystemDialogIds: [],
 
@@ -187,6 +189,7 @@ export function applySaveFields(saved: Partial<SaveData>): Partial<GameStateData
     pendingGameEvent: null,
     pendingCommContext: null,
     systemEntryLines: null,
+    crewNarration: null,
     pendingSystemEntryDialog: null,
     time: 0,
   };

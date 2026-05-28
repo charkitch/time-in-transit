@@ -28,6 +28,7 @@ export class InputSystem {
   private onCycleTarget?: () => void;
   private onHail?: () => void;
   private onScan?: () => void;
+  private onCrewRoster?: () => void;
   private onEscape?: () => void;
 
   constructor() {
@@ -44,6 +45,7 @@ export class InputSystem {
     if (e.code === 'KeyM' && !e.repeat) this.onSystemMap?.();
     if (e.code === 'Tab') { e.preventDefault(); if (!e.repeat) this.onCycleTarget?.(); }
     if (e.code === 'KeyH' && !e.repeat) this.onHail?.();
+    if (e.code === 'KeyC' && !e.repeat) this.onCrewRoster?.();
     if (e.code === 'KeyV' && !e.repeat) this.onScan?.();
     if (e.code === 'Escape' && !e.repeat) this.onEscape?.();
   };
@@ -103,6 +105,7 @@ export class InputSystem {
   triggerCycleTargetEvent() { this.onCycleTarget?.(); }
   triggerHailRequest() { this.onHail?.(); }
   triggerScanRequest() { this.onScan?.(); }
+  triggerCrewRosterToggle() { this.onCrewRoster?.(); }
   triggerEscapeEvent() { this.onEscape?.(); }
 
   onDockRequest(fn: () => void) { this.onDock = fn; }
@@ -111,6 +114,7 @@ export class InputSystem {
   onCycleTargetEvent(fn: () => void) { this.onCycleTarget = fn; }
   onHailRequest(fn: () => void) { this.onHail = fn; }
   onScanRequest(fn: () => void) { this.onScan = fn; }
+  onCrewRosterToggle(fn: () => void) { this.onCrewRoster = fn; }
   onEscapeEvent(fn: () => void) { this.onEscape = fn; }
 
   dispose() {

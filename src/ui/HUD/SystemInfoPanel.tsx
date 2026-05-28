@@ -14,9 +14,11 @@ interface SystemInfoPanelProps {
   currentFactionKnown: boolean;
   credits: number;
   isMobileHUD: boolean;
+  crewCount: number;
   onClusterMap: () => void;
   onSystemMap: () => void;
   onControls: () => void;
+  onCrewRoster: () => void;
 }
 
 export function SystemInfoPanel({
@@ -28,9 +30,11 @@ export function SystemInfoPanel({
   currentFactionKnown,
   credits,
   isMobileHUD,
+  crewCount,
   onClusterMap,
   onSystemMap,
   onControls,
+  onCrewRoster,
 }: SystemInfoPanelProps) {
   const starTooltip = useClickAwayTooltip();
   const econTooltip = useClickAwayTooltip();
@@ -149,6 +153,11 @@ export function SystemInfoPanel({
           <button type="button" className={styles.controlsBtn} onClick={onSystemMap}>
             M SYSTEM MAP
           </button>
+          {crewCount > 0 && (
+            <button type="button" className={styles.controlsBtn} onClick={onCrewRoster}>
+              C CREW
+            </button>
+          )}
           <br />
           <button type="button" className={styles.controlsBtn} onClick={onControls}>
             CONTROLS

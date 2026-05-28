@@ -178,7 +178,7 @@ export class JumpSystem {
         const battlePlanet = systemData.planets.find(p => p.id === battle.planetId);
         lines.push(`FLEET ENGAGEMENT DETECTED NEAR ${battlePlanet!.name.toUpperCase()}`);
       }
-      state.setSystemEntryLines(lines);
+      state.setSystemEntryLines(lines, payload.crewNarration);
 
       state.setUIMode('flight');
 

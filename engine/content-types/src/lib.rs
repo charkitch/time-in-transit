@@ -96,7 +96,7 @@ impl GoodName {
 
 // ─── Political Types ─────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, strum::EnumCount)]
 pub enum PoliticalType {
     RemembranceCompact,
     RequiemParliament,
@@ -114,6 +114,24 @@ pub enum PoliticalType {
 }
 
 impl PoliticalType {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            PoliticalType::RemembranceCompact => "Remembrance Compact",
+            PoliticalType::RequiemParliament => "Requiem Parliament",
+            PoliticalType::Murmuration => "Murmuration",
+            PoliticalType::Kindness => "Kindness",
+            PoliticalType::SilenceMandate => "Silence Mandate",
+            PoliticalType::Vigil => "Vigil",
+            PoliticalType::CovenantOfEchoes => "Covenant of Echoes",
+            PoliticalType::WoundTithe => "Wound Tithe",
+            PoliticalType::PalimpsestAuthority => "Palimpsest Authority",
+            PoliticalType::TheAsking => "The Asking",
+            PoliticalType::Arrival => "Arrival",
+            PoliticalType::DriftSovereignty => "Drift Sovereignty",
+            PoliticalType::CrownPatchwork => "Crown Patchwork",
+        }
+    }
+
     /// All political types available for random selection in civilization generation.
     /// CrownPatchwork is excluded — it's hand-assigned to The Crown system only.
     pub const ALL: &'static [PoliticalType] = &[
@@ -131,6 +149,12 @@ impl PoliticalType {
         PoliticalType::DriftSovereignty,
     ];
 }
+
+// ALL excludes CrownPatchwork (hand-assigned), so it should be variant_count - 1.
+const _: () = assert!(
+    PoliticalType::ALL.len() + 1 == <PoliticalType as strum::EnumCount>::COUNT,
+    "PoliticalType::ALL is out of sync with enum variants"
+);
 
 // ─── Surface Types ───────────────────────────────────────────────────────────
 

@@ -32,7 +32,15 @@ pub struct SystemPayload {
     pub market: Vec<MarketEntry>,
     pub game_event: Option<GameEvent>,
     pub system_entry_lines: Vec<String>,
+    pub crew_narration: Vec<CrewNarrationLine>,
     pub system_entry_dialog: Option<SystemEntryDialog>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CrewNarrationLine {
+    pub speaker: String,
+    pub text: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,14 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useGameState } from '../../game/GameState';
+import type { CrewNarrationLine } from '../../game/engine';
+
+type EntryItem =
+  | { kind: 'system'; line: string }
+  | { kind: 'crew'; speaker: string; text: string };
 
 export function SystemEntryText() {
   const lines = useGameState(s => s.systemEntryLines);
+  const crewNarration = useGameState(s => s.crewNarration);
   const setSystemEntryLines = useGameState(s => s.setSystemEntryLines);
   const [visibleCount, setVisibleCount] = useState(0);
   const [fading, setFading] = useState(false);
 
+  const items: EntryItem[] = useMemo(() => {
+    const system: EntryItem[] = (lines ?? []).map(line => ({ kind: 'system', line }));
+    const crew: EntryItem[] = (crewNarration ?? []).map((c: CrewNarrationLine) => ({
+      kind: 'crew',
+      speaker: c.speaker,
+      text: c.text,
+    }));
+    return [...system, ...crew];
+  }, [lines, crewNarration]);
+
   useEffect(() => {
-    if (!lines || lines.length === 0) {
+    if (items.length === 0) {
       setVisibleCount(0);
       setFading(false);
       return;
@@ -17,21 +33,14 @@ export function SystemEntryText() {
     setVisibleCount(0);
     setFading(false);
 
-    // Stagger line appearance
-    const timers = lines.map((_, i) => setTimeout(() => setVisibleCount(i + 1), i * 500));
-
-    // Start fade after 8 seconds
+    const timers = items.map((_, i) => setTimeout(() => setVisibleCount(i + 1), i * 500));
     timers.push(setTimeout(() => setFading(true), 8000));
-
-    // Clear after fade completes
-    timers.push(setTimeout(() => {
-      setSystemEntryLines(null);
-    }, 10000));
+    timers.push(setTimeout(() => setSystemEntryLines(null), 10000));
 
     return () => timers.forEach(clearTimeout);
-  }, [lines, setSystemEntryLines]);
+  }, [items, setSystemEntryLines]);
 
-  if (!lines || lines.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <div style={{
@@ -46,14 +55,35 @@ export function SystemEntryText() {
       opacity: fading ? 0 : 1,
       transition: 'opacity 2s ease-out',
     }}>
-      {lines.slice(0, visibleCount).map((line, i) => {
+      {items.slice(0, visibleCount).map((item, i) => {
+        if (item.kind === 'crew') {
+          return (
+            <div
+              key={i}
+              style={{
+                fontSize: '12px',
+                letterSpacing: '2px',
+                marginBottom: '8px',
+                opacity: 0,
+                animation: 'entryLineFade 0.5s ease-out forwards',
+              }}
+            >
+              <span style={{ color: 'var(--color-station)', textShadow: '0 0 10px rgba(68, 204, 255, 0.27)' }}>
+                {item.speaker.toUpperCase()}:
+              </span>{' '}
+              <span style={{ color: '#88ddff', fontStyle: 'italic', textShadow: '0 0 10px #88ddff22' }}>
+                &ldquo;{item.text}&rdquo;
+              </span>
+            </div>
+          );
+        }
+
         const isFirst = i === 0;
-        const isContested = line.startsWith('CONTESTED') || line.includes('COMBAT ZONE');
-        const isWarning = line.includes('FLEET ENGAGEMENT') || line.includes('NO LONGER HOLDS');
+        const isContested = item.line.startsWith('CONTESTED') || item.line.includes('COMBAT ZONE');
+        const isWarning = item.line.includes('FLEET ENGAGEMENT') || item.line.includes('NO LONGER HOLDS');
 
         let color = '#33FF88';
-        if (isContested) color = '#FFAA00';
-        if (isWarning) color = '#FFAA00';
+        if (isContested || isWarning) color = '#FFAA00';
 
         return (
           <div
@@ -68,7 +98,7 @@ export function SystemEntryText() {
               animation: 'entryLineFade 0.5s ease-out forwards',
             }}
           >
-            {line}
+            {item.line}
           </div>
         );
       })}

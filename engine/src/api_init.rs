@@ -4,7 +4,9 @@ use crate::api_state::{from_json, to_json, EngineState, ENGINE_STATE};
 use crate::cluster_generator::generate_cluster;
 use crate::content;
 use crate::simulation::init_galaxy_state;
-use crate::system_payload::{build_cluster_summary, build_system_payload, compute_chain_targets};
+use crate::system_payload::{
+    build_cluster_summary, build_system_payload, compute_chain_targets, ArrivalContext,
+};
 use crate::types::*;
 
 #[wasm_bindgen]
@@ -44,8 +46,12 @@ pub fn init_game(player_state_json: &str) -> Result<String, JsValue> {
         player_state.galaxy_year,
         &player_state,
         None,
-        None,
-        None,
+        Some(&galaxy_state.systems),
+        &ArrivalContext {
+            secret_base_id: None,
+            pre_jump_era: None,
+            jump_years_in_transit: None,
+        },
     );
 
     let cluster_summary = build_cluster_summary(&cluster, player_state.galaxy_year);

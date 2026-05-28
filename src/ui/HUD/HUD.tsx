@@ -11,6 +11,7 @@ import { SCAN_INTEL_MAX_AGE_YEARS } from '../../game/constants';
 import type { RuntimeProfile } from '../../runtime/runtimeProfile';
 import type { ScannableBodyId } from '../../game/types';
 import { TouchFlightControls } from './TouchFlightControls';
+import { CrewRosterPanel } from './CrewRosterPanel';
 import styles from './HUD.module.css';
 import * as THREE from 'three';
 
@@ -87,6 +88,10 @@ export function HUD({
     })),
   );
 
+  const crewCount = useGameState(s => s.crew.length);
+  const showCrewRoster = useGameState(s => s.ui.crewRosterOpen);
+  const toggleCrewRoster = useGameState(s => s.toggleCrewRoster);
+
   const currentStar = cluster[currentSystemId];
   const targetStar = hyperspaceTarget !== null ? cluster[hyperspaceTarget] : null;
   const currentFaction = currentSystemPayload
@@ -159,10 +164,16 @@ export function HUD({
         currentFactionKnown={Boolean(currentFactionKnown)}
         credits={credits}
         isMobileHUD={isMobileHUD}
+        crewCount={crewCount}
         onClusterMap={onClusterMap}
         onSystemMap={onSystemMap}
         onControls={onControls}
+        onCrewRoster={toggleCrewRoster}
       />
+
+      {showCrewRoster && crewCount > 0 && (
+        <CrewRosterPanel onClose={toggleCrewRoster} />
+      )}
 
       <TargetInfoPanel
         targetEntity={targetEntity}

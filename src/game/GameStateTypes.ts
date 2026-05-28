@@ -12,8 +12,9 @@ import type {
   WasmPlayerState,
   JumpLogEntry,
   ShipStats,
+  CrewNarrationLine,
 } from './engine';
-import type { GoodName } from './constants';
+import type { GoodName, PoliticalType } from './constants';
 import type { NPCCargoEntry } from './mechanics/NPCSystem';
 import type { NPCShipArchetype } from './archetypes';
 import type { SystemId, GalaxyYear, ScannableBodyId, FactionId, CrewMemberId } from './types';
@@ -80,6 +81,8 @@ export interface FactionMemoryEntry {
   factionId: FactionId;
   contestingFactionId: FactionId | null;
   galaxyYear: GalaxyYear;
+  politics?: PoliticalType;
+  stabilityBand?: number;
 }
 
 export interface GameStateData {
@@ -104,6 +107,7 @@ export interface GameStateData {
     canLandNow: boolean;
     canScanNow: boolean;
     canHailNow: boolean;
+    crewRosterOpen: boolean;
   };
   time: number;
 
@@ -121,6 +125,7 @@ export interface GameStateData {
   pendingTransitYears: number | null;
   pendingShipYears: number | null;
   systemEntryLines: string[] | null;
+  crewNarration: CrewNarrationLine[] | null;
   pendingSystemEntryDialog: SystemEntryDialog | null;
   seenSystemDialogIds: string[];
 
@@ -168,6 +173,7 @@ export interface GameActions {
   setCanLandNow: (canLandNow: boolean) => void;
   setCanScanNow: (canScanNow: boolean) => void;
   setCanHailNow: (canHailNow: boolean) => void;
+  toggleCrewRoster: () => void;
   addCargo: (good: GoodName, qty: number, purchasePrice?: number) => void;
   removeCargo: (good: GoodName, qty: number) => void;
   setCargoFromEngine: (cargo: Partial<Record<GoodName, number>>) => void;
@@ -187,7 +193,7 @@ export interface GameActions {
   addKnownFaction: (id: string) => void;
   setFactionMemory: (systemId: SystemId, data: FactionMemoryEntry) => void;
   setPendingTransitYears: (years: number | null, shipYears?: number | null) => void;
-  setSystemEntryLines: (lines: string[] | null) => void;
+  setSystemEntryLines: (lines: string[] | null, crewNarration?: CrewNarrationLine[] | null) => void;
   setPendingSystemEntryDialog: (dialog: SystemEntryDialog | null) => void;
   markSystemDialogSeen: (id: string) => void;
   syncPlayerStateFromEngine: (ps: WasmPlayerState) => void;

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-use super::{CrewMember, EffectiveShipStats, GoodName, ShipUpgrade};
+use super::{CrewMember, EffectiveShipStats, GoodName, PoliticalType, ShipUpgrade};
 
 // ─── Player State ────────────────────────────────────────────────────────────
 
@@ -100,6 +100,10 @@ pub struct FactionMemoryEntry {
     pub faction_id: String,
     pub contesting_faction_id: Option<String>,
     pub galaxy_year: u32,
+    #[serde(default)]
+    pub politics: Option<PoliticalType>,
+    #[serde(default)]
+    pub stability_band: Option<u8>,
 }
 
 // ─── Story Chains ────────────────────────────────────────────────────────────

@@ -7,6 +7,8 @@ use crate::system_generator::generate_solar_system;
 use crate::trading::get_market;
 use crate::types::*;
 
+pub(crate) const DEFAULT_STABILITY: f64 = 0.5;
+
 pub fn build_cluster_summary(
     cluster: &[StarSystemData],
     galaxy_year: u32,
@@ -140,13 +142,19 @@ pub fn compute_chain_targets(
     targets
 }
 
+pub struct ArrivalContext<'a> {
+    pub secret_base_id: Option<&'a str>,
+    pub pre_jump_era: Option<u32>,
+    pub jump_years_in_transit: Option<u32>,
+}
+
 pub fn build_system_payload(
     star: &StarSystemData,
     galaxy_year: u32,
     player_state: &PlayerState,
-    secret_base_id: Option<&str>,
-    pre_jump_era: Option<u32>,
-    jump_years_in_transit: Option<u32>,
+    prior_memory: Option<&FactionMemoryEntry>,
+    galaxy_sim_state: Option<&[SystemSimState]>,
+    arrival: &ArrivalContext,
 ) -> SystemPayload {
     let mut system = generate_solar_system(star);
     let system_flags = player_state.player_choices.get(&star.id).map(|c| &c.flags);
@@ -232,7 +240,7 @@ pub fn build_system_payload(
         current_system_id: star.id,
         current_system_special_kind: star.special_kind,
     };
-    let game_event = if let Some(base_id) = secret_base_id {
+    let game_event = if let Some(base_id) = arrival.secret_base_id {
         let base_type = system
             .secret_bases
             .iter()
@@ -254,7 +262,7 @@ pub fn build_system_payload(
 
     // Era transition narration
     let current_era = galaxy_year / ERA_LENGTH;
-    if let Some(prev_era) = pre_jump_era {
+    if let Some(prev_era) = arrival.pre_jump_era {
         if current_era != prev_era {
             lines.push(format!("— GALAXY YEAR {} —", galaxy_year));
             lines.push(
@@ -265,7 +273,7 @@ pub fn build_system_payload(
     }
 
     lines.push(format!("ENTERING {}", star.name.to_uppercase()));
-    if let Some(years) = jump_years_in_transit {
+    if let Some(years) = arrival.jump_years_in_transit {
         let ship_time = years as f64 * LORENTZ_FACTOR;
         lines.push(format!(
             "+{} YEARS IN TRANSIT ({} SHIP TIME)",
@@ -307,8 +315,8 @@ pub fn build_system_payload(
         }
     }
 
-    // Check faction memory for changes
-    if let Some(memory) = player_state.faction_memory.get(&star.id) {
+    // Check faction memory for changes (uses prior_memory captured before overwrite)
+    if let Some(memory) = prior_memory {
         if memory.faction_id != faction_state.controlling_faction_id {
             if let Some(old_faction) = get_faction(&memory.faction_id) {
                 lines.push(format!(
@@ -319,6 +327,20 @@ pub fn build_system_payload(
             }
         }
     }
+
+    let current_stability = galaxy_sim_state
+        .and_then(|states| states.iter().find(|s| s.system_id == star.id))
+        .map(|s| s.stability)
+        .unwrap_or(DEFAULT_STABILITY);
+    let crew_narration = crate::crew_narration::crew_narration_lines(
+        &player_state.crew,
+        prior_memory,
+        &faction_state.controlling_faction_id,
+        civ_state.politics,
+        current_stability,
+        galaxy_year,
+        star.id,
+    );
 
     // Special system arrival dialogs — shown only once per save
     let system_entry_dialog = if star.special_kind == SpecialSystemKind::IronStar
@@ -346,6 +368,7 @@ pub fn build_system_payload(
         market,
         game_event,
         system_entry_lines: lines,
+        crew_narration,
         system_entry_dialog,
     }
 }

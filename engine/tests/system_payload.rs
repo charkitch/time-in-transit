@@ -3,7 +3,7 @@ mod helpers;
 use helpers::test_player_state;
 use time_in_transit_engine::cluster_generator::generate_cluster;
 use time_in_transit_engine::system_payload::{
-    build_system_payload, jump_years_elapsed, ship_years_elapsed,
+    build_system_payload, jump_years_elapsed, ship_years_elapsed, ArrivalContext,
 };
 use time_in_transit_engine::types::*;
 
@@ -44,8 +44,12 @@ fn jump_payload_includes_exact_transit_years_line() {
         galaxy_year,
         &player,
         None,
-        Some(current_era - 1),
-        Some(137),
+        None,
+        &ArrivalContext {
+            secret_base_id: None,
+            pre_jump_era: Some(current_era - 1),
+            jump_years_in_transit: Some(137),
+        },
     );
 
     assert!(payload
@@ -72,8 +76,12 @@ fn era_crossing_shows_narration() {
         galaxy_year,
         &player,
         None,
-        Some(pre_jump_era),
-        Some(800),
+        None,
+        &ArrivalContext {
+            secret_base_id: None,
+            pre_jump_era: Some(pre_jump_era),
+            jump_years_in_transit: Some(800),
+        },
     );
 
     assert!(payload
@@ -88,7 +96,18 @@ fn init_payload_does_not_include_transit_line() {
     let star = &cluster[0];
     let player = test_player_state(GALAXY_YEAR_START);
 
-    let payload = build_system_payload(star, GALAXY_YEAR_START, &player, None, None, None);
+    let payload = build_system_payload(
+        star,
+        GALAXY_YEAR_START,
+        &player,
+        None,
+        None,
+        &ArrivalContext {
+            secret_base_id: None,
+            pre_jump_era: None,
+            jump_years_in_transit: None,
+        },
+    );
 
     assert!(!payload
         .system_entry_lines

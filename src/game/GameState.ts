@@ -88,6 +88,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
   setCanHailNow: (canHailNow) => set((s) => (
     s.ui.canHailNow === canHailNow ? {} : { ui: { ...s.ui, canHailNow } }
   )),
+  toggleCrewRoster: () => set(s => ({ ui: { ...s.ui, crewRosterOpen: !s.ui.crewRosterOpen } })),
   addCargo: (good, qty, purchasePrice) => set(s => {
     const cargo = { ...s.player.cargo };
     const oldQty = cargo[good] ?? 0;
@@ -183,7 +184,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
     pendingTransitYears: years,
     pendingShipYears: shipYears ?? null,
   }),
-  setSystemEntryLines: (lines) => set({ systemEntryLines: lines }),
+  setSystemEntryLines: (lines, crewNarration) => set({ systemEntryLines: lines, crewNarration: crewNarration ?? null }),
   setPendingSystemEntryDialog: (dialog) => set({ pendingSystemEntryDialog: dialog }),
   markSystemDialogSeen: (id) => set(s => ({
     seenSystemDialogIds: s.seenSystemDialogIds.includes(id)
@@ -191,6 +192,7 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
       : [...s.seenSystemDialogIds, id],
   })),
   syncPlayerStateFromEngine: (ps) => set(s => ({
+    ui: { ...s.ui, crewRosterOpen: false },
     player: {
       ...s.player,
       credits: ps.credits,
