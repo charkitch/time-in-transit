@@ -32,7 +32,7 @@ const TRANSFER_PLASMA_HARVEST_INTERVAL = 1;
 const HARVEST_CAP_PER_GOOD = 5;
 const COMBAT_INTELLIGENCE_INFO = 'COLLECTING COMBAT INTELLIGENCE FROM CROSSFIRE';
 const RELATIVISTIC_ASH_INFO = 'COLLECTING RELATIVISTIC ASH FROM JET CORE';
-const PULSAR_SILK_INFO = 'COLLECTING PULSAR SILK FROM BEAM CORE';
+const PULSAR_SILK_INFO = 'COLLECTING PULSAR SILK FROM BEAM SWEEP';
 const TRANSFER_PLASMA_INFO = 'COLLECTING TRANSFER PLASMA FROM DONOR STREAM';
 // Pulsar burst damage per sweep (flat amounts, not per-second rates)
 const PULSAR_LETHAL_SHIELD_BURST = [30, 80] as const; // [min, max] — proximity-scaled
@@ -419,6 +419,7 @@ export class FlightHazardSystem {
 
       if (starWorldPos) {
         const sweep = checkPulsarSweepZone({ pos, beamParams: pulsarBeam, starWorldPos, starRadius });
+        const enteringSweep = sweep.zone !== null && !this.pulsarInZone;
 
         if (sweep.zone === 'lethal') {
           // Burst damage on entry — not continuous
@@ -440,8 +441,20 @@ export class FlightHazardSystem {
           this.pulsarLethalHit = false;
         }
 
+        if (sweep.zone === 'harvesting' && enteringSweep) {
+          // Small burst when the sweep first catches the ship
+          effects.push({
+            heatRate: PULSAR_HARVEST_HEAT_BURST / dt,
+            shieldDamageRate: PULSAR_HARVEST_SHIELD_BURST / dt,
+            fuelRate: 0,
+            alert: 'WARNING: PULSAR BEAM PROXIMITY',
+            hazardType: 'PulsarBeam',
+            zone: 'harvesting',
+          });
+        }
+
         const pulsarHarvest = runEntryHarvest({
-          active: sweep.zone === 'lethal',
+          active: sweep.zone !== null,
           wasActive: this.pulsarInZone,
           good: PULSAR_SILK_GOOD,
           message: PULSAR_SILK_INFO,
@@ -452,23 +465,6 @@ export class FlightHazardSystem {
         this.pulsarInZone = pulsarHarvest.active;
         this.pulsarHarvestCollected = pulsarHarvest.collectedThisPass;
         if (pulsarHarvest.infoMessage) infoMessage = pulsarHarvest.infoMessage;
-
-        if (sweep.zone === 'harvesting') {
-          // Near-beam warning band remains dangerous but non-harvestable.
-          if (!this.pulsarInZone) {
-            effects.push({
-              heatRate: PULSAR_HARVEST_HEAT_BURST / dt,
-              shieldDamageRate: PULSAR_HARVEST_SHIELD_BURST / dt,
-              fuelRate: 0,
-              alert: 'WARNING: PULSAR BEAM PROXIMITY',
-              hazardType: 'PulsarBeam',
-              zone: 'harvesting',
-            });
-          }
-        } else if (sweep.zone !== 'lethal') {
-          this.pulsarInZone = false;
-          this.pulsarHarvestCollected = false;
-        }
       }
     } else {
       this.pulsarInZone = false;

@@ -1,6 +1,6 @@
 /** Canvas 2D drawing helpers for the system map. */
 
-const CANVAS_W = 540;
+import { W as CANVAS_W } from './types';
 
 export function drawTooltip(ctx: CanvasRenderingContext2D, text: string, x: number, y: number): void {
   ctx.font = '9px Courier New';
