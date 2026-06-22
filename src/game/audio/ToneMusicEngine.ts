@@ -1,15 +1,42 @@
 import * as Tone from 'tone';
-import type { MusicEngine, MusicalParams } from './types';
+import type { MusicEngine, MusicMode, MusicalParams } from './types';
 
 const DEFAULT_VOLUME = 0.35;
-const PAD_CHORDS = [
-  ['G2', 'D3', 'C4'], // open quintal stack
-  ['Bb2', 'F3', 'D4'], // Bb major
-  ['D3', 'A3', 'F4'], // D minor
-  ['F2', 'C3', 'A3'], // F major
-];
+
+// Chord pools per mode. 'calm' is the open, no-third palette; 'tense' grounds a
+// perfect fifth under a semitone/tritone tension for contested space.
+const CHORD_POOLS: Record<MusicMode, string[][]> = {
+  calm: [
+    ['G2', 'D3', 'C4'], // open quintal stack
+    ['Bb2', 'F3', 'D4'], // Bb major
+    ['D3', 'A3', 'F4'], // D minor
+    ['F2', 'C3', 'A3'], // F major
+  ],
+  tense: [
+    ['D3', 'A3', 'Eb4'], // hollow fifth + tritone above
+    ['Bb2', 'Db3', 'F3'], // Bb minor — dark but stable
+    ['F2', 'C3', 'Gb3'], // hollow fifth + tritone above
+    ['D3', 'F3', 'Ab3'], // D diminished — dread
+  ],
+};
 const BELL_SCALE = ['G4', 'Bb4', 'C5', 'D5', 'F5', 'G5', 'A5'];
-const VOICE_NOTES = ['F2', 'Ab2', 'C3', 'Db3', 'F3'];
+// A small vocabulary of "words" (short note motifs). Phrases string these
+// together so motifs recur — reading as an alien language rather than noise.
+const VOICE_WORDS: string[][] = [
+  ['C4', 'Db4'],
+  ['F3', 'Ab3', 'F3'],
+  ['Ab3', 'C4'],
+  ['Db4', 'C4', 'Ab3'],
+  ['F4', 'Db4'],
+  ['C4', 'F3'],
+  ['Ab3', 'Db4', 'C4'],
+];
+
+// Per-phrase pitch shifts (semitones) so each utterance reads as a different speaker.
+const VOICE_REGISTERS = [-12, -7, -5, 0, 0, 4, 7];
+// Overlapping "speakers" that make up the docked crowd din, and how loud the bed sits.
+const VOICE_SPEAKERS = 5;
+const VOICE_BED_LEVEL = 0.75;
 
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_VOLUME;
@@ -25,20 +52,26 @@ function decibelsFromVolume(volume: number): number {
   return -30 + volume * 30;
 }
 
+// Map 0..1 brightness to a low-pass cutoff: dark ~400 Hz, brilliant ~12.8 kHz.
+function brightnessToFrequency(brightness: number): number {
+  return 400 * 2 ** (clamp01(brightness) * 5);
+}
+
 export class ToneMusicEngine implements MusicEngine {
   private initialized = false;
   private enabled = false;
   private volume = DEFAULT_VOLUME;
-  private params: MusicalParams = { key: 0, voiceActive: false };
-  private chordPool = PAD_CHORDS;
+  private params: MusicalParams = { key: 0, mode: 'calm', brightness: 0.85, voiceActive: false };
+  private chordPool = CHORD_POOLS.calm;
 
   private master: Tone.Volume | null = null;
   private ambientBus: Tone.Gain | null = null;
+  private ambientTone: Tone.Filter | null = null;
   private voiceBus: Tone.Gain | null = null;
   private pad: Tone.PolySynth<Tone.FMSynth> | null = null;
   private bell: Tone.FMSynth | null = null;
   private pulse: Tone.MembraneSynth | null = null;
-  private voice: Tone.FMSynth | null = null;
+  private voice: Tone.PolySynth<Tone.FMSynth> | null = null;
   private voiceNoise: Tone.NoiseSynth | null = null;
   private timers: number[] = [];
   private effects: Array<{ dispose(): unknown }> = [];
@@ -83,9 +116,9 @@ export class ToneMusicEngine implements MusicEngine {
 
   setParams(params: MusicalParams): void {
     const enteringStation = !this.params.voiceActive && params.voiceActive;
-    const keyChanged = params.key !== this.params.key;
+    const poolChanged = params.key !== this.params.key || params.mode !== this.params.mode;
     this.params = params;
-    if (keyChanged) {
+    if (poolChanged) {
       this.rebuildChordPool();
     }
     if (this.initialized && this.enabled) {
@@ -109,6 +142,7 @@ export class ToneMusicEngine implements MusicEngine {
     this.voice?.dispose();
     this.voiceNoise?.dispose();
     this.ambientBus?.dispose();
+    this.ambientTone?.dispose();
     this.voiceBus?.dispose();
     this.master?.dispose();
     this.initialized = false;
@@ -118,15 +152,26 @@ export class ToneMusicEngine implements MusicEngine {
     if (this.initialized) return;
 
     this.master = new Tone.Volume(-60).toDestination();
-    this.ambientBus = new Tone.Gain(1).connect(this.master);
+    this.ambientTone = new Tone.Filter({
+      type: 'lowpass',
+      frequency: brightnessToFrequency(this.params.brightness),
+      rolloff: -12,
+    }).connect(this.master);
+    this.ambientBus = new Tone.Gain(1).connect(this.ambientTone);
     this.voiceBus = new Tone.Gain(0).connect(this.master);
 
     const reverb = new Tone.Reverb({ decay: 8, preDelay: 0.08, wet: 0.45 }).connect(this.ambientBus);
     const padHighpass = new Tone.Filter({ frequency: 90, type: 'highpass', rolloff: -12 }).connect(reverb);
     const delay = new Tone.FeedbackDelay('4n.', 0.38).connect(reverb);
-    const voiceDelay = new Tone.FeedbackDelay('8n.', 0.48).connect(this.voiceBus);
-    const voiceFilter = new Tone.Filter({ frequency: 980, type: 'bandpass', Q: 5 }).connect(voiceDelay);
-    this.effects = [reverb, padHighpass, delay, voiceDelay, voiceFilter];
+    // A room reverb smears the overlapping speakers into a crowd wash (SimTower-style din).
+    const voiceReverb = new Tone.Reverb({ decay: 3.5, preDelay: 0.02, wet: 0.5 }).connect(this.voiceBus);
+    const voiceDelay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.35, wet: 0.28 }).connect(voiceReverb);
+    // Shift every partial by a fixed Hz so the spectrum goes inharmonic — metallic and alien, not human speech.
+    const voiceShifter = new Tone.FrequencyShifter(34).connect(voiceDelay);
+    // A vowel-like pair of vocal formants the voice/noise energy actually lands in.
+    const formantLow = new Tone.Filter({ frequency: 500, type: 'bandpass', Q: 1.8 }).connect(voiceShifter);
+    const formantHigh = new Tone.Filter({ frequency: 1100, type: 'bandpass', Q: 2.4 }).connect(voiceShifter);
+    this.effects = [reverb, padHighpass, delay, voiceReverb, voiceDelay, voiceShifter, formantLow, formantHigh];
 
     this.pad = new Tone.PolySynth(Tone.FMSynth, {
       harmonicity: 0.35,
@@ -149,19 +194,24 @@ export class ToneMusicEngine implements MusicEngine {
       envelope: { attack: 0.02, decay: 1.6, sustain: 0.02, release: 4 },
     }).connect(this.ambientBus);
 
-    this.voice = new Tone.FMSynth({
+    this.voice = new Tone.PolySynth(Tone.FMSynth, {
       harmonicity: 0.72,
-      modulationIndex: 14,
-      envelope: { attack: 0.06, decay: 0.35, sustain: 0.24, release: 1.4 },
-      modulationEnvelope: { attack: 0.03, decay: 0.22, sustain: 0.4, release: 0.8 },
-    }).connect(voiceFilter);
+      modulationIndex: 12,
+      envelope: { attack: 0.06, decay: 0.35, sustain: 0.24, release: 0.6 },
+      modulationEnvelope: { attack: 0.03, decay: 0.22, sustain: 0.6, release: 0.5 },
+    });
+    this.voice.maxPolyphony = 24;
+    this.voice.connect(formantLow);
+    this.voice.connect(formantHigh);
 
     this.voiceNoise = new Tone.NoiseSynth({
       noise: { type: 'pink' },
       envelope: { attack: 0.03, decay: 0.22, sustain: 0.04, release: 0.55 },
-    }).connect(voiceFilter);
+    });
+    this.voiceNoise.connect(formantLow);
+    this.voiceNoise.connect(formantHigh);
 
-    await reverb.ready;
+    await Promise.all([reverb.ready, voiceReverb.ready]);
     this.initialized = true;
   }
 
@@ -191,23 +241,26 @@ export class ToneMusicEngine implements MusicEngine {
     this.pulse?.triggerAttackRelease('C1', '2s', time + 0.05, 0.16);
   }
 
-  private triggerVoice(): void {
-    if (Math.random() < 0.4) return;
-    this.triggerStationPhrase();
-  }
-
   private triggerStationPhrase(): void {
-    if (!this.enabled || !this.params.voiceActive || !this.voice || !this.voiceNoise) return;
+    const { voice, voiceNoise } = this;
+    if (!this.enabled || !this.params.voiceActive || !voice || !voiceNoise) return;
     const time = this.scheduledNow();
-    const syllables = 3 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < syllables; i += 1) {
-      const offset = i * (0.16 + Math.random() * 0.16);
-      const duration = 0.22 + Math.random() * 0.42;
-      this.voice.triggerAttackRelease(pick(VOICE_NOTES), `${duration}s`, time + offset, 0.42);
-      if (Math.random() > 0.25) {
-        this.voiceNoise.triggerAttackRelease('0.16s', time + offset + 0.04, 0.22);
+    const register = pick(VOICE_REGISTERS);
+    const words = Array.from({ length: 1 + Math.floor(Math.random() * 3) }, () => pick(VOICE_WORDS));
+    let cursor = 0;
+    const syllables = words.flatMap((word, wordIndex) => word.map((note, noteIndex) => {
+      if (wordIndex > 0 && noteIndex === 0) cursor += 0.18 + Math.random() * 0.22; // gap between words
+      const at = cursor;
+      cursor += 0.14 + Math.random() * 0.12; // spacing within a word
+      return { note: Tone.Frequency(note).transpose(register).toNote(), at };
+    }));
+    syllables.forEach(({ note, at }) => {
+      const duration = 0.18 + Math.random() * 0.3;
+      voice.triggerAttackRelease(note, `${duration}s`, time + at, 0.22);
+      if (Math.random() > 0.7) {
+        voiceNoise.triggerAttackRelease('0.16s', time + at + 0.04, 0.18);
       }
-    }
+    });
   }
 
   private startLoops(): void {
@@ -222,7 +275,8 @@ export class ToneMusicEngine implements MusicEngine {
     this.scheduleLayer(() => this.triggerPad(), 14_000, 24_000);
     this.scheduleLayer(() => this.triggerBell(), 7_000, 16_000);
     this.scheduleLayer(() => this.triggerPulse(), 12_000, 26_000);
-    this.scheduleLayer(() => this.triggerVoice(), 6_000, 14_000);
+    Array.from({ length: VOICE_SPEAKERS }).forEach(() =>
+      this.scheduleLayer(() => this.triggerStationPhrase(), 1_200, 3_200));
   }
 
   private stopLoops(): void {
@@ -237,14 +291,16 @@ export class ToneMusicEngine implements MusicEngine {
   }
 
   private applyParams(): void {
-    const target = this.params.voiceActive ? 1 : 0;
-    this.voiceBus?.gain.rampTo(target, target > 0 ? 0.08 : 1.2);
+    const voiceTarget = this.params.voiceActive ? VOICE_BED_LEVEL : 0;
+    this.voiceBus?.gain.rampTo(voiceTarget, voiceTarget > 0 ? 0.08 : 1.2);
+    this.ambientTone?.frequency.rampTo(brightnessToFrequency(this.params.brightness), 2.5);
   }
 
   private rebuildChordPool(): void {
+    const base = CHORD_POOLS[this.params.mode];
     this.chordPool = this.params.key === 0
-      ? PAD_CHORDS
-      : PAD_CHORDS.map(chord =>
+      ? base
+      : base.map(chord =>
           chord.map(note => Tone.Frequency(note).transpose(this.params.key).toNote()));
   }
 

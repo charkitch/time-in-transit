@@ -248,7 +248,9 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
 
   resetGame: () => {
     localStorage.removeItem('space-game-save');
-    set(buildInitialState('flight'));
+    // User preferences are not game state — carry them across a new game.
+    const { invertControls, musicEnabled, musicVolume } = get();
+    set({ ...buildInitialState('flight'), invertControls, musicEnabled, musicVolume });
   },
 
   loadSave: () => {

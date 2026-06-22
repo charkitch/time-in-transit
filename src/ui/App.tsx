@@ -54,7 +54,8 @@ export function App() {
   const pendingSystemEntryDialog = useGameState(s => s.pendingSystemEntryDialog);
   const stationMusicActive = useGameState(s => s.ui.mode === 'docked' || s.pendingGameEvent?.returnMode === 'docked');
   const currentSystemId = useGameState(s => s.currentSystemId);
-  const systemName = useGameState(s => s.cluster[s.currentSystemId]?.name ?? null);
+  const starType = useGameState(s => s.clusterSummary.find(x => x.id === s.currentSystemId)?.starType ?? null);
+  const systemContested = useGameState(s => s.clusterSummary.find(x => x.id === s.currentSystemId)?.isContested ?? false);
 
   const prevUiModeRef = useRef<UIMode>('flight');
   const [flashPhase, setFlashPhase] = useState<'none' | 'entry' | 'exit' | 'loadFade'>('none');
@@ -93,12 +94,12 @@ export function App() {
 
   useEffect(() => {
     musicDirectorRef.current?.setEnvironment({
-      uiMode,
       currentSystemId,
-      systemName,
+      starType,
+      contested: systemContested,
       stationActive: stationMusicActive,
     });
-  }, [uiMode, currentSystemId, systemName, stationMusicActive]);
+  }, [currentSystemId, starType, systemContested, stationMusicActive]);
 
   useEffect(() => {
     musicEnabledRef.current = musicEnabled;
