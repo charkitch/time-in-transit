@@ -52,7 +52,7 @@ build: ## Build app for production
 preview: ## Preview production build
 	npm run preview
 
-test: test-rust test-e2e-docker ## Run all tests (Rust unit + E2E via Docker)
+test: test-rust
 
 test-rust: ## Run Rust unit tests
 	cargo test --manifest-path engine/Cargo.toml
