@@ -1,8 +1,13 @@
 import * as Tone from 'tone';
-import type { MusicEngine, MusicEnvironment } from './types';
+import type { MusicEngine, MusicalParams } from './types';
 
 const DEFAULT_VOLUME = 0.35;
-const SPACE_SCALE = ['C2', 'G2', 'Bb2', 'D3', 'F3', 'A3', 'C4', 'D4', 'F4', 'G4'];
+const PAD_CHORDS = [
+  ['G2', 'D3', 'C4'], // open quintal stack
+  ['Bb2', 'F3', 'D4'], // Bb major
+  ['D3', 'A3', 'F4'], // D minor
+  ['F2', 'C3', 'A3'], // F major
+];
 const BELL_SCALE = ['G4', 'Bb4', 'C5', 'D5', 'F5', 'G5', 'A5'];
 const VOICE_NOTES = ['F2', 'Ab2', 'C3', 'Db3', 'F3'];
 
@@ -24,12 +29,8 @@ export class ToneMusicEngine implements MusicEngine {
   private initialized = false;
   private enabled = false;
   private volume = DEFAULT_VOLUME;
-  private environment: MusicEnvironment = {
-    uiMode: 'loading',
-    currentSystemId: 0,
-    systemName: null,
-    stationActive: false,
-  };
+  private params: MusicalParams = { key: 0, voiceActive: false };
+  private chordPool = PAD_CHORDS;
 
   private master: Tone.Volume | null = null;
   private ambientBus: Tone.Gain | null = null;
@@ -49,7 +50,7 @@ export class ToneMusicEngine implements MusicEngine {
     if (this.enabled) {
       this.startLoops();
       this.applyVolume();
-      this.applyEnvironment();
+      this.applyParams();
       if (!this.hasPlayedStartupCue) {
         this.triggerStartupCue();
         this.hasPlayedStartupCue = true;
@@ -80,11 +81,15 @@ export class ToneMusicEngine implements MusicEngine {
     }
   }
 
-  setEnvironment(environment: MusicEnvironment): void {
-    const enteringStation = !this.environment.stationActive && environment.stationActive;
-    this.environment = environment;
+  setParams(params: MusicalParams): void {
+    const enteringStation = !this.params.voiceActive && params.voiceActive;
+    const keyChanged = params.key !== this.params.key;
+    this.params = params;
+    if (keyChanged) {
+      this.rebuildChordPool();
+    }
     if (this.initialized && this.enabled) {
-      this.applyEnvironment();
+      this.applyParams();
       if (enteringStation) {
         window.setTimeout(() => this.triggerStationPhrase(), 120);
       }
@@ -117,17 +122,18 @@ export class ToneMusicEngine implements MusicEngine {
     this.voiceBus = new Tone.Gain(0).connect(this.master);
 
     const reverb = new Tone.Reverb({ decay: 8, preDelay: 0.08, wet: 0.45 }).connect(this.ambientBus);
+    const padHighpass = new Tone.Filter({ frequency: 90, type: 'highpass', rolloff: -12 }).connect(reverb);
     const delay = new Tone.FeedbackDelay('4n.', 0.38).connect(reverb);
     const voiceDelay = new Tone.FeedbackDelay('8n.', 0.48).connect(this.voiceBus);
     const voiceFilter = new Tone.Filter({ frequency: 980, type: 'bandpass', Q: 5 }).connect(voiceDelay);
-    this.effects = [reverb, delay, voiceDelay, voiceFilter];
+    this.effects = [reverb, padHighpass, delay, voiceDelay, voiceFilter];
 
     this.pad = new Tone.PolySynth(Tone.FMSynth, {
       harmonicity: 0.35,
-      modulationIndex: 3.2,
+      modulationIndex: 2,
       envelope: { attack: 1.2, decay: 1.8, sustain: 0.48, release: 8 },
       modulationEnvelope: { attack: 0.8, decay: 1, sustain: 0.25, release: 5 },
-    }).connect(reverb);
+    }).connect(padHighpass);
     this.pad.maxPolyphony = 6;
 
     this.bell = new Tone.FMSynth({
@@ -165,13 +171,7 @@ export class ToneMusicEngine implements MusicEngine {
 
   private triggerPad(): void {
     if (!this.enabled || !this.pad) return;
-    const rootIndex = Math.floor(Math.random() * 4);
-    const chord = [
-      SPACE_SCALE[rootIndex],
-      SPACE_SCALE[rootIndex + 2],
-      SPACE_SCALE[rootIndex + 5],
-    ];
-    this.pad.triggerAttackRelease(chord, '12s', this.scheduledNow(), 0.2);
+    this.pad.triggerAttackRelease(pick(this.chordPool), '12s', this.scheduledNow(), 0.2);
   }
 
   private triggerBell(): void {
@@ -192,12 +192,12 @@ export class ToneMusicEngine implements MusicEngine {
   }
 
   private triggerVoice(): void {
-    if (!this.enabled || !this.environment.stationActive || !this.voice || !this.voiceNoise) return;
+    if (Math.random() < 0.4) return;
     this.triggerStationPhrase();
   }
 
   private triggerStationPhrase(): void {
-    if (!this.enabled || !this.environment.stationActive || !this.voice || !this.voiceNoise) return;
+    if (!this.enabled || !this.params.voiceActive || !this.voice || !this.voiceNoise) return;
     const time = this.scheduledNow();
     const syllables = 3 + Math.floor(Math.random() * 3);
     for (let i = 0; i < syllables; i += 1) {
@@ -215,14 +215,14 @@ export class ToneMusicEngine implements MusicEngine {
 
     this.triggerPad();
     this.triggerBell();
-    if (this.environment.stationActive) {
+    if (this.params.voiceActive) {
       this.triggerStationPhrase();
     }
 
     this.scheduleLayer(() => this.triggerPad(), 14_000, 24_000);
     this.scheduleLayer(() => this.triggerBell(), 7_000, 16_000);
     this.scheduleLayer(() => this.triggerPulse(), 12_000, 26_000);
-    this.scheduleLayer(() => this.triggerVoice(), 2_400, 5_600);
+    this.scheduleLayer(() => this.triggerVoice(), 6_000, 14_000);
   }
 
   private stopLoops(): void {
@@ -236,9 +236,16 @@ export class ToneMusicEngine implements MusicEngine {
     this.master?.volume.rampTo(decibelsFromVolume(this.volume), 0.8);
   }
 
-  private applyEnvironment(): void {
-    const target = this.environment.stationActive ? 1 : 0;
+  private applyParams(): void {
+    const target = this.params.voiceActive ? 1 : 0;
     this.voiceBus?.gain.rampTo(target, target > 0 ? 0.08 : 1.2);
+  }
+
+  private rebuildChordPool(): void {
+    this.chordPool = this.params.key === 0
+      ? PAD_CHORDS
+      : PAD_CHORDS.map(chord =>
+          chord.map(note => Tone.Frequency(note).transpose(this.params.key).toNote()));
   }
 
   private releaseAll(): void {
