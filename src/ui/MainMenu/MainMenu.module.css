@@ -69,6 +69,26 @@
   box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
 }
 
+.sliderControl {
+  width: 240px;
+  margin: 0 auto 14px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 14px;
+  align-items: center;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.62);
+  text-align: left;
+}
+
+.slider {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: var(--color-station);
+}
+
 .controlsList {
   display: flex;
   flex-direction: column;
@@ -147,5 +167,10 @@
     max-width: 320px;
     letter-spacing: 2px;
     font-size: 13px;
+  }
+
+  .sliderControl {
+    width: 100%;
+    max-width: 320px;
   }
 }

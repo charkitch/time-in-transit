@@ -43,6 +43,15 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
     set({ invertControls: invert });
     get().saveGame();
   },
+  setMusicEnabled: (enabled) => {
+    set({ musicEnabled: enabled });
+    get().saveGame();
+  },
+  setMusicVolume: (volume) => {
+    const clamped = Math.max(0, Math.min(1, volume));
+    set({ musicVolume: clamped });
+    get().saveGame();
+  },
   setPlayerPosition: (pos) => set(s => ({ player: { ...s.player, position: pos } })),
   setPlayerVelocity: (vel) => set(s => ({ player: { ...s.player, velocity: vel } })),
   setPlayerQuaternion: (q) => set(s => ({ player: { ...s.player, quaternion: q } })),
@@ -239,7 +248,9 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
 
   resetGame: () => {
     localStorage.removeItem('space-game-save');
-    set(buildInitialState('flight'));
+    // User preferences are not game state — carry them across a new game.
+    const { invertControls, musicEnabled, musicVolume } = get();
+    set({ ...buildInitialState('flight'), invertControls, musicEnabled, musicVolume });
   },
 
   loadSave: () => {

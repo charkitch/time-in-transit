@@ -20,6 +20,7 @@ import { saveToSlot, loadFromSlot, loadAutosave, buildSlotMeta, loadAutosaveByKi
 import { isFiniteVec3, isFiniteQuat, isOriginVec3 } from '../game/spatialValidation';
 import { detectRuntimeProfile, type RuntimeProfile } from '../runtime/runtimeProfile';
 import { useMobileOrientation } from './hooks/useMobileOrientation';
+import { MusicDirector } from '../game/audio';
 import * as THREE from 'three';
 
 const BUILD_TAG_LABEL = `v: early beta • build ${__APP_BUILD__.number} • commits ${__APP_BUILD__.commitCount} • ${__APP_BUILD__.sha}`;
@@ -38,13 +39,23 @@ function runtimeProfileInitKey(profile: RuntimeProfile | null): string {
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
+  const musicDirectorRef = useRef<MusicDirector | null>(null);
+  const musicEnabledRef = useRef(false);
 
   const uiMode = useGameState(s => s.ui.mode);
   const hyperspaceCountdown = useGameState(s => s.ui.hyperspaceCountdown);
   const invertControls = useGameState(s => s.invertControls);
   const setInvertControls = useGameState(s => s.setInvertControls);
+  const musicEnabled = useGameState(s => s.musicEnabled);
+  const setMusicEnabled = useGameState(s => s.setMusicEnabled);
+  const musicVolume = useGameState(s => s.musicVolume);
+  const setMusicVolume = useGameState(s => s.setMusicVolume);
   const setUIMode = useGameState(s => s.setUIMode);
   const pendingSystemEntryDialog = useGameState(s => s.pendingSystemEntryDialog);
+  const stationMusicActive = useGameState(s => s.ui.mode === 'docked' || s.pendingGameEvent?.returnMode === 'docked');
+  const currentSystemId = useGameState(s => s.currentSystemId);
+  const starType = useGameState(s => s.clusterSummary.find(x => x.id === s.currentSystemId)?.starType ?? null);
+  const systemContested = useGameState(s => s.clusterSummary.find(x => x.id === s.currentSystemId)?.isContested ?? false);
 
   const prevUiModeRef = useRef<UIMode>('flight');
   const [flashPhase, setFlashPhase] = useState<'none' | 'entry' | 'exit' | 'loadFade'>('none');
@@ -67,6 +78,37 @@ export function App() {
       window.visualViewport?.removeEventListener('resize', updateProfile);
     };
   }, []);
+
+  useEffect(() => {
+    const director = new MusicDirector();
+    musicDirectorRef.current = director;
+    return () => {
+      director.dispose();
+      musicDirectorRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    musicDirectorRef.current?.setVolume(musicVolume);
+  }, [musicVolume]);
+
+  useEffect(() => {
+    musicDirectorRef.current?.setEnvironment({
+      currentSystemId,
+      starType,
+      contested: systemContested,
+      stationActive: stationMusicActive,
+    });
+  }, [currentSystemId, starType, systemContested, stationMusicActive]);
+
+  useEffect(() => {
+    musicEnabledRef.current = musicEnabled;
+    if (!musicEnabled) {
+      musicDirectorRef.current?.setEnabled(false).catch((error) => {
+        console.warn('Failed to stop music playback:', error);
+      });
+    }
+  }, [musicEnabled]);
 
   const runtimeInitKey = runtimeProfileInitKey(runtimeProfile);
   const frameStyle = useMemo(() => ({
@@ -232,6 +274,20 @@ export function App() {
     setInvertControls(!invertControls);
   };
 
+  const handleToggleMusic = () => {
+    const next = !musicEnabled;
+    musicEnabledRef.current = next;
+    setMusicEnabled(next);
+    musicDirectorRef.current?.setEnabled(next).catch((error) => {
+      console.warn('Failed to toggle music playback:', error);
+    });
+  };
+
+  const handleMusicVolume = (volume: number) => {
+    setMusicVolume(volume);
+    musicDirectorRef.current?.setVolume(volume);
+  };
+
   const isLandscapePlayable = Boolean(runtimeProfile);
 
   useEffect(() => {
@@ -349,6 +405,10 @@ export function App() {
             onLoadAutosave={(kind) => handleLoadAutosave(kind)}
             invertControls={invertControls}
             onToggleInvertControls={handleToggleInvertControls}
+            musicEnabled={musicEnabled}
+            musicVolume={musicVolume}
+            onToggleMusic={handleToggleMusic}
+            onMusicVolume={handleMusicVolume}
             buildLabel={BUILD_TAG_LABEL}
             runtimeProfile={runtimeProfile!}
             initialView={menuFromDeathRef.current ? 'load' : menuInitialViewRef.current}
@@ -419,4 +479,3 @@ export function App() {
     </div>
   );
 }
-

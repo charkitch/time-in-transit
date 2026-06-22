@@ -84,6 +84,8 @@ export interface FactionMemoryEntry {
 
 export interface GameStateData {
   invertControls: boolean;
+  musicEnabled: boolean;
+  musicVolume: number;
   player: PlayerState;
   currentSystemId: SystemId;
   currentSystem: SolarSystemData | null;
@@ -145,6 +147,8 @@ export interface GameStateData {
 
 export interface GameActions {
   setInvertControls: (invert: boolean) => void;
+  setMusicEnabled: (enabled: boolean) => void;
+  setMusicVolume: (volume: number) => void;
   setPlayerPosition: (pos: Vec3) => void;
   setPlayerVelocity: (vel: Vec3) => void;
   setPlayerQuaternion: (q: Quat) => void;
@@ -202,6 +206,8 @@ export interface GameActions {
 
 export interface SaveData {
   invertControls?: boolean;
+  musicEnabled?: boolean;
+  musicVolume?: number;
   credits: number;
   cargo: Partial<Record<GoodName, number>>;
   cargoCostBasis: Partial<Record<GoodName, number>>;

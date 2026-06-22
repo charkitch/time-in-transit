@@ -24,20 +24,35 @@ test.describe('Save & Load', () => {
   test('state survives page reload', async ({ gamePage }) => {
     await gamePage.waitForGameReady();
 
-    // invertControls is not Rust-synced and auto-saves when set
+    // These preferences are not Rust-synced and auto-save when set.
     await gamePage.page.evaluate(() => {
-      window.__STORE__!.getState().setInvertControls(true);
+      const state = window.__STORE__!.getState();
+      state.setInvertControls(true);
+      state.setMusicEnabled(true);
+      state.setMusicVolume(0.62);
     });
     await gamePage.waitForGameReady();
 
-    const invertControls = await gamePage.page.evaluate(() =>
-      window.__STORE__?.getState()?.invertControls,
-    );
-    expect(invertControls).toBe(true);
+    const prefs = await gamePage.page.evaluate(() => {
+      const state = window.__STORE__?.getState();
+      return {
+        invertControls: state?.invertControls,
+        musicEnabled: state?.musicEnabled,
+        musicVolume: state?.musicVolume,
+      };
+    });
+    expect(prefs).toEqual({
+      invertControls: true,
+      musicEnabled: true,
+      musicVolume: 0.62,
+    });
 
     // Reset so other tests start clean
     await gamePage.page.evaluate(() => {
-      window.__STORE__!.getState().setInvertControls(false);
+      const state = window.__STORE__!.getState();
+      state.setInvertControls(false);
+      state.setMusicEnabled(false);
+      state.setMusicVolume(0.35);
     });
   });
 
