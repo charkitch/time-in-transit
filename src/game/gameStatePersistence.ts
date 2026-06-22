@@ -41,6 +41,8 @@ const DEFAULT_PLAYER: PlayerState = {
 export function buildInitialState(mode: UIMode): Omit<GameStateData, 'cluster'> {
   return {
     invertControls: false,
+    musicEnabled: false,
+    musicVolume: 0.35,
     player: { ...DEFAULT_PLAYER },
     currentSystemId: STARTING_SYSTEM_ID,
     currentSystem: null,
@@ -122,6 +124,8 @@ export function buildSaveData(s: GameStateData): SaveData {
 
   return {
     invertControls: s.invertControls,
+    musicEnabled: s.musicEnabled,
+    musicVolume: s.musicVolume,
     credits: s.player.credits,
     cargo: s.player.cargo,
     cargoCostBasis: s.player.cargoCostBasis,
@@ -163,6 +167,10 @@ export function applySaveFields(saved: Partial<SaveData>): Partial<GameStateData
       quaternion: saved.shipQuaternion ?? DEFAULT_PLAYER.quaternion,
     },
     invertControls: saved.invertControls ?? false,
+    musicEnabled: saved.musicEnabled ?? false,
+    musicVolume: typeof saved.musicVolume === 'number'
+      ? Math.max(0, Math.min(1, saved.musicVolume))
+      : 0.35,
     currentSystemId: saved.currentSystemId ?? STARTING_SYSTEM_ID,
     currentSystem: null,
     currentSystemPayload: null,

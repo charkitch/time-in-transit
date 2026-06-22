@@ -18,6 +18,10 @@ interface MainMenuProps {
   onLoadAutosave: (kind: AutosaveKind) => Promise<void>;
   invertControls: boolean;
   onToggleInvertControls: () => void;
+  musicEnabled: boolean;
+  musicVolume: number;
+  onToggleMusic: () => void;
+  onMusicVolume: (volume: number) => void;
   buildLabel: string;
   runtimeProfile: RuntimeProfile;
   initialView?: 'main' | 'load' | 'controls';
@@ -31,6 +35,10 @@ export function MainMenu({
   onLoadAutosave,
   invertControls,
   onToggleInvertControls,
+  musicEnabled,
+  musicVolume,
+  onToggleMusic,
+  onMusicVolume,
   buildLabel,
   runtimeProfile,
   initialView = 'main',
@@ -194,6 +202,21 @@ export function MainMenu({
           <button className={styles.menuBtn} onClick={onToggleInvertControls}>
             INVERT CONTROLS: {invertControls ? 'ON' : 'OFF'}
           </button>
+          <button className={styles.menuBtn} onClick={onToggleMusic}>
+            MUSIC: {musicEnabled ? 'ON' : 'OFF'}
+          </button>
+          <label className={styles.sliderControl}>
+            <span>MUSIC VOLUME</span>
+            <input
+              className={styles.slider}
+              type="range"
+              min="0"
+              max="100"
+              value={Math.round(musicVolume * 100)}
+              onChange={(event) => onMusicVolume(Number(event.currentTarget.value) / 100)}
+            />
+            <span>{Math.round(musicVolume * 100)}%</span>
+          </label>
           <button className={styles.menuBtn} onClick={() => setView('main')}>
             BACK
           </button>

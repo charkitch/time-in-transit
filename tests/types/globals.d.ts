@@ -91,11 +91,15 @@ interface TestGameState {
   };
   cluster: Array<{ x: number; y: number; name: string }>;
   invertControls: boolean;
+  musicEnabled: boolean;
+  musicVolume: number;
 
   setHyperspaceTarget(idx: number | null): void;
   setHyperspaceCountdown(n: number): void;
   setUIMode(mode: string): void;
   setInvertControls(b: boolean): void;
+  setMusicEnabled(b: boolean): void;
+  setMusicVolume(n: number): void;
   setCredits(n: number): void;
   setShields(n: number): void;
   setHeat(n: number): void;
