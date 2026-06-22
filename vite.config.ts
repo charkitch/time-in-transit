@@ -60,7 +60,14 @@ const appBuild = {
   commitCount,
 }
 
+const inCodespaces = process.env.CODESPACES === 'true'
+
 export default defineConfig(({ command }) => ({
+  // In Codespaces the dev server is reached through an HTTPS port-forward on
+  // 443, so HMR must advertise that client port instead of Vite's own.
+  ...(inCodespaces
+    ? { server: { host: true, hmr: { clientPort: 443 } } }
+    : {}),
   plugins: [
     react(),
     wasm(),

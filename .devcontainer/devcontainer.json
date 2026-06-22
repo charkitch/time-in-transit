@@ -1,0 +1,21 @@
+{
+  "name": "the-years-between-the-stars",
+  "image": "mcr.microsoft.com/devcontainers/rust:1-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "20" }
+  },
+  "postCreateCommand": "rustup target add wasm32-unknown-unknown && curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh && npm ci && npm run wasm:build",
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": { "label": "Vite dev (game)", "onAutoForward": "openPreview" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}
