@@ -192,6 +192,10 @@ fn dialog_by_label(label: &str) -> SystemEntryDialog {
         .unwrap_or_else(|| panic!("Missing dialog {}", label))
 }
 
+pub fn cold_open_dialog() -> SystemEntryDialog {
+    dialog_by_label("dialogs/cold_open.yaml")
+}
+
 pub fn iron_star_arrival_dialog() -> SystemEntryDialog {
     dialog_by_label("dialogs/iron_star_arrival.yaml")
 }
