@@ -27,6 +27,12 @@ export const test = base.extend<{ gamePage: GamePage }>({
           null,
           { timeout: 30_000 },
         );
+        // Dismiss any once-per-save arrival dialog (e.g. the new-game cold open)
+        await page.evaluate(() => {
+          if (window.__STORE__?.getState()?.pendingSystemEntryDialog) {
+            window.__GAME__?.dismissSystemEntryDialog();
+          }
+        });
       },
 
       async getUIMode() {
