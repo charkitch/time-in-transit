@@ -320,20 +320,15 @@ pub fn build_system_payload(
         }
     }
 
-    // Special system arrival dialogs — shown only once per save
-    let system_entry_dialog = if star.special_kind == SpecialSystemKind::IronStar
-        && !player_state
-            .seen_system_dialog_ids
-            .iter()
-            .any(|id| id == "iron_star_arrival")
-    {
+    // Arrival dialogs — shown only once per save
+    let unseen = |id: &str| !player_state.seen_system_dialog_ids.iter().any(|d| d == id);
+    let is_first_departure =
+        galaxy_year == GALAXY_YEAR_START && player_state.visited_systems.len() <= 1;
+    let system_entry_dialog = if is_first_departure && unseen("cold_open") {
+        Some(content::cold_open_dialog())
+    } else if star.special_kind == SpecialSystemKind::IronStar && unseen("iron_star_arrival") {
         Some(content::iron_star_arrival_dialog())
-    } else if star.special_kind == SpecialSystemKind::TheCrown
-        && !player_state
-            .seen_system_dialog_ids
-            .iter()
-            .any(|id| id == "the_crown_arrival")
-    {
+    } else if star.special_kind == SpecialSystemKind::TheCrown && unseen("the_crown_arrival") {
         Some(content::the_crown_arrival_dialog())
     } else {
         None

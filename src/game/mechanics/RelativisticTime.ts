@@ -9,3 +9,14 @@ export { GALAXY_YEAR_START };
 export function jumpYearsElapsed(dist: number): number {
   return 10 + Math.floor(dist * 14);
 }
+
+// Mirrored in engine/src/types/constants.rs (LORENTZ_FACTOR)
+const LORENTZ_FACTOR = 0.367559518989782;
+
+/**
+ * Proper time experienced aboard during a jump (Lorentz-contracted).
+ * Mirrors ship_years_elapsed in engine/src/system_payload.rs.
+ */
+export function shipYearsElapsed(dist: number): number {
+  return (10 + dist * 14) * LORENTZ_FACTOR;
+}

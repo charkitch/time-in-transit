@@ -1,7 +1,11 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useGameState } from '../../game/GameState';
 import { canJump as checkCanJump, jumpCost as calcJumpCost, getReachableSystems } from '../../game/mechanics/hyperspaceCalc';
-import { jumpYearsElapsed } from '../../game/mechanics/RelativisticTime';
+import {
+  jumpYearsElapsed,
+  shipYearsElapsed,
+} from '../../game/mechanics/RelativisticTime';
+import { FirstJumpConfirm } from './FirstJumpConfirm';
 import type { StarSystemData, ClusterSystemSummary, SystemSimState } from '../../game/engine';
 import type { SystemId } from '../../game/types';
 import { POLITICAL_TYPE_DISPLAY } from '../../game/constants';
@@ -16,6 +20,14 @@ import { drawClusterMap } from './ClusterMapRendering';
 interface ClusterMapProps {
   onClose: () => void;
   onJump: () => void;
+}
+
+function jumpTimePreview(from: StarSystemData, to: StarSystemData) {
+  const dist = Math.hypot(to.x - from.x, to.y - from.y);
+  return {
+    galaxyYears: jumpYearsElapsed(dist),
+    shipYears: Math.round(shipYearsElapsed(dist)),
+  };
 }
 
 export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
@@ -78,12 +90,8 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
 
   // Compute years-elapsed preview for hovered/targeted system
   const previewSys = hovered ?? (hyperspaceTarget !== null ? cluster[hyperspaceTarget] : null);
-  const previewYears = previewSys && previewSys.id !== currentSystemId
-    ? (() => {
-        const dx = previewSys.x - currentSys.x;
-        const dy = previewSys.y - currentSys.y;
-        return jumpYearsElapsed(Math.sqrt(dx * dx + dy * dy));
-      })()
+  const previewTime = previewSys && previewSys.id !== currentSystemId
+    ? jumpTimePreview(currentSys, previewSys)
     : null;
 
   const draw = useCallback(() => {
@@ -218,13 +226,21 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
 
   const selectedSys = hyperspaceTarget !== null ? cluster[hyperspaceTarget] : null;
   const selectedSummary = selectedSys ? clusterSummaryById.get(selectedSys.id) : undefined;
+  const selectedTime = selectedSys ? jumpTimePreview(currentSys, selectedSys) : null;
   const jumpCost = selectedSys ? calcJumpCost(currentSys, selectedSys) : 0;
   const canJump = selectedSys
     ? checkCanJump(currentSys, selectedSys, player.fuel).ok
     : false;
 
+  const [confirmingFirstJump, setConfirmingFirstJump] = useState(false);
+  const hasJumpedBefore = jumpLog.length > 0;
+
   const handleJump = () => {
     if (!canJump) return;
+    if (!hasJumpedBefore) {
+      setConfirmingFirstJump(true);
+      return;
+    }
     onJump();
   };
 
@@ -264,12 +280,12 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
                   <br />
                   FUEL COST: {jumpCost.toFixed(1)} / {player.fuel.toFixed(1)}
                   <br />
-                  {(() => {
-                    const dx = selectedSys.x - currentSys.x;
-                    const dy = selectedSys.y - currentSys.y;
-                    const yrs = jumpYearsElapsed(Math.sqrt(dx * dx + dy * dy));
-                    return <span style={{ color: 'var(--color-warning)' }}>+{yrs.toLocaleString()} YRS</span>;
-                  })()}
+                  {selectedTime && (
+                    <>
+                      <span style={{ color: 'var(--color-warning)' }}>+{selectedTime.galaxyYears.toLocaleString()} YRS</span>
+                      <span style={{ color: 'var(--color-hud-dim)' }}> · {selectedTime.shipYears.toLocaleString()} ABOARD</span>
+                    </>
+                  )}
                   <br />
                   TECH LV: {selectedSummary?.techLevel ?? selectedSys.techLevel} · {selectedSummary?.economy ?? selectedSys.economy}
                   {(() => {
@@ -316,9 +332,10 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
                   })()}
                 </div>
               )}
-              {previewYears !== null && !selectedSys && hovered && reachableIds.has(hovered.id) && (
+              {previewTime !== null && !selectedSys && hovered && reachableIds.has(hovered.id) && (
                 <div style={{ marginTop: '4px', color: 'var(--color-warning)', fontSize: '11px' }}>
-                  HOVER: {hovered.name.toUpperCase()} +{previewYears.toLocaleString()} YRS
+                  HOVER: {hovered.name.toUpperCase()} +{previewTime.galaxyYears.toLocaleString()} YRS
+                  <span style={{ color: 'var(--color-hud-dim)' }}> · {previewTime.shipYears.toLocaleString()} ABOARD</span>
                   {visitedSystems.has(hovered.id) && lastVisitYear[hovered.id] != null && (() => {
                     const ago = galaxyYear - lastVisitYear[hovered.id];
                     return ago > 0
@@ -369,6 +386,18 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
           {canJump ? `JUMP TO ${selectedSys?.name.toUpperCase()}` : selectedSys ? 'INSUFFICIENT FUEL' : 'SELECT TARGET'}
         </button>
       </div>
+      {confirmingFirstJump && selectedSys && selectedTime && (
+        <FirstJumpConfirm
+          targetName={selectedSys.name}
+          galaxyYears={selectedTime.galaxyYears}
+          shipYears={selectedTime.shipYears}
+          onDepart={() => {
+            setConfirmingFirstJump(false);
+            onJump();
+          }}
+          onCancel={() => setConfirmingFirstJump(false)}
+        />
+      )}
     </div>
   );
 }

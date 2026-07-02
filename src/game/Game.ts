@@ -126,6 +126,9 @@ export class Game {
     state.markVisited(state.currentSystemId);
     state.addKnownFaction(result.systemPayload.factionState.controllingFactionId);
     state.setSystemEntryLines(result.systemPayload.systemEntryLines);
+    if (result.systemPayload.systemEntryDialog) {
+      state.setPendingSystemEntryDialog(result.systemPayload.systemEntryDialog);
+    }
 
     const starData = result.cluster[state.currentSystemId];
     this.sceneRenderer.loadSystem(
