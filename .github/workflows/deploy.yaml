@@ -1,15 +1,22 @@
 name: Deploy
 
+# Deploy only after E2E passes on main, so a red suite never ships.
 on:
-  push:
+  workflow_run:
+    workflows: [E2E]
+    types: [completed]
     branches: [main]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # event == 'push' guards against PR-triggered E2E runs from head branches
+    # named 'main' (workflow_run's branches filter matches the head branch).
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
       - name: Install Rust

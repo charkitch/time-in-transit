@@ -1,6 +1,3 @@
-import { GALAXY_YEAR_START } from '../constants';
-export { GALAXY_YEAR_START };
-
 /**
  * How many galaxy years elapse during a hyperspace jump.
  * dist is in galaxy units (same scale as StarSystemData.x/y, max 25).
@@ -18,5 +15,5 @@ const LORENTZ_FACTOR = 0.367559518989782;
  * Mirrors ship_years_elapsed in engine/src/system_payload.rs.
  */
 export function shipYearsElapsed(dist: number): number {
-  return (10 + dist * 14) * LORENTZ_FACTOR;
+  return jumpYearsElapsed(dist) * LORENTZ_FACTOR;
 }

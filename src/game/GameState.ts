@@ -193,7 +193,10 @@ export const useGameState = create<GameStateData & GameActions>((set, get) => ({
     pendingShipYears: shipYears ?? null,
   }),
   setSystemEntryLines: (lines) => set({ systemEntryLines: lines }),
-  setPendingSystemEntryDialog: (dialog) => set({ pendingSystemEntryDialog: dialog }),
+  setPendingSystemEntryDialog: (dialog) => set(s => ({
+    pendingSystemEntryDialog:
+      dialog?.showOnce && s.seenSystemDialogIds.includes(dialog.id) ? null : dialog,
+  })),
   markSystemDialogSeen: (id) => set(s => ({
     seenSystemDialogIds: s.seenSystemDialogIds.includes(id)
       ? s.seenSystemDialogIds

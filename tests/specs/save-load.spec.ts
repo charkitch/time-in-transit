@@ -56,6 +56,19 @@ test.describe('Save & Load', () => {
     });
   });
 
+  test('dismissed cold open does not re-show on reload before first jump', async ({ gamePage }) => {
+    // waitForGameReady dismisses the cold open, which marks it seen and saves
+    await gamePage.waitForGameReady();
+
+    await gamePage.page.reload();
+    await waitForUIMode(gamePage.page, 'flight');
+
+    const pending = await gamePage.page.evaluate(
+      () => window.__STORE__!.getState().pendingSystemEntryDialog,
+    );
+    expect(pending).toBeNull();
+  });
+
   test('clear save starts fresh', async ({ gamePage }) => {
     await gamePage.waitForGameReady();
 

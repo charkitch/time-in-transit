@@ -1,6 +1,11 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useGameState } from '../../game/GameState';
-import { canJump as checkCanJump, jumpCost as calcJumpCost, getReachableSystems } from '../../game/mechanics/hyperspaceCalc';
+import {
+  canJump as checkCanJump,
+  jumpCost as calcJumpCost,
+  getReachableSystems,
+  systemDistance,
+} from '../../game/mechanics/hyperspaceCalc';
 import {
   jumpYearsElapsed,
   shipYearsElapsed,
@@ -23,10 +28,10 @@ interface ClusterMapProps {
 }
 
 function jumpTimePreview(from: StarSystemData, to: StarSystemData) {
-  const dist = Math.hypot(to.x - from.x, to.y - from.y);
+  const dist = systemDistance(from, to);
   return {
     galaxyYears: jumpYearsElapsed(dist),
-    shipYears: Math.round(shipYearsElapsed(dist)),
+    shipYears: Math.floor(shipYearsElapsed(dist)),
   };
 }
 
@@ -68,6 +73,7 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
   );
 
   const [hovered, setHovered] = useState<StarSystemData | null>(null);
+  const [confirmingFirstJump, setConfirmingFirstJump] = useState(false);
   const [mobileCenter, setMobileCenter] = useState<{ x: number; y: number }>({
     x: currentSys.x,
     y: currentSys.y,
@@ -232,8 +238,10 @@ export function ClusterMap({ onClose, onJump }: ClusterMapProps) {
     ? checkCanJump(currentSys, selectedSys, player.fuel).ok
     : false;
 
-  const [confirmingFirstJump, setConfirmingFirstJump] = useState(false);
-  const hasJumpedBefore = jumpLog.length > 0;
+  // jumpLog alone misses legacy saves that predate the field. A second visited
+  // system proves a jump happened regardless of save-format vintage — unlike
+  // galaxyYear, which event choices can also advance.
+  const hasJumpedBefore = jumpLog.length > 0 || visitedSystems.size > 1;
 
   const handleJump = () => {
     if (!canJump) return;

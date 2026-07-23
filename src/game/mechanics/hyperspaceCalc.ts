@@ -1,16 +1,16 @@
 import { HYPERSPACE } from '../constants';
 import type { StarSystemData } from '../engine';
 
+export function systemDistance(from: StarSystemData, to: StarSystemData): number {
+  return Math.hypot(to.x - from.x, to.y - from.y);
+}
+
 export function canJump(
   currentSystem: StarSystemData,
   targetSystem: StarSystemData,
   fuel: number,
 ): { ok: boolean; reason?: string } {
-  const dx = targetSystem.x - currentSystem.x;
-  const dy = targetSystem.y - currentSystem.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-
-  if (dist > HYPERSPACE.maxRange) {
+  if (systemDistance(currentSystem, targetSystem) > HYPERSPACE.maxRange) {
     return { ok: false, reason: 'Target out of range' };
   }
 
@@ -23,21 +23,14 @@ export function canJump(
 }
 
 export function jumpCost(from: StarSystemData, to: StarSystemData): number {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  return Math.max(0.5, Math.min(3.0, dist * HYPERSPACE.fuelPerUnit));
+  return Math.max(0.5, Math.min(3.0, systemDistance(from, to) * HYPERSPACE.fuelPerUnit));
 }
 
 export function getReachableSystems(
   currentSystem: StarSystemData,
   galaxy: StarSystemData[],
 ): StarSystemData[] {
-  return galaxy.filter(s => {
-    if (s.id === currentSystem.id) return false;
-    const dx = s.x - currentSystem.x;
-    const dy = s.y - currentSystem.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    return dist <= HYPERSPACE.maxRange;
-  });
+  return galaxy.filter(s =>
+    s.id !== currentSystem.id && systemDistance(currentSystem, s) <= HYPERSPACE.maxRange,
+  );
 }

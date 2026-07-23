@@ -351,9 +351,10 @@ pub fn jump_years_elapsed(distance: f64) -> u32 {
 
 /// Proper time experienced by the ship during a jump (Lorentz-contracted).
 /// At 0.93c the Lorentz factor ≈ 0.368, compressing centuries into decades.
+/// Based on the same floored galaxy years the player sees, so previews,
+/// arrival text, and the jump log all agree.
 pub fn ship_years_elapsed(distance: f64) -> f64 {
-    let external = 10.0 + distance * 14.0;
-    external * LORENTZ_FACTOR
+    jump_years_elapsed(distance) as f64 * LORENTZ_FACTOR
 }
 
 fn format_duration(years: f64) -> String {
