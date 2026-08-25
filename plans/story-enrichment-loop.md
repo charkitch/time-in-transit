@@ -75,11 +75,12 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
 
 ### Phase 1 — guardrails
 
-- [ ] **Dangling-wiring test.** New cargo test in `engine/src/content.rs`:
-      every flag/trigger/galactic-flag *consumed* by a condition has a
-      producer, and every `sets_flags` / `fires` / `factionTag` *producer* has
-      a consumer. Allowlist for intentionally-open hooks so it can land green,
-      with the allowlist itself being the todo list for Phase 2.
+- [x] **Dangling-wiring test.** Landed as `engine/src/content_wiring.rs`:
+      every flag/trigger/galactic-flag/faction-tag consumed by a condition has
+      a producer, and every producer has a consumer. `OPEN_FLAG_HOOKS` /
+      `OPEN_FACTION_TAG_HOOKS` in that file are the authoritative
+      open-hook lists (17 flags + 4 tags) — the tests fail on stale entries,
+      so Phase 2 payoffs must remove their entry as they land.
 - [ ] **Dead-end choice report.** Extend the test (or a `#[ignore]`d
       reporting test) to list choices with empty terminal effects (no flags,
       no fires, no `next_moment`, no material effect) — informational, feeds
@@ -104,6 +105,13 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       `harvest_scar_relic_preserved` are never read — make later stages (or a
       post-chain event) acknowledge which path was taken.
 - [ ] **`alien_graveloom_tithe_paid`** — author the consequence.
+- [ ] **Crew-outcome flags.** `renn_ally`/`renn_captured`, `seval_ally`,
+      `tessaly_friend`, `thennic_peace` are set but unread — author payoffs
+      that remember how each meeting went.
+- [ ] **`faction-0/2/3` tags.** Events can align the player with generated
+      factions, but only `corp/gov/rebel_ally` affect the simulation — give
+      generated-faction alignment a payoff (simulation boost like the named
+      tags, or gated events).
 - [ ] **`burnt_accord_finale` outcomes.** 14 outcome flags, zero readers.
       Author consequence events for all of them, starting with the strongest
       (e.g. `tessaly_captured`, `accord_collapsed`) — every flag eventually

@@ -2,6 +2,8 @@ mod civilization;
 mod climate;
 pub mod cluster_generator;
 mod content;
+#[cfg(test)]
+mod content_wiring;
 mod dyson_generator;
 mod events;
 mod factions;
