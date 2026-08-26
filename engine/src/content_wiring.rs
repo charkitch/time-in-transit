@@ -34,7 +34,7 @@ const OPEN_FLAG_HOOKS: &[&str] = &[
     "korathi_distrust",
 ];
 
-const OPEN_FACTION_TAG_HOOKS: &[&str] = &["faction-0", "faction-2", "faction-3"];
+const OPEN_FACTION_TAG_HOOKS: &[&str] = &[];
 
 const OPEN_GALACTIC_FLAG_HOOKS: &[&str] = &[];
 
@@ -239,7 +239,11 @@ fn produced_flags_have_consumers() {
     assert_producers_consumed(
         "faction tags",
         &w.produced_faction_tags,
-        |tag| w.consumed_faction_tags.contains(tag) || SIMULATION_FACTION_TAGS.contains(&tag),
+        |tag| {
+            w.consumed_faction_tags.contains(tag)
+                || SIMULATION_FACTION_TAGS.contains(&tag)
+                || crate::factions::all_factions().iter().any(|f| f.id == tag)
+        },
         OPEN_FACTION_TAG_HOOKS,
     );
 }

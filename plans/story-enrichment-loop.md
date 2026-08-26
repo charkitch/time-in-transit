@@ -154,10 +154,12 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       `BURNT_ACCORD_THE_ALMOST_WAR` (Tessaly's book for `tessaly_friend`,
       with a `thennic_peace`-gated peace-dividend choice). Seven flags
       retired from the open-hook list; 8 remain.
-- [ ] **`faction-0/2/3` tags.** Events can align the player with generated
-      factions, but only `corp/gov/rebel_ally` affect the simulation — give
-      generated-faction alignment a payoff (simulation boost like the named
-      tags, or gated events).
+- [x] **`faction-0/2/3` tags.** Direct faction alignment now feeds the
+      galaxy simulation: a tag equal to a faction id strengthens exactly
+      that faction in that system (one generic match arm in
+      `simulation.rs`, covered by an integration test). The wiring test
+      recognizes faction-id tags as simulation-consumed; the faction-tag
+      open-hook list is now empty.
 - [ ] **`burnt_accord_finale` outcomes.** 14 outcome flags, zero readers.
       Author consequence events for all of them, starting with the strongest
       (e.g. `tessaly_captured`, `accord_collapsed`) — every flag eventually

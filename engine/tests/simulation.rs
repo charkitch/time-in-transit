@@ -53,3 +53,28 @@ fn player_choices_influence_simulation() {
         "Player choices should influence simulation"
     );
 }
+
+#[test]
+fn direct_faction_alignment_strengthens_that_faction() {
+    let cluster = generate_cluster();
+    let unaligned = test_player_state(GALAXY_YEAR_START);
+
+    let mut aligned = test_player_state(GALAXY_YEAR_START);
+    let choices = SystemChoices {
+        faction_tag: Some("faction-0".to_string()),
+        ..Default::default()
+    };
+    aligned.player_choices.insert(0, choices);
+
+    let mut state_unaligned = init_galaxy_state(&cluster, GALAXY_YEAR_START);
+    let mut state_aligned = init_galaxy_state(&cluster, GALAXY_YEAR_START);
+
+    simulate_galaxy(&cluster, &mut state_unaligned, &unaligned, 2);
+    simulate_galaxy(&cluster, &mut state_aligned, &aligned, 2);
+
+    let strength = |state: &GalaxyState| state.systems[0].faction_strength["faction-0"];
+    assert!(
+        strength(&state_aligned) > strength(&state_unaligned),
+        "direct faction alignment should strengthen that faction"
+    );
+}

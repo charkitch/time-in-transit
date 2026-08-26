@@ -230,4 +230,21 @@
   build on (Korathi = faction-0, Ashundi = faction-2, Draimar = faction-3).
 - **Verified:** `cargo test` 88 passed, lint clean. Content-only, no e2e.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** 54aafaa Author crew-outcome epilogue events
+
+## Iteration 12 — Generated-faction alignment feeds the simulation
+
+- **Did:** Siding with the Korathi, Ashundi, or Draimar in the Burnt Accord
+  finale (faction tags `faction-0/2/3`) now matters mechanically: a
+  faction tag equal to a faction id strengthens exactly that faction in
+  that system, via one generic match arm in `simulation.rs` — no
+  per-faction hardcoding, works for any current or future generated
+  faction. Integration test
+  `direct_faction_alignment_strengthens_that_faction` covers it. The
+  wiring test now treats faction-id tags as simulation-consumed;
+  `OPEN_FACTION_TAG_HOOKS` is empty — every faction tag in the game has a
+  consumer.
+- **Verified:** `cargo test` 88 + 4 integration tests passed, lint clean.
+  Engine-only, no e2e.
+- **Proposed removals (needs human approval):** none.
 - **Commit:** (this commit)
