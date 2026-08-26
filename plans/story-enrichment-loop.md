@@ -175,9 +175,13 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
 
 ### Phase 3 — grow chains
 
-- [ ] **More trigger-based chains.** The `fires` → `triggeredBy` mechanism has
-      exactly one use. Extend 2-3 well-liked one-shot events into two-beat
-      chains via `engine/content/triggers/`.
+- [x] **More trigger-based chains.** `FROZEN_DERELICT` and `MINERS_DISPUTE`
+      each grew two consequence beats (four triggered events, two trigger
+      files): the drive logs reveal the derelict *arrived* rather than
+      failed; the pocketed component gets a missing-artifact notice and a
+      collector's offer; the even split becomes The Even Vein cooperative;
+      siding with the stronger crew leaves the losing chief running a scrap
+      stall. Trigger-driven chains are now 7 (from 1 at loop start).
 - [ ] **Sweep for text/world mismatches.** Audit event prose for asserted
       world state (population, ruins, stations, planet type) not guaranteed by
       `requires`; tighten conditions or soften prose. Add conditions to the

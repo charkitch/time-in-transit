@@ -282,4 +282,23 @@
   consumer, and the wiring tests fail on any future nub. Phase 2 is done.
 - **Verified:** `cargo test` 88 + 4 passed, lint clean. Content-only.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** 3b99f70 Pay off remaining Burnt Accord political outcomes
+
+## Iteration 15 — Two one-shots become chains
+
+- **Did:** Extended `FROZEN_DERELICT` and `MINERS_DISPUTE` into two-beat
+  chains — four triggered follow-ups, one per consequential choice
+  (walk-aways untouched). Derelict: `DERELICT_TRANSLATION_FOLLOWS_UP` (the
+  logs reveal the ship *arrived* — last entry a calm heading, engines
+  stepped down in good order; "Why here?") and
+  `DERELICT_SALVAGE_FOLLOWS_UP` (the component sits in a neat circle of
+  waiting dust; a missing-artifact notice reads like a worried parent; a
+  collector is not worried at all). Miners: `MINERS_SPLIT_FOLLOWS_UP`
+  (The Even Vein cooperative, "fair ruins a good feud") and
+  `MINERS_STRONGER_FOLLOWS_UP` (the losing chief's scrap stall — "everyone
+  gets a ruling wrong eventually"). New flags/triggers validated by the
+  wiring tests with no allowlist entries. Trigger-driven follow-ups now
+  number 7, up from 1 at loop start.
+- **Verified:** `cargo test` 88 + 4 passed, lint clean. Content-only.
+- **Proposed removals (needs human approval):** none.
 - **Commit:** (this commit)

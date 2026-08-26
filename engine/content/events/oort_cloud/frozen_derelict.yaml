@@ -14,12 +14,16 @@ choices:
     effect:
       tradingReputation: 2
       creditsReward: 500
+      setsFlags: [derelict_logs_translated]
+      fires: [derelict-translation-ready]
   - id: salvage_tech
     label: Quietly pocket a component
     description: "CR 1500, -Reputation x2"
     effect:
       tradingReputation: -2
       creditsReward: 1500
+      setsFlags: [derelict_component_taken]
+      fires: [derelict-salvage-noticed]
   - id: leave_derelict
     label: Leave it to the researchers
     description: No effect

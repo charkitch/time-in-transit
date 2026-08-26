@@ -1,0 +1,7 @@
+triggers:
+  - id: derelict-translation-ready
+    conditions:
+      - !FlagSet derelict_logs_translated
+  - id: derelict-salvage-noticed
+    conditions:
+      - !FlagSet derelict_component_taken

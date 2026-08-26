@@ -1,0 +1,35 @@
+id: MINERS_STRONGER_FOLLOWS_UP
+title: THE SCRAP STALL
+triggeredOnly: true
+triggeredBy: miners-stronger-outcome
+narrativeLines:
+  - >-
+    The big crew runs the whole vein now, and most of the base with it. The
+    ore moves on schedule. The dock fees are precise. Nobody growls at
+    anybody anymore, mostly because half the people who used to growl are
+    gone.
+  - >-
+    The smaller crew's chief runs a scrap stall by the airlock — patch
+    plates, filter cartridges, one shelf of mining trophies she polishes
+    but won't sell.
+  - >-
+    She recognizes you. Of course she does. "The ancient outsider," she
+    says, not unkindly. "Everyone gets a ruling wrong eventually. Even the
+    ones who've had ten thousand years to practice. Buying anything?"
+choices:
+  - id: buy_generously
+    label: Buy patch plates you don't need, at her price
+    description: "CR -250, +Reputation"
+    effect:
+      creditsReward: -250
+      tradingReputation: 1
+  - id: collect_your_cut
+    label: Collect the standing percentage from the big crew
+    description: "CR 400, -Reputation"
+    effect:
+      creditsReward: 400
+      tradingReputation: -1
+  - id: admit_it
+    label: Tell her she's right
+    description: No effect
+    effect: {}

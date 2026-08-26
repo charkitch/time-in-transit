@@ -13,12 +13,16 @@ choices:
     description: "+Reputation x2, both crews grateful"
     effect:
       tradingReputation: 2
+      setsFlags: [miners_split_ruled]
+      fires: [miners-split-outcome]
   - id: side_with_stronger
     label: Side with the larger crew (for a cut)
     description: "CR 800, -Reputation"
     effect:
       tradingReputation: -1
       creditsReward: 800
+      setsFlags: [miners_stronger_ruled]
+      fires: [miners-stronger-outcome]
   - id: refuse_dispute
     label: Refuse to get involved
     description: No effect
