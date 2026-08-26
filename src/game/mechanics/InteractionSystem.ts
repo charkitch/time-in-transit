@@ -127,11 +127,13 @@ export class InteractionSystem {
 
     const currentPayload = state.currentSystemPayload;
     if (!currentPayload) return;
+    const planet = host.type === 'planet'
+      ? currentPayload.system.planets.find((p) => p.id === host.id)
+      : undefined;
     const isVisited = !!site.visited;
     let event: GameEvent | null = null;
     if (!isVisited) {
       if (host.type === 'planet') {
-        const planet = currentPayload.system.planets.find((p) => p.id === host.id);
         event = engineGetGameEvent(state.currentSystemId, {
           context: 'planet_landing',
           surface: planet?.surfaceType,
@@ -172,6 +174,7 @@ export class InteractionSystem {
       landingSiteLabel: site.siteLabel ?? 'LANDING SITE',
       landingHostLabel: site.siteHostLabel ?? null,
       visited: isVisited,
+      hostHasStation: planet?.hasStation ?? false,
     });
     state.setUIMode('landing');
   }
@@ -226,7 +229,10 @@ export class InteractionSystem {
 
     state.setPendingGameEvent(null);
     state.saveGame();
-    state.setUIMode(returnMode);
+    // A stationed planet has a working port: open its market instead of
+    // returning straight to flight. Undock lifts off from the surface.
+    const surfacePort = returnMode === 'flight' && !!ctx.hostHasStation;
+    state.setUIMode(surfacePort ? 'docked' : returnMode);
   }
 
   trackDockedStation(): void {

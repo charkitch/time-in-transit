@@ -109,4 +109,26 @@
   its own backlog item for a reliquary-themed beat rather than forcing it
   into this batch.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** 292cc31 Author faction alignment payoff events
+
+## Iteration 6 — Surface markets actually open
+
+- **Did:** Landing on a planet with `hasStation` now opens the port screen
+  after the landing event resolves (and immediately on revisits), reusing
+  `StationUI` in `docked` mode as the surface port — trade, refuel, and
+  repair at the settlement the event described. Plumbing: `hostHasStation`
+  on `PendingGameEventContext`, set from the landed planet in
+  `InteractionSystem.landAtSite`, consumed in `completeLanding` to pick the
+  final UI mode. `undock()` already handles the no-docked-station case, so
+  UNDOCK lifts off from the surface. Freshly applied event price modifiers
+  show in the port because `completeLanding` refreshes
+  `currentSystemPayload.market` before the mode switch.
+- **Verified:** cargo tests, full build, lint green. E2e: 41/42 passed; the
+  one failure (`boot.spec.ts` music controls) is unrelated to this change,
+  passed in both prior full runs, and passes in isolation on retry — flake
+  under load (that run took 10.1m vs the usual 2.6m).
+- **Found:** Stationless-planet landings still return to flight (correct).
+  The stone market fantasy is now real: land, resolve the event, buy at -15%.
+  Planet-flavored goods (next item) will make these ports feel distinct.
+- **Proposed removals (needs human approval):** none.
 - **Commit:** (this commit)

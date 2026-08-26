@@ -113,12 +113,13 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       `REBEL_QUIET_BERTH`, `GOV_CLEARED_LANES` — each `rare` so standing
       keeps mattering on revisits; tags are per-system, so the payoff reads
       as "this system remembers you."
-- [ ] **Surface markets actually open.** Landing on a planet whose site/host
-      has a market (`hasStation`) should offer real trading, not just prose:
-      after the landing event resolves, surface the trading UI (e.g. a TRADE
-      action in the landing flow, or return to a docked-style mode) instead
-      of dropping straight back to flight. Market state (reputation, bans,
-      price modifier) stays per-system.
+- [x] **Surface markets actually open.** Landing on a stationed planet now
+      opens the port screen (`StationUI`, mode `docked`) after the landing
+      event resolves — including on revisits — instead of dropping straight
+      back to flight. `hostHasStation` rides the pending-event context from
+      `InteractionSystem`; UNDOCK lifts off from the surface (no docked
+      station to snap to). Market state stays per-system, and the freshly
+      applied price modifiers show immediately in the port.
 - [ ] **Planet-flavored goods.** Market listings are currently seeded by
       system + economy only. Bias listing composition by the host planet's
       character — gas-giant ports lean volatiles/plasma-adjacent goods,
