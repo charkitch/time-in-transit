@@ -113,6 +113,19 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       `REBEL_QUIET_BERTH`, `GOV_CLEARED_LANES` — each `rare` so standing
       keeps mattering on revisits; tags are per-system, so the payoff reads
       as "this system remembers you."
+- [ ] **Surface markets actually open.** Landing on a planet whose site/host
+      has a market (`hasStation`) should offer real trading, not just prose:
+      after the landing event resolves, surface the trading UI (e.g. a TRADE
+      action in the landing flow, or return to a docked-style mode) instead
+      of dropping straight back to flight. Market state (reputation, bans,
+      price modifier) stays per-system.
+- [ ] **Planet-flavored goods.** Market listings are currently seeded by
+      system + economy only. Bias listing composition by the host planet's
+      character — gas-giant ports lean volatiles/plasma-adjacent goods,
+      continental worlds lean grown/harvested goods, ice/ocean/desert each
+      get their own leanings — so markets feel like the world they orbit.
+      Engine change in `trading.rs` listing selection; keep per-system price
+      state unchanged.
 - [ ] **`alien_reliquary_trusted` payoff.** The remaining unconsumed tag —
       author a reliquary-themed beat (the orrery keepers extend trust) gated
       on `HasFactionTag alien_reliquary_trusted`.
