@@ -22,4 +22,26 @@
   consumed-side checks passed with zero violations — no conditions reference
   flags that can never be set.
 - **Proposed removals (needs human approval):** none.
-- **Commit:** see `git log loop/story-enrichment`.
+- **Commit:** 0c4c2ec Add content wiring validation tests
+
+## Iteration 2 — Dead-end choice report
+
+- **Did:** Added `report_dead_end_choices` to `engine/src/content_wiring.rs` —
+  an `#[ignore]`d informational test (run:
+  `cargo test -- --ignored report_dead_end`) that walks every choice tree,
+  including nested `nextMoment` branches, and lists terminal choices whose
+  effect changes nothing (no flags, triggers, credits, reputation, crew,
+  upgrades, price/ban effects).
+- **Verified:** `cargo test` 84 passed / 1 ignored (the report), clippy and
+  eslint clean.
+- **Found:** 78 terminal no-effect choices. Most are legitimate walk-away
+  flavor. But the report exposed a serious bug class: **soft declines
+  permanently kill story chains.** Every choice marks its event completed
+  (`api_query.rs:128`), chain-start events default to `Unique` and never
+  repeat, so `ARRAY_OORT_BRIEFING no_time_today` ("No time today"),
+  `CARTOGRAPHERS_WAKE_INTRO mind_own_drink`, and `BURNT_ACCORD_SIGNAL
+  ignore_cube` each foreclose their entire multi-stage chain forever while
+  reading like deferrals. All three shipped chains are killable this way.
+  Added as the top Phase 2 backlog item.
+- **Proposed removals (needs human approval):** none.
+- **Commit:** (this commit)

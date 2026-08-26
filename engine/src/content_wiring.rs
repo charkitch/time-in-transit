@@ -258,6 +258,55 @@ fn produced_flags_have_consumers() {
     );
 }
 
+/// True when a choice's effect changes nothing about the world: no flags, no
+/// trigger, no economy/faction/crew/upgrade consequence.
+fn is_neutral(effect: &crate::types::ChoiceEffect) -> bool {
+    effect.trading_reputation == 0
+        && effect.banned_goods.is_empty()
+        && effect.price_modifier == 1.0
+        && effect.faction_tag.is_none()
+        && effect.credits_reward == 0
+        && effect.fuel_reward == 0.0
+        && effect.sets_flags.is_empty()
+        && effect.fires.is_empty()
+        && effect.sets_galactic_flags.is_empty()
+        && effect.galaxy_years_advance == 0
+        && effect.grants_upgrade.is_none()
+        && effect.recruits_crew.is_none()
+}
+
+/// Terminal choices (no next_moment) whose effect is entirely neutral —
+/// "EVENT_ID choice_id" paths. Some are intentional flavor beats; the report
+/// exists to make each one a deliberate decision rather than an accident.
+fn dead_end_choice_paths(choices: &[crate::types::EventChoice], prefix: &str) -> Vec<String> {
+    choices
+        .iter()
+        .flat_map(|choice| {
+            let path = format!("{prefix} {}", choice.id);
+            match &choice.next_moment {
+                Some(moment) => dead_end_choice_paths(&moment.choices, &path),
+                None if is_neutral(&choice.effect) => vec![path],
+                None => vec![],
+            }
+        })
+        .collect()
+}
+
+/// Informational report, not a gate: `cargo test -- --ignored report_dead_end`.
+#[test]
+#[ignore = "informational report for the story-enrichment backlog"]
+fn report_dead_end_choices() {
+    let paths: Vec<String> = all_events()
+        .iter()
+        .flat_map(|event| dead_end_choice_paths(&event.choices, &event.id))
+        .collect();
+    println!(
+        "{} terminal choices with no effect:\n  {}",
+        paths.len(),
+        paths.join("\n  ")
+    );
+}
+
 #[test]
 fn triggers_are_wired() {
     let w = wiring();

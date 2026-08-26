@@ -81,10 +81,11 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       `OPEN_FACTION_TAG_HOOKS` in that file are the authoritative
       open-hook lists (17 flags + 4 tags) — the tests fail on stale entries,
       so Phase 2 payoffs must remove their entry as they land.
-- [ ] **Dead-end choice report.** Extend the test (or a `#[ignore]`d
-      reporting test) to list choices with empty terminal effects (no flags,
-      no fires, no `next_moment`, no material effect) — informational, feeds
-      the backlog.
+- [x] **Dead-end choice report.** Landed in `engine/src/content_wiring.rs`
+      as `report_dead_end_choices` — run with
+      `cargo test -- --ignored report_dead_end`. Informational, not a gate:
+      78 terminal no-effect choices exist; most are legitimate walk-away
+      flavor, and the report makes each one a deliberate decision.
 - [ ] **World-consistency condition.** Add `EventCondition::HasStation`
       (schema `lib.rs:211`, check in `events.rs:53-148`, plumb `has_station`
       from system state), plus a validation test that market/port-themed
@@ -95,6 +96,15 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
 
 ### Phase 2 — pay off existing nubs
 
+- [ ] **Soft declines silently kill story chains.** Any choice marks its
+      event completed (`api_query.rs:128`) and chain-start events default to
+      `Unique`, so `ARRAY_OORT_BRIEFING no_time_today`,
+      `CARTOGRAPHERS_WAKE_INTRO mind_own_drink`, and
+      `BURNT_ACCORD_SIGNAL ignore_cube` permanently foreclose their entire
+      chains while reading like deferrals. Fix so a decline defers instead of
+      completes (e.g. a `defersCompletion` choice field, or decline branches
+      set a `_declined` flag and the start event becomes re-eligible), keeping
+      a true hard-refusal path where the prose earns it.
 - [ ] **Faction alignment matters.** `corp_ally` / `rebel_ally` / `gov_ally` /
       `alien_reliquary_trusted` are set but nothing consumes them. Author 1-2
       events per tag gated on `HasFactionTag`.
