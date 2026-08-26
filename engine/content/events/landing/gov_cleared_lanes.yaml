@@ -1,0 +1,32 @@
+id: GOV_CLEARED_LANES
+title: CLEARED LANES
+requires:
+  - !HasFactionTag gov_ally
+repeatability: rare
+narrativeLines:
+  - >-
+    Customs waves you through before you finish transmitting your manifest.
+    Your file travels ahead of you these days, stamped in official blue.
+  - >-
+    The inspection bay you would normally wait in is occupied by somebody
+    less cooperative, whose ship is being taken apart bolt by bolt.
+  - >-
+    A port official thanks you, formally and on the record, for your
+    continued civic reliability, and notes the expedited lane is yours.
+choices:
+  - id: use_the_lane
+    label: Use the expedited lane
+    description: "+Fuel, +Reputation"
+    effect:
+      fuelReward: 0.4
+      tradingReputation: 1
+  - id: consult_on_patterns
+    label: Consult for the inspectorate on smuggling patterns
+    description: "CR 350, -Reputation"
+    effect:
+      creditsReward: 350
+      tradingReputation: -1
+  - id: decline_formally
+    label: Decline, formally and on the record
+    description: No effect
+    effect: {}

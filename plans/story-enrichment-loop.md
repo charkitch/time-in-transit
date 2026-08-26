@@ -108,9 +108,14 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       path-wise: every chain-event choice path must advance the chain or
       defer. A future authored hard-refusal earns its permanence by setting
       an explicit outcome flag.
-- [ ] **Faction alignment matters.** `corp_ally` / `rebel_ally` / `gov_ally` /
-      `alien_reliquary_trusted` are set but nothing consumes them. Author 1-2
-      events per tag gated on `HasFactionTag`.
+- [x] **Faction alignment matters.** Authored one `HasFactionTag`-gated
+      landing event per core tag: `CORP_PREFERRED_VENDOR`,
+      `REBEL_QUIET_BERTH`, `GOV_CLEARED_LANES` — each `rare` so standing
+      keeps mattering on revisits; tags are per-system, so the payoff reads
+      as "this system remembers you."
+- [ ] **`alien_reliquary_trusted` payoff.** The remaining unconsumed tag —
+      author a reliquary-themed beat (the orrery keepers extend trust) gated
+      on `HasFactionTag alien_reliquary_trusted`.
 - [ ] **`DEAD_DROP_MESSAGE` gov branch.** `report_authorities` gets a
       follow-up (second trigger-driven chain in the game); decide whether
       `delete_message` staying silent is intentional.

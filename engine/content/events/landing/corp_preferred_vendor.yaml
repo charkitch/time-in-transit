@@ -1,0 +1,31 @@
+id: CORP_PREFERRED_VENDOR
+title: PREFERRED VENDOR
+requires:
+  - !HasFactionTag corp_ally
+repeatability: rare
+narrativeLines:
+  - >-
+    Your transponder pings green before you finish the docking burn, and the
+    harbormaster's queue quietly rearranges itself around you.
+  - >-
+    Somewhere in a tower on this station a ledger remembers what you did for
+    the acquisition board, and today the ledger is feeling generous.
+  - >-
+    A liaison in a pressed suit recites the courtesies: consolidated freight
+    rates, a private berth, and a standing invitation to keep being reasonable.
+choices:
+  - id: accept_courtesies
+    label: Accept the courtesies
+    description: "Prices -15% this port"
+    effect:
+      priceModifier: 0.85
+  - id: broker_for_outsiders
+    label: Quietly resell your freight rate to independent haulers
+    description: "CR 500, -Reputation"
+    effect:
+      creditsReward: 500
+      tradingReputation: -1
+  - id: berth_in_public_ring
+    label: Nod politely and berth in the public ring
+    description: No effect
+    effect: {}

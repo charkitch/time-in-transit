@@ -90,4 +90,23 @@
   choice prose was changed; several decline labels could later acknowledge
   re-approachability ("perhaps another time") as flavor polish.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** ccbe0c8 Soft declines defer story chains instead of killing them
+
+## Iteration 5 — Faction alignment payoff events
+
+- **Did:** Authored three new `landing`-pool events, each gated on
+  `HasFactionTag` and `rare` repeatability: `CORP_PREFERRED_VENDOR` (the
+  acquisition board's ledger remembers you — discounted port or resell your
+  rate for CR/-rep), `REBEL_QUIET_BERTH` (hand-written dock assignment, no
+  cameras — fuel+prices, a courier gig, or pay your fees on the books),
+  `GOV_CLEARED_LANES` (customs pre-clearance — fuel+rep, or consult for the
+  inspectorate for CR/-rep). Faction tags are per-system, so each payoff
+  reads as the system where you aligned remembering it. All three tags now
+  have real condition consumers; the simulation effects remain as before.
+- **Verified:** `cargo test` 86 passed (wiring tests confirm the tags are
+  consumed), lint clean. No TS changes, so no e2e run.
+- **Found:** `alien_reliquary_trusted` still lacks a consumer — split into
+  its own backlog item for a reliquary-themed beat rather than forcing it
+  into this batch.
+- **Proposed removals (needs human approval):** none.
 - **Commit:** (this commit)
