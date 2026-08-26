@@ -182,10 +182,17 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       collector's offer; the even split becomes The Even Vein cooperative;
       siding with the stronger crew leaves the losing chief running a scrap
       stall. Trigger-driven chains are now 7 (from 1 at loop start).
-- [ ] **Sweep for text/world mismatches.** Audit event prose for asserted
-      world state (population, ruins, stations, planet type) not guaranteed by
-      `requires`; tighten conditions or soften prose. Add conditions to the
-      schema only when a real event needs them.
+- [x] **Sweep for text/world mismatches.** Full audit of all 39 events in
+      the world-facing pools: 38 clean, 1 mismatch fixed —
+      `AGE_WORN_TRANSPONDER` asserted a "station AI" while firing on entry
+      to any system; now gated on `!HasStation` (system-entry events flow
+      through the payload path, which derives it from the system's
+      planets). Notable clean finding: the `crown_sunmere` shore events are
+      transitively guaranteed Continental by the cluster generator. No
+      prose changed, no new schema conditions needed.
+
+**Backlog complete.** All three phases done. New work: append items here and
+re-run `/loop /story-enrichment-loop`.
 
 ## Out of scope for the POC
 

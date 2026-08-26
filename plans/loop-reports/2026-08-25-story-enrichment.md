@@ -301,4 +301,23 @@
   number 7, up from 1 at loop start.
 - **Verified:** `cargo test` 88 + 4 passed, lint clean. Content-only.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** ef608cf Extend derelict and miners events into chains
+
+## Iteration 16 — Prose/world-state sweep (backlog complete)
+
+- **Did:** Audited all 39 events across the eight world-facing pools for
+  prose asserting world state their conditions don't guarantee. Result: 38
+  clean, 1 mismatch — `AGE_WORN_TRANSPONDER` asserted "the station AI
+  flags it as invalid" with an empty `requires`, firing on entry to
+  stationless systems. Fixed by gating on `!HasStation` (system-entry
+  events are selected via the payload path, which computes it as
+  any-planet-has-station). No prose changed anywhere. Suspicious-looking
+  cases verified clean: `crown_sunmere` ocean/shore prose is transitively
+  guaranteed (Sunmere is generator-forced Continental), and secret-base
+  events consistently depict small isolated communities.
+- **Verified:** `cargo test` 88 + 4 passed, lint clean.
+- **Proposed removals (needs human approval):** none.
+- **Milestone:** the backlog is empty — Phases 1-3 all complete. The loop
+  stops here; re-run `/loop /story-enrichment-loop` after adding new
+  backlog items.
 - **Commit:** (this commit)
