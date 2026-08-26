@@ -162,11 +162,16 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       `simulation.rs`, covered by an integration test). The wiring test
       recognizes faction-id tags as simulation-consumed; the faction-tag
       open-hook list is now empty.
-- [ ] **`burnt_accord_finale` outcomes.** 14 outcome flags, zero readers.
-      Author consequence events for all of them, starting with the strongest
-      (e.g. `tessaly_captured`, `accord_collapsed`) — every flag eventually
-      gets a payoff; multiple flags may share one consequence event where
-      that reads naturally.
+- [x] **`burnt_accord_finale` outcomes.** All 14 outcome flags now pay off
+      across six epilogue events (iterations 11 + 14):
+      `BURNT_ACCORD_HADIQS_CHAIR` (Korathi bundle — the Marshal's chair,
+      brass-plated "For the witness", while Ashundi harbormasters stamp
+      without looking up), `BURNT_ACCORD_DRAIMAR_GRUDGE` (the watching
+      frigate), `BURNT_ACCORD_EMBERS` (the war that never quite starts,
+      refugees, the sealed evidence Tessaly still checks), plus the Ashundi
+      political pair folded into `BURNT_ACCORD_RENNS_NETWORK`. **Both
+      open-hook lists are now empty — every flag and faction tag in the
+      game has a producer and a consumer, test-enforced. Phase 2 complete.**
 
 ### Phase 3 — grow chains
 

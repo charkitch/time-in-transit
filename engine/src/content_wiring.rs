@@ -23,15 +23,7 @@ const SIMULATION_FACTION_TAGS: &[&str] = &[
     FACTION_TAG_REBEL_ALLY,
 ];
 
-const OPEN_FLAG_HOOKS: &[&str] = &[
-    "accord_collapsed",
-    "ashundi_accord",
-    "ashundi_distrust",
-    "draimar_exposed",
-    "hadiq_ally",
-    "korathi_accord",
-    "korathi_distrust",
-];
+const OPEN_FLAG_HOOKS: &[&str] = &[];
 
 const OPEN_FACTION_TAG_HOOKS: &[&str] = &[];
 

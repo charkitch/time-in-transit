@@ -2,6 +2,8 @@ id: BURNT_ACCORD_RENNS_NETWORK
 title: THE FIRST VICTIMS
 requires:
   - !AnyFlagSet renn_ally
+  - !AnyFlagSet ashundi_accord
+  - !AnyFlagSet korathi_distrust
 narrativeLines:
   - >-
     An Ashundi consulate flags your transponder before the docking queue does.

@@ -261,4 +261,25 @@
   Burnt Accord finale's political outcomes.
 - **Verified:** `cargo test` 88 + 4 passed, lint clean. Content-only.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** 8fad0ae Author graveloom weave consequence event
+
+## Iteration 14 — Burnt Accord political epilogues (Phase 2 complete)
+
+- **Did:** The last seven outcome flags paid off. New events:
+  `BURNT_ACCORD_HADIQS_CHAIR` (`hadiq_ally` + `korathi_accord` +
+  `ashundi_distrust`) — Korathi ports seat you in the Marshal's own chair,
+  brass-plated "For the witness," while Ashundi harbormasters stamp your
+  manifests without looking up; `BURNT_ACCORD_DRAIMAR_GRUDGE`
+  (`draimar_exposed`) — the permanent frigate at the outer dock, and a
+  historians' consortium bidding for your account; `BURNT_ACCORD_EMBERS`
+  (`accord_collapsed`) — the war that never quite starts, refugee convoys
+  with mixed hull plating, and the sealed evidence Tessaly still checks.
+  The Ashundi pair (`ashundi_accord`, `korathi_distrust`) joined
+  `BURNT_ACCORD_RENNS_NETWORK`'s requires — always set together with
+  `renn_ally`, so no separate event needed.
+- **Milestone:** `OPEN_FLAG_HOOKS` and `OPEN_FACTION_TAG_HOOKS` are both
+  empty. Every flag and faction tag in the game now has a producer and a
+  consumer, and the wiring tests fail on any future nub. Phase 2 is done.
+- **Verified:** `cargo test` 88 + 4 passed, lint clean. Content-only.
+- **Proposed removals (needs human approval):** none.
 - **Commit:** (this commit)
