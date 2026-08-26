@@ -175,6 +175,7 @@ export class InteractionSystem {
       landingHostLabel: site.siteHostLabel ?? null,
       visited: isVisited,
       hostHasStation: planet?.hasStation ?? false,
+      hostPlanetId: planet?.id ?? null,
     });
     state.setUIMode('landing');
   }
@@ -219,7 +220,7 @@ export class InteractionSystem {
     }
 
     // Refresh market from engine (player state already synced)
-    state.setCurrentSystemMarket(engineGetMarket(systemId));
+    state.setCurrentSystemMarket(engineGetMarket(systemId, ctx.hostPlanetId));
     // Remove landing site after planet/dyson landing (returnMode 'flight')
     if (returnMode === 'flight' && this.lastLandedSiteId) {
       this.sceneRenderer.removeLandingSite(this.lastLandedSiteId);
@@ -392,6 +393,7 @@ export class InteractionSystem {
       yearsSinceLastVisit,
       returnMode: 'docked',
       visited: isVisited,
+      hostPlanetId: stationPlanet?.id ?? null,
     });
     state.setUIMode('landing');
   }

@@ -131,4 +131,29 @@
   The stone market fantasy is now real: land, resolve the event, buy at -15%.
   Planet-flavored goods (next item) will make these ports feel distinct.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** 53d00f9 Open surface port market on stationed-planet landings
+
+## Iteration 7 — Planet-flavored goods
+
+- **Did:** Markets now reflect the world they belong to. `MarketHost`
+  (planet type + surface type) reaches `get_market`; each surface type and
+  gas giants have a 3-good leaning table (gas giants: Reactor Salt, Weather
+  Keys, Hullskin Lace; ocean: Rain-Choir Spools, Weather Keys, Impossible
+  Seeds; ice: Memory Caskets, Silence Vials, Oath Filaments; …). Leaning
+  goods get +0.30 listing probability, one is always guaranteed on the
+  shelf, and the 9-good cap trims off-theme goods first. The host planet id
+  travels from the docking/landing context through
+  `get_system_market(system_id, host_planet_id)`; both orbital stations and
+  surface ports are flavored by their planet.
+- **Anti-exploit invariant:** prices and stock moved from the shared listing
+  RNG to per-good streams, so every port in a system quotes identical
+  prices no matter what its shelf carries — buying at one port and selling
+  at another in the same system nets nothing. Covered by
+  `host_ports_quote_identical_prices`; flavor coverage by
+  `host_ports_always_list_a_leaning_good`. Side effect: sell-only quotes now
+  match what the good would list at, and absolute prices shifted once
+  (new stream) — relative structure unchanged.
+- **Verified:** `cargo test` 88 passed (2 new market tests); build, lint,
+  e2e in this iteration's final run.
+- **Proposed removals (needs human approval):** none.
 - **Commit:** (this commit)

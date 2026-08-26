@@ -3,8 +3,9 @@ use wasm_bindgen::prelude::*;
 use crate::api_state::{from_json, to_json, with_engine_mut};
 use crate::civilization::get_civ_state;
 use crate::simulation::simulate_galaxy;
+use crate::system_generator::generate_solar_system;
 use crate::system_payload::{build_cluster_summary, compute_chain_targets};
-use crate::trading::get_market;
+use crate::trading::{get_market, MarketHost};
 use crate::types::*;
 
 #[wasm_bindgen]
@@ -28,18 +29,31 @@ pub fn set_player_state(json: &str) -> Result<(), JsValue> {
 }
 
 #[wasm_bindgen]
-pub fn get_system_market(system_id: u32) -> Result<String, JsValue> {
+pub fn get_system_market(system_id: u32, host_planet_id: &str) -> Result<String, JsValue> {
     crate::api_state::with_engine(|engine| {
         let ps = &engine.player_state;
         let star = &engine.cluster[system_id as usize];
         let civ_state = get_civ_state(system_id, ps.galaxy_year, star.economy);
         let system_choices = ps.player_choices.get(&system_id);
+        let host = (!host_planet_id.is_empty())
+            .then(|| generate_solar_system(star))
+            .and_then(|system| {
+                system
+                    .planets
+                    .iter()
+                    .find(|p| p.id == host_planet_id)
+                    .map(|p| MarketHost {
+                        planet_type: p.planet_type,
+                        surface_type: p.surface_type,
+                    })
+            });
         let market = get_market(
             system_id,
             civ_state.economy,
             Some(&civ_state),
             system_choices,
             Some(&ps.cargo),
+            host.as_ref(),
         );
 
         to_json(&market)

@@ -120,13 +120,14 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       `InteractionSystem`; UNDOCK lifts off from the surface (no docked
       station to snap to). Market state stays per-system, and the freshly
       applied price modifiers show immediately in the port.
-- [ ] **Planet-flavored goods.** Market listings are currently seeded by
-      system + economy only. Bias listing composition by the host planet's
-      character — gas-giant ports lean volatiles/plasma-adjacent goods,
-      continental worlds lean grown/harvested goods, ice/ocean/desert each
-      get their own leanings — so markets feel like the world they orbit.
-      Engine change in `trading.rs` listing selection; keep per-system price
-      state unchanged.
+- [x] **Planet-flavored goods.** `MarketHost` (planet type + surface type)
+      now biases listing composition: every surface type and gas giants have
+      a 3-good leaning table (`host_leanings` in `trading.rs`), leaning goods
+      get +0.30 listing probability, at least one is always on the shelf, and
+      the listing cap trims off-theme goods first. Prices/stock moved to
+      per-good RNG streams so every port in a system quotes identical prices
+      — intra-system dock-hopping can't be arbitraged (tested). Host planet
+      id flows from docking/landing context through `get_system_market`.
 - [ ] **`alien_reliquary_trusted` payoff.** The remaining unconsumed tag —
       author a reliquary-themed beat (the orrery keepers extend trust) gated
       on `HasFactionTag alien_reliquary_trusted`.

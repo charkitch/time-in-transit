@@ -212,6 +212,7 @@ pub fn build_system_payload(
         Some(&civ_state),
         system_choices,
         Some(&player_state.cargo),
+        None,
     );
 
     let triggers = content::all_triggers();

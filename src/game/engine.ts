@@ -484,8 +484,8 @@ export function engineJumpToSystem(
   return JSON.parse(result);
 }
 
-export function engineGetMarket(systemId: SystemId): MarketEntry[] {
-  const result = get_system_market(systemId as number);
+export function engineGetMarket(systemId: SystemId, hostPlanetId?: string | null): MarketEntry[] {
+  const result = get_system_market(systemId as number, hostPlanetId ?? '');
   return JSON.parse(result);
 }
 
