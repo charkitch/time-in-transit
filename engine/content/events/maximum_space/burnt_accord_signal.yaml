@@ -28,6 +28,7 @@ choices:
     description: "Hear what she's asking"
     effect:
       tradingReputation: 0
+      defersCompletion: true
     nextMoment:
       narrativeLines:
         - >-
@@ -63,8 +64,10 @@ choices:
         - id: leave_cube
           label: Put the cube back. Not your war.
           description: No effect
-          effect: {}
+          effect:
+            defersCompletion: true
   - id: ignore_cube
     label: Leave it where you found it
     description: No effect
-    effect: {}
+    effect:
+      defersCompletion: true

@@ -69,4 +69,25 @@
   `DUST_CHOIR` are consistent without a station, so the rule was narrowed
   deliberately rather than over-gating flavor content.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** 92a28cc Add HasStation event condition and gate market events
+
+## Iteration 4 — Soft declines defer chains instead of killing them
+
+- **Did:** Added `defersCompletion` to `ChoiceEffect` (schema + TS type):
+  when true, `apply_choice_effect` skips both completion records, so the
+  event stays eligible and "not now" actually means not now. Marked all 21
+  decline paths across the three quest chains (`quasar_array`,
+  `cartographers_wake`, `burnt_accord`) — terminal declines plus the
+  intermediate choices on their paths, since TS applies each step's effect
+  and any non-deferring step records completion. Accept paths are untouched
+  and still complete normally. New path-walking validation test
+  `chain_events_cannot_be_silently_killed`: on chain events, every
+  root-to-leaf choice path must set a flag / fire a trigger or defer.
+- **Verified:** `cargo test` 86 passed, full build, lint, all 42 e2e green.
+- **Found:** `deliver_silently` on `BURNT_ACCORD_HANDOFF` looked like an
+  alternate stage completion but the accept branch shows Hadiq hands the
+  case back — so it's a genuine walk-away and defers like the rest. No
+  choice prose was changed; several decline labels could later acknowledge
+  re-approachability ("perhaps another time") as flavor polish.
+- **Proposed removals (needs human approval):** none.
 - **Commit:** (this commit)

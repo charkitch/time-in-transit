@@ -85,9 +85,10 @@ pub fn apply_choice_effect(
         } else {
             root_event_id
         };
-        if !choices
-            .completed_event_ids
-            .contains(&tracking_id.to_string())
+        if !effect.defers_completion
+            && !choices
+                .completed_event_ids
+                .contains(&tracking_id.to_string())
         {
             choices.completed_event_ids.push(tracking_id.to_string());
         }
@@ -125,13 +126,15 @@ pub fn apply_choice_effect(
             ps.galaxy_year += years_advance;
         }
 
-        ps.player_history.completed_events.insert(
-            tracking_id.to_string(),
-            CompletedEvent {
-                system_id,
-                galaxy_year: ps.galaxy_year,
-            },
-        );
+        if !effect.defers_completion {
+            ps.player_history.completed_events.insert(
+                tracking_id.to_string(),
+                CompletedEvent {
+                    system_id,
+                    galaxy_year: ps.galaxy_year,
+                },
+            );
+        }
 
         if years_advance > 0 {
             simulate_galaxy(

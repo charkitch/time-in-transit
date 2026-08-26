@@ -324,6 +324,7 @@ mod tests {
             galaxy_years_advance: 0,
             grants_upgrade: None,
             recruits_crew: None,
+            defers_completion: false,
         }
     }
 

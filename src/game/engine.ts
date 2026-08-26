@@ -260,6 +260,7 @@ export interface ChoiceEffect {
   fires: string[];
   setsGalacticFlags: string[];
   galaxyYearsAdvance: number;
+  defersCompletion: boolean;
 }
 
 export interface EventMoment {

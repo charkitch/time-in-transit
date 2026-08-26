@@ -24,6 +24,7 @@ choices:
     description: "Hear what Enne has learned"
     effect:
       tradingReputation: 0
+      defersCompletion: true
     nextMoment:
       narrativeLines:
         - >-
@@ -72,8 +73,10 @@ choices:
         - id: leave_enne
           label: Thank Enne but decline the chart
           description: No effect
-          effect: {}
+          effect:
+            defersCompletion: true
   - id: trade_only
     label: You came to trade, not to listen to stories
     description: No effect
-    effect: {}
+    effect:
+      defersCompletion: true

@@ -295,6 +295,7 @@ fn is_neutral(effect: &crate::types::ChoiceEffect) -> bool {
         && effect.galaxy_years_advance == 0
         && effect.grants_upgrade.is_none()
         && effect.recruits_crew.is_none()
+        && !effect.defers_completion
 }
 
 /// Terminal choices (no next_moment) whose effect is entirely neutral —
@@ -326,6 +327,57 @@ fn report_dead_end_choices() {
         "{} terminal choices with no effect:\n  {}",
         paths.len(),
         paths.join("\n  ")
+    );
+}
+
+/// Choice paths on a chain event that record completion without advancing the
+/// chain — "EVENT_ID choice…" per offending root-to-leaf path. Completion is
+/// recorded at every non-deferring step (`apply_choice_effect`), so a decline
+/// leaf is only safe when every step on its path defers.
+fn chain_killing_paths(
+    choices: &[crate::types::EventChoice],
+    prefix: &str,
+    ancestor_records: bool,
+) -> Vec<String> {
+    choices
+        .iter()
+        .flat_map(|choice| {
+            let path = format!("{prefix} {}", choice.id);
+            let records = ancestor_records || !choice.effect.defers_completion;
+            let advances = !choice.effect.sets_flags.is_empty() || !choice.effect.fires.is_empty();
+            match &choice.next_moment {
+                Some(moment) => chain_killing_paths(&moment.choices, &path, records),
+                None if records && !advances => vec![path],
+                None => vec![],
+            }
+        })
+        .collect()
+}
+
+/// Unique events never repeat once completed, so on story-chain events every
+/// choice path must either advance the chain (set a flag / fire a trigger) or
+/// defer completion — otherwise a polite decline forecloses the chain forever.
+#[test]
+fn chain_events_cannot_be_silently_killed() {
+    let events = all_events();
+    let chain_flags = chain_completion_flags();
+    let start_ids: BTreeSet<&str> = story_chains()
+        .iter()
+        .filter_map(|chain| chain.start_event_id)
+        .collect();
+    let offenders = events
+        .iter()
+        .filter(|event| {
+            start_ids.contains(event.id.as_str())
+                || collect_choice_effects(&event.choices)
+                    .iter()
+                    .any(|e| e.sets_flags.iter().any(|flag| chain_flags.contains(flag)))
+        })
+        .flat_map(|event| chain_killing_paths(&event.choices, &event.id, false))
+        .collect();
+    assert_no_dangling(
+        "chain-event choice paths record completion without advancing the chain (add defersCompletion or a chain flag)",
+        offenders,
     );
 }
 

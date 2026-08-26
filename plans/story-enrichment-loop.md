@@ -98,15 +98,16 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
 
 ### Phase 2 — pay off existing nubs
 
-- [ ] **Soft declines silently kill story chains.** Any choice marks its
-      event completed (`api_query.rs:128`) and chain-start events default to
-      `Unique`, so `ARRAY_OORT_BRIEFING no_time_today`,
-      `CARTOGRAPHERS_WAKE_INTRO mind_own_drink`, and
-      `BURNT_ACCORD_SIGNAL ignore_cube` permanently foreclose their entire
-      chains while reading like deferrals. Fix so a decline defers instead of
-      completes (e.g. a `defersCompletion` choice field, or decline branches
-      set a `_declined` flag and the start event becomes re-eligible), keeping
-      a true hard-refusal path where the prose earns it.
+- [x] **Soft declines silently kill story chains.** Fixed via
+      `defersCompletion: true` on `ChoiceEffect`: a deferring apply skips the
+      completion record, so the event stays eligible and the player can
+      return. Applied to all 21 decline paths across the three quest chains
+      (intermediate choices on decline paths defer too, since completion is
+      recorded at every apply step). New validation test
+      `chain_events_cannot_be_silently_killed` enforces the invariant
+      path-wise: every chain-event choice path must advance the chain or
+      defer. A future authored hard-refusal earns its permanence by setting
+      an explicit outcome flag.
 - [ ] **Faction alignment matters.** `corp_ally` / `rebel_ally` / `gov_ally` /
       `alien_reliquary_trusted` are set but nothing consumes them. Author 1-2
       events per tag gated on `HasFactionTag`.

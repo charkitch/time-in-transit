@@ -55,4 +55,5 @@ choices:
   - id: postpone_handoff
     label: Keep the crate aboard for now
     description: No effect
-    effect: {}
+    effect:
+      defersCompletion: true
