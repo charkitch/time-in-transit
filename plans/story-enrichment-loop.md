@@ -133,9 +133,13 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       ports" now actually happen — a licensing snarl dissolves when the
       port sees the reliquary vouches for you. Tag retired from the
       open-hook list.
-- [ ] **`DEAD_DROP_MESSAGE` gov branch.** `report_authorities` gets a
-      follow-up (second trigger-driven chain in the game); decide whether
-      `delete_message` staying silent is intentional.
+- [x] **`DEAD_DROP_MESSAGE` gov branch.** `report_authorities` now sets
+      `dead_drop_reported` and fires `gov-crackdown-ready`
+      (`triggers/gov_chain.yaml`), paid off by `GOV_CRACKDOWN_FOLLOWS_UP` —
+      the second trigger-driven chain in the game, with the intercession
+      melancholy the tone canon calls for. Decision: `delete_message`
+      staying silent is intentional — a wiped chip leaves nothing for
+      anyone to follow up on.
 - [ ] **`harvest_scar` branch divergence.** `harvest_scar_inlet_built` vs
       `harvest_scar_relic_preserved` are never read — make later stages (or a
       post-chain event) acknowledge which path was taken.

@@ -172,4 +172,25 @@
   hooks.
 - **Verified:** `cargo test` 88 passed, lint clean. Content-only, no e2e.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** 3948090 Author reliquary clearance payoff event
+
+## Iteration 9 — Gov crackdown follow-up chain
+
+- **Did:** The game's second trigger-driven chain. `report_authorities` on
+  `DEAD_DROP_MESSAGE` now sets `dead_drop_reported` and fires
+  `gov-crackdown-ready` (new `triggers/gov_chain.yaml`), consumed by
+  `GOV_CRACKDOWN_FOLLOWS_UP` (`triggered/` pool): on a later landing in
+  that system, the concourse is cleaner, the cell was "processed," and an
+  old dockhand notes the free clinic kept the same hours as the vanished
+  noodle stalls. Choices: accept the commendation (CR 400, +rep), quietly
+  settle the clinic's arrears (CR −300), or ask what "processed" means.
+  Written to the tone canon's "sometimes we intercede in ways we will get
+  sad about."
+- **Decision:** `delete_message` stays silent by design — wiping the chip
+  erases the thread; recorded in the backlog.
+- **Verified:** `cargo test` 88 passed — the wiring tests validated the new
+  flag/trigger producer-consumer pairs with no allowlist additions, which
+  is the Phase 1 guardrails doing their job on new content. Lint clean;
+  content-only, no e2e.
+- **Proposed removals (needs human approval):** none.
 - **Commit:** (this commit)

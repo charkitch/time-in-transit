@@ -1,0 +1,4 @@
+triggers:
+  - id: gov-crackdown-ready
+    conditions:
+      - !FlagSet dead_drop_reported
