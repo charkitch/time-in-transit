@@ -3,6 +3,7 @@ title: STONE MARKET
 requires:
   - !HostTypeIs [planet]
   - !SiteClassIs [rocky_landable]
+  - !HasStation
 narrativeLines:
   - >-
     Your site beacon guides you into a terraced market carved straight into the local bedrock.

@@ -258,6 +258,28 @@ fn produced_flags_have_consumers() {
     );
 }
 
+/// Price or trade-ban effects on a stationless planet would mutate a market
+/// the player cannot visit, so planet_landing events with them must gate on
+/// HasStation (system_generator.rs decides which planets have stations).
+/// Reputation alone is exempt — goodwill travels to the system's ports.
+#[test]
+fn planet_landing_market_effects_require_station() {
+    let offenders = crate::content::events_for_pool(crate::events::EventPool::PlanetLanding)
+        .iter()
+        .filter(|event| {
+            let touches_market = collect_choice_effects(&event.choices)
+                .iter()
+                .any(|e| e.price_modifier != 1.0 || !e.banned_goods.is_empty());
+            touches_market && !event.requires.contains(&EventCondition::HasStation)
+        })
+        .map(|event| event.id.clone())
+        .collect();
+    assert_no_dangling(
+        "planet_landing events touch the market without requiring HasStation",
+        offenders,
+    );
+}
+
 /// True when a choice's effect changes nothing about the world: no flags, no
 /// trigger, no economy/faction/crew/upgrade consequence.
 fn is_neutral(effect: &crate::types::ChoiceEffect) -> bool {

@@ -86,13 +86,15 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       `cargo test -- --ignored report_dead_end`. Informational, not a gate:
       78 terminal no-effect choices exist; most are legitimate walk-away
       flavor, and the report makes each one a deliberate decision.
-- [ ] **World-consistency condition.** Add `EventCondition::HasStation`
-      (schema `lib.rs:211`, check in `events.rs:53-148`, plumb `has_station`
-      from system state), plus a validation test that market/port-themed
-      `planet_landing` events require it. Fix `LANDFALL_STONE_MARKET`
-      (`engine/content/events/planet_landing/landfall_stone_market.yaml`) —
-      either require a station or rewrite it as a stationless bazaar whose
-      effect doesn't mutate market prices.
+- [x] **World-consistency condition.** `EventCondition::HasStation` landed:
+      engine check in `events.rs`, plumbed across the WASM boundary
+      (`get_game_event` `has_station` param) from the landed planet's
+      `hasStation` in `InteractionSystem.ts`. Validation test
+      `planet_landing_market_effects_require_station` enforces the rule:
+      price/trade-ban effects require `!HasStation`; reputation alone is
+      exempt (goodwill travels). Gated `LANDFALL_STONE_MARKET`,
+      `OCEAN_KELPLINE_ANCHORAGE`, and two `CROWN_SUNMERE` events; all text
+      preserved.
 
 ### Phase 2 — pay off existing nubs
 

@@ -496,6 +496,7 @@ export function engineGetGameEvent(
     surface?: string;
     siteClass?: string;
     hostType?: string;
+    hasStation?: boolean;
   },
 ): GameEvent | null {
   const result = get_game_event(
@@ -505,6 +506,7 @@ export function engineGetGameEvent(
     options?.surface ?? '',
     options?.siteClass ?? '',
     options?.hostType ?? '',
+    options?.hasStation ?? false,
   );
   return JSON.parse(result);
 }

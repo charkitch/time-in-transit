@@ -229,6 +229,7 @@ pub enum EventCondition {
     SurfaceIs(Vec<SurfaceType>),
     SiteClassIs(Vec<String>),
     HostTypeIs(Vec<String>),
+    HasStation,
     TriggerFired(String),
     ChainTargetHere(String),
     GalacticFlag(String),

@@ -44,4 +44,29 @@
   reading like deferrals. All three shipped chains are killable this way.
   Added as the top Phase 2 backlog item.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** cc47fa9 Add dead-end choice report
+
+## Iteration 3 — HasStation world-consistency condition
+
+- **Did:** Added `EventCondition::HasStation` to the schema
+  (`content-types/src/lib.rs`), checked via a new
+  `EventContext.host_has_station` (`events.rs`), plumbed across the WASM
+  boundary as a `has_station` param on `get_game_event` and passed from the
+  landed planet's `hasStation` in `InteractionSystem.ts` (station landings
+  pass `true`, secret bases `false`; the payload path derives it from the
+  system's planets). Gated the four price-touching `planet_landing` events
+  (`LANDFALL_STONE_MARKET`, `OCEAN_KELPLINE_ANCHORAGE`,
+  `CROWN_SUNMERE_ARRIVAL_SHORE`, `CROWN_SUNMERE_HELIOSTAT_GROVE`) with
+  `!HasStation` — no text changed. New validation test
+  `planet_landing_market_effects_require_station` enforces the rule
+  permanently; reputation-only effects are exempt since goodwill plausibly
+  travels to the system's ports (kept `DUST_CHOIR` et al. available on
+  stationless planets).
+- **Verified:** `cargo test` 85 passed, full `npm run build`, `npm run lint`,
+  and all 42 Playwright e2e tests pass.
+- **Found:** The initial stricter rule (reputation counts as market-touching)
+  flagged 7 events; reading them showed reputation-only beats like
+  `DUST_CHOIR` are consistent without a station, so the rule was narrowed
+  deliberately rather than over-gating flavor content.
+- **Proposed removals (needs human approval):** none.
 - **Commit:** (this commit)

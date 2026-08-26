@@ -137,6 +137,7 @@ export class InteractionSystem {
           surface: planet?.surfaceType,
           siteClass: site.siteClassification,
           hostType: 'planet',
+          hasStation: planet?.hasStation ?? false,
         });
       } else if (host.type === 'topopolis') {
         // Map topopolis biome to SurfaceType so events can use SurfaceIs conditions
@@ -368,6 +369,7 @@ export class InteractionSystem {
         secretBaseId: secretBase ? stationId : undefined,
         siteClass: secretBase ? 'secret_base' : 'station',
         hostType: secretBase ? secretBase.type : hostType,
+        hasStation: !secretBase,
       });
     if (entity) entity.visited = true;
 

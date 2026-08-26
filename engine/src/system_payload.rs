@@ -228,6 +228,7 @@ pub fn build_system_payload(
         surface: None,
         site_class: None,
         host_type: None,
+        host_has_station: system.planets.iter().any(|p| p.has_station),
         current_cluster: 0,
         current_system_id: star.id,
         current_system_special_kind: star.special_kind,
