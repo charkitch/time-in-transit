@@ -128,9 +128,11 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       per-good RNG streams so every port in a system quotes identical prices
       — intra-system dock-hopping can't be arbitraged (tested). Host planet
       id flows from docking/landing context through `get_system_market`.
-- [ ] **`alien_reliquary_trusted` payoff.** The remaining unconsumed tag —
-      author a reliquary-themed beat (the orrery keepers extend trust) gated
-      on `HasFactionTag alien_reliquary_trusted`.
+- [x] **`alien_reliquary_trusted` payoff.** `RELIQUARY_CLEARANCE` landed:
+      the audit event's promised "legal clearances recognized by nearby
+      ports" now actually happen — a licensing snarl dissolves when the
+      port sees the reliquary vouches for you. Tag retired from the
+      open-hook list.
 - [ ] **`DEAD_DROP_MESSAGE` gov branch.** `report_authorities` gets a
       follow-up (second trigger-driven chain in the game); decide whether
       `delete_message` staying silent is intentional.

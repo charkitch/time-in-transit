@@ -43,12 +43,7 @@ const OPEN_FLAG_HOOKS: &[&str] = &[
     "thennic_peace",
 ];
 
-const OPEN_FACTION_TAG_HOOKS: &[&str] = &[
-    "alien_reliquary_trusted",
-    "faction-0",
-    "faction-2",
-    "faction-3",
-];
+const OPEN_FACTION_TAG_HOOKS: &[&str] = &["faction-0", "faction-2", "faction-3"];
 
 const OPEN_GALACTIC_FLAG_HOOKS: &[&str] = &[];
 

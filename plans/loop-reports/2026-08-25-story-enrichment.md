@@ -156,4 +156,20 @@
 - **Verified:** `cargo test` 88 passed (2 new market tests); build, lint,
   e2e in this iteration's final run.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** 00197d7 Planet-flavored market listings with port price parity
+
+## Iteration 8 — Reliquary clearance payoff
+
+- **Did:** Authored `RELIQUARY_CLEARANCE` (`landing` pool, `rare`, gated on
+  `HasFactionTag alien_reliquary_trusted`): the audit event promised "legal
+  clearances recognized by nearby ports," and now they exist — a licensing
+  dispute dissolves when the port terminal sees the reliquary vouches for
+  you. Choices: let the seal work (+rep, prices −10%), carry a consigned
+  crystal node (CR 350), or tell the awed officer what the crystal rings
+  are like (+rep). Removed the tag from `OPEN_FACTION_TAG_HOOKS` — the
+  stale-entry check would have failed otherwise, which is the burn-down
+  mechanism working as designed. Only `faction-0/2/3` remain as open tag
+  hooks.
+- **Verified:** `cargo test` 88 passed, lint clean. Content-only, no e2e.
+- **Proposed removals (needs human approval):** none.
 - **Commit:** (this commit)
