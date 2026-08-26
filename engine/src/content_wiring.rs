@@ -25,7 +25,6 @@ const SIMULATION_FACTION_TAGS: &[&str] = &[
 
 const OPEN_FLAG_HOOKS: &[&str] = &[
     "accord_collapsed",
-    "alien_graveloom_tithe_paid",
     "ashundi_accord",
     "ashundi_distrust",
     "draimar_exposed",

@@ -1,0 +1,32 @@
+id: ALIEN_GRAVELOOM_WEAVE
+title: THE WOVEN ROUTE
+requires:
+  - !AnyFlagSet alien_graveloom_tithe_paid
+narrativeLines:
+  - >-
+    A courier drone finds you on the concourse — graveloom make, folded like a
+    paper wasp, carrying a bolt of fabric that hums at the frequency of your
+    old drive signature.
+  - >-
+    The tithe you paid has been woven. Your flight logs are a memorial thread
+    now, part of a tapestry pilgrims cross three systems to touch. They
+    navigate by a route you flew before their harbors had names for it.
+  - >-
+    The drone unspools a copy against your hull: every jump you had archived,
+    rendered in thread the color of old starlight, annotated in a script that
+    reads your life as weather.
+choices:
+  - id: follow_the_thread
+    label: Trace the weave to the jump you'd forgotten you made
+    description: "+Reputation"
+    effect:
+      tradingReputation: 1
+  - id: annotate_for_pilgrims
+    label: Add your own margin-thread for the pilgrims who follow it
+    description: "CR 350"
+    effect:
+      creditsReward: 350
+  - id: let_the_weave_speak
+    label: Let the weave speak for itself
+    description: No effect
+    effect: {}

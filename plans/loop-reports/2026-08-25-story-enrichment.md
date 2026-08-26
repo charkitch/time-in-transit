@@ -247,4 +247,18 @@
 - **Verified:** `cargo test` 88 + 4 integration tests passed, lint clean.
   Engine-only, no e2e.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** 996f28b Direct faction alignment strengthens that faction
+
+## Iteration 13 — The woven route
+
+- **Did:** `ALIEN_GRAVELOOM_WEAVE` (`landing`, unique, gated on
+  `AnyFlagSet alien_graveloom_tithe_paid`): the memory you tithed at the
+  graveloom station returns as a woven memorial thread — pilgrims cross
+  three systems to touch a tapestry of your old flight logs and navigate
+  by a route you flew before their harbors had names. Trace the forgotten
+  jump (+rep), add a margin-thread for the pilgrims (CR 350), or let the
+  weave speak. Flag retired from `OPEN_FLAG_HOOKS`; 7 remain, all from the
+  Burnt Accord finale's political outcomes.
+- **Verified:** `cargo test` 88 + 4 passed, lint clean. Content-only.
+- **Proposed removals (needs human approval):** none.
 - **Commit:** (this commit)

@@ -146,7 +146,9 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       kept; cite the inlet's cost / the wall's lesson to the daughter-house
       assemblies). Existing text and choices untouched; both flags now
       consumed and retired from the open-hook list.
-- [ ] **`alien_graveloom_tithe_paid`** — author the consequence.
+- [x] **`alien_graveloom_tithe_paid`** — `ALIEN_GRAVELOOM_WEAVE` landed: the
+      tithed flight logs come back as a woven memorial thread pilgrims
+      navigate by. Flag consumed and retired from the open-hook list.
 - [x] **Crew-outcome flags.** Three finale epilogues landed:
       `BURNT_ACCORD_RENNS_NETWORK` (Ashundi honor-guard payoff for
       `renn_ally`), `BURNT_ACCORD_THE_LISTED` (the wanted-kiosk cost of
