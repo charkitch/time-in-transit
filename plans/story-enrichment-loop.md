@@ -147,9 +147,13 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       assemblies). Existing text and choices untouched; both flags now
       consumed and retired from the open-hook list.
 - [ ] **`alien_graveloom_tithe_paid`** — author the consequence.
-- [ ] **Crew-outcome flags.** `renn_ally`/`renn_captured`, `seval_ally`,
-      `tessaly_friend`, `thennic_peace` are set but unread — author payoffs
-      that remember how each meeting went.
+- [x] **Crew-outcome flags.** Three finale epilogues landed:
+      `BURNT_ACCORD_RENNS_NETWORK` (Ashundi honor-guard payoff for
+      `renn_ally`), `BURNT_ACCORD_THE_LISTED` (the wanted-kiosk cost of
+      selling out — consumes `seval_ally` + all three `_captured` flags),
+      `BURNT_ACCORD_THE_ALMOST_WAR` (Tessaly's book for `tessaly_friend`,
+      with a `thennic_peace`-gated peace-dividend choice). Seven flags
+      retired from the open-hook list; 8 remain.
 - [ ] **`faction-0/2/3` tags.** Events can align the player with generated
       factions, but only `corp/gov/rebel_ally` affect the simulation — give
       generated-faction alignment a payoff (simulation boost like the named

@@ -1,0 +1,34 @@
+id: BURNT_ACCORD_THE_LISTED
+title: THE LISTED
+requires:
+  - !AnyFlagSet seval_ally
+  - !AnyFlagSet renn_captured
+  - !AnyFlagSet tessaly_captured
+  - !AnyFlagSet hadiq_captured
+narrativeLines:
+  - >-
+    The Draimar client office honors your account before you finish docking.
+    Dividends, they call the transfer. Seval Osh remembers her friends.
+  - >-
+    On the concourse, a public notice kiosk cycles through the settled
+    matters of the Thennic question. Three of the faces take longer than the
+    others. An ambassador. A whistleblower. A commander who brought his own
+    chair to an unlisted station because he didn't trust anyone else's.
+  - >-
+    The kiosk calls them resolved. The word sits in your hull like unsecured
+    cargo, shifting every time you change course.
+choices:
+  - id: collect_dividend
+    label: Collect the dividend
+    description: "CR 600"
+    effect:
+      creditsReward: 600
+  - id: fund_the_advocates
+    label: Route an anonymous sum to their advocates-in-detention
+    description: "CR -500"
+    effect:
+      creditsReward: -500
+  - id: walk_past
+    label: Walk past the kiosk without slowing down
+    description: No effect
+    effect: {}

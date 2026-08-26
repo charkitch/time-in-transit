@@ -209,4 +209,25 @@
   (15 remain).
 - **Verified:** `cargo test` 88 passed, lint clean. Content-only, no e2e.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** e016c63 Echo harvest_scar branch choice in later stages
+
+## Iteration 11 — Crew-outcome epilogues
+
+- **Did:** Three epilogue events for the burnt_accord finale endings, all
+  `landing` pool, unique. `BURNT_ACCORD_RENNS_NETWORK` (`renn_ally`): an
+  Ashundi consulate honor-guards the ship that carries Renn — escort
+  privileges, a network errand, or asking after the others.
+  `BURNT_ACCORD_THE_LISTED` (`seval_ally` + `renn_captured` +
+  `tessaly_captured` + `hadiq_captured`, one ending's full bundle): Seval's
+  dividends arrive while a concourse kiosk cycles the faces of the people
+  you sold — collect, anonymously fund their advocates, or walk past.
+  `BURNT_ACCORD_THE_ALMOST_WAR` (`tessaly_friend`): Tessaly's book "The
+  Almost-War" spreads port to port, with a `thennic_peace`-gated choice to
+  read the peace dispatches to dockside children. Seven flags retired from
+  `OPEN_FLAG_HOOKS` (8 remain).
+- **Found:** The finale's endings are also where the `faction-0/2/3` tags
+  come from — the generated-faction payoff item now has clear fiction to
+  build on (Korathi = faction-0, Ashundi = faction-2, Draimar = faction-3).
+- **Verified:** `cargo test` 88 passed, lint clean. Content-only, no e2e.
+- **Proposed removals (needs human approval):** none.
 - **Commit:** (this commit)

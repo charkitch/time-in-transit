@@ -30,15 +30,8 @@ const OPEN_FLAG_HOOKS: &[&str] = &[
     "ashundi_distrust",
     "draimar_exposed",
     "hadiq_ally",
-    "hadiq_captured",
     "korathi_accord",
     "korathi_distrust",
-    "renn_ally",
-    "renn_captured",
-    "seval_ally",
-    "tessaly_captured",
-    "tessaly_friend",
-    "thennic_peace",
 ];
 
 const OPEN_FACTION_TAG_HOOKS: &[&str] = &["faction-0", "faction-2", "faction-3"];
