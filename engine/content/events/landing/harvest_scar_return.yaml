@@ -19,6 +19,22 @@ narrativeLines:
     A clerk from the harbor college gives you a sealed slate. "A daughter-house in the belt has
     split over your precedent. They asked us to send the oldest witness we had. We had you."
 choices:
+  - id: walk_the_inlet
+    label: Walk the inlet mouth they cut on your word, then take the slate
+    description: "+Reputation, reveal the distant consequence target"
+    requires:
+      - !AnyFlagSet harvest_scar_inlet_built
+    effect:
+      tradingReputation: 1
+      setsFlags: [harvest_scar_stage2_done]
+  - id: touch_the_plating
+    label: Press your palm to the plating they kept on your word, then take the slate
+    description: "+Reputation, reveal the distant consequence target"
+    requires:
+      - !AnyFlagSet harvest_scar_relic_preserved
+    effect:
+      tradingReputation: 1
+      setsFlags: [harvest_scar_stage2_done]
   - id: accept_slate
     label: Take the sealed slate
     description: "Reveal the distant consequence target"

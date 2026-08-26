@@ -193,4 +193,20 @@
   is the Phase 1 guardrails doing their job on new content. Lint clean;
   content-only, no e2e.
 - **Proposed removals (needs human approval):** none.
+- **Commit:** 36b44d3 Add gov crackdown follow-up chain
+
+## Iteration 10 — harvest_scar branch echoes
+
+- **Did:** The chain's stage-1 choice (`inlet_built` vs `relic_preserved`)
+  now echoes forward. `HARVEST_SCAR_RETURN` and
+  `HARVEST_SCAR_DAUGHTER_HOUSE` each gained two branch-conditioned choices
+  (choice-level `requires: AnyFlagSet …`) that only appear for the path the
+  player ruled on five centuries earlier — walking the inlet cut on your
+  word, or pressing a palm to the plating kept on it; citing the inlet's
+  cost or the wall's lesson to the daughter-house assemblies. No existing
+  text or choices were altered; the branch-blind options remain for both
+  paths. Both flags are now consumed and retired from `OPEN_FLAG_HOOKS`
+  (15 remain).
+- **Verified:** `cargo test` 88 passed, lint clean. Content-only, no e2e.
+- **Proposed removals (needs human approval):** none.
 - **Commit:** (this commit)

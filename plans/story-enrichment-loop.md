@@ -140,9 +140,12 @@ Ordered: guardrails first (they mechanically find the rest), then payoffs.
       melancholy the tone canon calls for. Decision: `delete_message`
       staying silent is intentional — a wiped chip leaves nothing for
       anyone to follow up on.
-- [ ] **`harvest_scar` branch divergence.** `harvest_scar_inlet_built` vs
-      `harvest_scar_relic_preserved` are never read — make later stages (or a
-      post-chain event) acknowledge which path was taken.
+- [x] **`harvest_scar` branch divergence.** Both later stages now carry
+      branch-conditioned choices that only appear for the path you ruled on
+      500 years earlier (walk the inlet they cut / touch the plating they
+      kept; cite the inlet's cost / the wall's lesson to the daughter-house
+      assemblies). Existing text and choices untouched; both flags now
+      consumed and retired from the open-hook list.
 - [ ] **`alien_graveloom_tithe_paid`** — author the consequence.
 - [ ] **Crew-outcome flags.** `renn_ally`/`renn_captured`, `seval_ally`,
       `tessaly_friend`, `thennic_peace` are set but unread — author payoffs

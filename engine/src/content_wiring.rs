@@ -31,8 +31,6 @@ const OPEN_FLAG_HOOKS: &[&str] = &[
     "draimar_exposed",
     "hadiq_ally",
     "hadiq_captured",
-    "harvest_scar_inlet_built",
-    "harvest_scar_relic_preserved",
     "korathi_accord",
     "korathi_distrust",
     "renn_ally",
