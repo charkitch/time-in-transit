@@ -60,6 +60,7 @@ export function HUD({
 
   // Per-jump: stable within a system visit
   const cluster = useGameState(s => s.cluster);
+  const crew = useGameState(s => s.crew);
   const currentSystem = useGameState(s => s.currentSystem);
   const { currentSystemId, galaxyYear, knownFactions, currentSystemPayload, scannedBodies } = useGameState(
     useShallow(s => ({
@@ -158,6 +159,7 @@ export function HUD({
         currentFaction={currentFaction}
         currentFactionKnown={Boolean(currentFactionKnown)}
         credits={credits}
+        crew={crew}
         isMobileHUD={isMobileHUD}
         onClusterMap={onClusterMap}
         onSystemMap={onSystemMap}
