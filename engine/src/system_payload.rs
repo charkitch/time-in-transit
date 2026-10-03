@@ -320,20 +320,15 @@ pub fn build_system_payload(
         }
     }
 
-    // Special system arrival dialogs — shown only once per save
-    let system_entry_dialog = if star.special_kind == SpecialSystemKind::IronStar
-        && !player_state
-            .seen_system_dialog_ids
-            .iter()
-            .any(|id| id == "iron_star_arrival")
-    {
+    // Arrival dialogs — shown only once per save
+    let unseen = |id: &str| !player_state.seen_system_dialog_ids.iter().any(|d| d == id);
+    let is_first_departure =
+        galaxy_year == GALAXY_YEAR_START && player_state.visited_systems.len() <= 1;
+    let system_entry_dialog = if is_first_departure && unseen("cold_open") {
+        Some(content::cold_open_dialog())
+    } else if star.special_kind == SpecialSystemKind::IronStar && unseen("iron_star_arrival") {
         Some(content::iron_star_arrival_dialog())
-    } else if star.special_kind == SpecialSystemKind::TheCrown
-        && !player_state
-            .seen_system_dialog_ids
-            .iter()
-            .any(|id| id == "the_crown_arrival")
-    {
+    } else if star.special_kind == SpecialSystemKind::TheCrown && unseen("the_crown_arrival") {
         Some(content::the_crown_arrival_dialog())
     } else {
         None
@@ -356,9 +351,10 @@ pub fn jump_years_elapsed(distance: f64) -> u32 {
 
 /// Proper time experienced by the ship during a jump (Lorentz-contracted).
 /// At 0.93c the Lorentz factor ≈ 0.368, compressing centuries into decades.
+/// Based on the same floored galaxy years the player sees, so previews,
+/// arrival text, and the jump log all agree.
 pub fn ship_years_elapsed(distance: f64) -> f64 {
-    let external = 10.0 + distance * 14.0;
-    external * LORENTZ_FACTOR
+    jump_years_elapsed(distance) as f64 * LORENTZ_FACTOR
 }
 
 fn format_duration(years: f64) -> String {

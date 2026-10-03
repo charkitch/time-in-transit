@@ -12,6 +12,7 @@ import { JumpSystem } from './mechanics/JumpSystem';
 import { useGameState } from './GameState';
 import type { SaveData } from './GameState';
 import type { GoodName } from './constants';
+import { GALAXY_YEAR_START } from './constants';
 import {
   initEngine, engineInitGame, engineGetGameEvent,
   type GameEvent,
@@ -113,7 +114,7 @@ export class Game {
   ): Promise<void> {
     await initEngine();
     const wasmState = buildWasmPlayerState(state);
-    const result = engineInitGame(wasmState.galaxyYear === 3200 && wasmState.visitedSystems.length <= 1 ? undefined : wasmState);
+    const result = engineInitGame(wasmState.galaxyYear === GALAXY_YEAR_START && wasmState.visitedSystems.length <= 1 ? undefined : wasmState);
     state.setCluster(result.cluster);
     state.setClusterSummary(result.clusterSummary);
     state.setGalaxySimState(result.galaxySimState);
@@ -126,6 +127,9 @@ export class Game {
     state.markVisited(state.currentSystemId);
     state.addKnownFaction(result.systemPayload.factionState.controllingFactionId);
     state.setSystemEntryLines(result.systemPayload.systemEntryLines);
+    if (result.systemPayload.systemEntryDialog) {
+      state.setPendingSystemEntryDialog(result.systemPayload.systemEntryDialog);
+    }
 
     const starData = result.cluster[state.currentSystemId];
     this.sceneRenderer.loadSystem(

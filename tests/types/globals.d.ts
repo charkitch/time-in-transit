@@ -66,6 +66,7 @@ interface TestGame {
   requestJump(): void;
   requestClusterMapToggle(): void;
   requestSystemMapToggle(): void;
+  dismissSystemEntryDialog(): void;
   triggerDeath(msg: string[]): void;
   sceneRenderer: TestSceneRenderer;
   flightModel: TestFlightModel;
@@ -89,6 +90,7 @@ interface TestGameState {
   currentSystem?: {
     mainStationPlanetId?: string;
   };
+  pendingSystemEntryDialog: { id: string } | null;
   cluster: Array<{ x: number; y: number; name: string }>;
   invertControls: boolean;
   musicEnabled: boolean;
