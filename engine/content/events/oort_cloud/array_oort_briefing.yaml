@@ -25,6 +25,7 @@ choices:
     description: "Learn more about the project"
     effect:
       tradingReputation: 0
+      defersCompletion: true
     nextMoment:
       narrativeLines:
         - >-
@@ -58,8 +59,10 @@ choices:
         - id: decline_briefing
           label: Decline politely
           description: No effect
-          effect: {}
+          effect:
+            defersCompletion: true
   - id: no_time_today
     label: You're passing through
     description: No effect
-    effect: {}
+    effect:
+      defersCompletion: true

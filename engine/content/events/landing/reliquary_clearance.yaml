@@ -1,0 +1,33 @@
+id: RELIQUARY_CLEARANCE
+title: THE LINEAGE SEAL
+requires:
+  - !HasFactionTag alien_reliquary_trusted
+repeatability: rare
+narrativeLines:
+  - >-
+    A licensing officer is halfway through explaining why your cargo class
+    requires a third notarized waiver when her terminal chimes, goes quiet,
+    and politely re-evaluates its opinion of you.
+  - >-
+    Your trajectory lineage is on file with the orrery reliquary. Whatever
+    the crystal caretakers vouch for, this port does not argue with.
+  - >-
+    "Cleared," she says, a little awed, and then, quieter: "What are they
+    like? Nobody I know has ever docked there twice."
+choices:
+  - id: present_clearance
+    label: Let the seal do its work
+    description: "+Reputation, prices -10% this port"
+    effect:
+      tradingReputation: 1
+      priceModifier: 0.90
+  - id: escort_a_node
+    label: Accept a crystal node consigned for the reliquary
+    description: "CR 350"
+    effect:
+      creditsReward: 350
+  - id: tell_her_about_it
+    label: Tell her what the rings of crystal are like
+    description: "+Reputation"
+    effect:
+      tradingReputation: 1

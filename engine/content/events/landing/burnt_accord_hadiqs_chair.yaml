@@ -1,0 +1,36 @@
+id: BURNT_ACCORD_HADIQS_CHAIR
+title: THE COMMANDER'S CHAIR
+requires:
+  - !AnyFlagSet hadiq_ally
+  - !AnyFlagSet korathi_accord
+  - !AnyFlagSet ashundi_distrust
+narrativeLines:
+  - >-
+    The Korathi port admiral meets you at the airlock with full honors and an
+    apologetic shrug: Marshal Hadiq is in session, has been in session for a
+    year, will likely die in session, and has standing orders that you are to
+    be seated whenever you dock.
+  - >-
+    They bring out a chair. His chair — the one he carried to an unlisted
+    station because he didn't trust anyone else's. There's a small brass
+    plate on the back now. It reads, "For the witness."
+  - >-
+    The peace he built from your evidence holds across the Korathi sectors.
+    The Ashundi ports honor it too, but their harbormasters stamp your
+    manifests without looking up. They remember whose side you took.
+choices:
+  - id: sit_in_the_chair
+    label: Sit, and hear what the Marshal has built
+    description: "+Reputation, +Fuel"
+    effect:
+      tradingReputation: 1
+      fuelReward: 0.4
+  - id: carry_a_commission
+    label: Carry a sealed Korathi commission to the frontier
+    description: "CR 450"
+    effect:
+      creditsReward: 450
+  - id: word_through_old_channels
+    label: Send an unsigned note to the Ashundi through Renn's old channels
+    description: Some bridges you rebuild one plank at a time
+    effect: {}

@@ -25,6 +25,7 @@ choices:
     description: "Learn the cartographer's story"
     effect:
       tradingReputation: 0
+      defersCompletion: true
     nextMoment:
       narrativeLines:
         - >-
@@ -64,8 +65,10 @@ choices:
         - id: leave_collector
           label: This is fascinating but you need to go
           description: No effect
-          effect: {}
+          effect:
+            defersCompletion: true
   - id: not_interested
     label: Just here for fuel and provisions
     description: No effect
-    effect: {}
+    effect:
+      defersCompletion: true

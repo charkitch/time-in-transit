@@ -1,5 +1,7 @@
 id: AGE_WORN_TRANSPONDER
 title: AGE-WORN TRANSPONDER
+requires:
+  - !HasStation
 narrativeLines:
   - >-
     As you enter the system, a forgotten transponder handshake pings your comms - a protocol dead for millennia.

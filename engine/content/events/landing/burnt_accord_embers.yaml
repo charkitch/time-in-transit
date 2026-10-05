@@ -1,0 +1,34 @@
+id: BURNT_ACCORD_EMBERS
+title: EMBERS OF THE ACCORD
+requires:
+  - !AnyFlagSet accord_collapsed
+narrativeLines:
+  - >-
+    The war you almost stopped never quite starts and never quite ends. The
+    Thennic Reach burns low — convoy escorts, contested buoys, a skirmish
+    every season that both admiralties call an incident.
+  - >-
+    This port takes refugees from the Reach. Their ships arrive with
+    Ashundi hull plating and Korathi patch welds, because out there, at the
+    sharp end, nobody can afford to care anymore whose lie started it.
+  - >-
+    Somewhere in your hold is the evidence that could still end it — both
+    halves, sealed, waiting for a room willing to hear an old story. Tessaly
+    checks the seals every few weeks. Neither of you talks about it.
+choices:
+  - id: escort_a_convoy
+    label: Fly escort for the next refugee convoy leg
+    description: "+Reputation, -Fuel"
+    effect:
+      tradingReputation: 2
+      fuelReward: -0.3
+  - id: sell_to_the_sharp_end
+    label: Run priority supplies to the Reach at war prices
+    description: "CR 600, -Reputation"
+    effect:
+      creditsReward: 600
+      tradingReputation: -1
+  - id: check_the_seals
+    label: Check the seals yourself tonight
+    description: The room willing to listen may still come
+    effect: {}

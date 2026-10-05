@@ -27,6 +27,7 @@ choices:
     description: "Help Tessaly and learn the full picture"
     effect:
       tradingReputation: 0
+      defersCompletion: true
     nextMoment:
       narrativeLines:
         - >-
@@ -66,8 +67,10 @@ choices:
         - id: refuse_meeting
           label: Patch her up, give her fuel, and wish her luck
           description: No effect
-          effect: {}
+          effect:
+            defersCompletion: true
   - id: leave_her
     label: She's alive. She has air. That's enough.
     description: No effect
-    effect: {}
+    effect:
+      defersCompletion: true

@@ -1,0 +1,33 @@
+id: DERELICT_SALVAGE_FOLLOWS_UP
+title: THE MISSING COMPONENT
+triggeredOnly: true
+triggeredBy: derelict-salvage-noticed
+narrativeLines:
+  - >-
+    The component you pocketed has not done anything. That's the unsettling
+    part. Forty days in your hold and it hasn't so much as gathered dust —
+    literally; the dust arranges itself around it in a neat, waiting circle.
+  - >-
+    Dockside, the researchers have posted a notice: one artifact
+    unaccounted for after the last survey rotation. No accusations. The
+    notice reads less like a warrant and more like a worried parent's
+    description of a missing child.
+  - >-
+    A private collector's agent has also read the notice. He finds you
+    within the hour, and he is not worried at all.
+choices:
+  - id: return_it_quietly
+    label: Return it to the survey intake chute, no note
+    description: "+Reputation x2"
+    effect:
+      tradingReputation: 2
+  - id: sell_to_collector
+    label: Sell it to the collector's agent
+    description: "CR 2000, -Reputation x2"
+    effect:
+      creditsReward: 2000
+      tradingReputation: -2
+  - id: keep_the_circle
+    label: Keep it, and keep watching the dust
+    description: No effect
+    effect: {}

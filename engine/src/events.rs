@@ -41,6 +41,7 @@ pub struct EventContext<'a> {
     pub surface: Option<SurfaceType>,
     pub site_class: Option<&'a str>,
     pub host_type: Option<&'a str>,
+    pub host_has_station: bool,
     pub current_cluster: u32,
     pub current_system_id: u32,
     pub current_system_special_kind: SpecialSystemKind,
@@ -125,6 +126,7 @@ fn check_condition(cond: &EventCondition, ctx: &EventContext) -> bool {
             .host_type
             .map(|host_type| host_types.iter().any(|ht| ht == host_type))
             .unwrap_or(false),
+        EventCondition::HasStation => ctx.host_has_station,
         EventCondition::TriggerFired(id) => choices.fired_triggers.contains(id),
         EventCondition::ChainTargetHere(chain_id) => ctx
             .player_state
@@ -322,6 +324,7 @@ mod tests {
             galaxy_years_advance: 0,
             grants_upgrade: None,
             recruits_crew: None,
+            defers_completion: false,
         }
     }
 
@@ -372,6 +375,7 @@ mod tests {
             surface: None,
             site_class: None,
             host_type: None,
+            host_has_station: false,
             current_cluster: 0,
             current_system_id: 0,
             current_system_special_kind: SpecialSystemKind::None,
@@ -392,6 +396,7 @@ mod tests {
             surface: None,
             site_class: None,
             host_type: None,
+            host_has_station: false,
             current_cluster: 0,
             current_system_id: 0,
             current_system_special_kind: SpecialSystemKind::None,
@@ -425,6 +430,7 @@ mod tests {
             surface: None,
             site_class: None,
             host_type: None,
+            host_has_station: false,
             current_cluster: 0,
             current_system_id: 0,
             current_system_special_kind: SpecialSystemKind::None,
@@ -442,6 +448,7 @@ mod tests {
             surface: None,
             site_class: None,
             host_type: None,
+            host_has_station: false,
             current_cluster: 0,
             current_system_id: 0,
             current_system_special_kind: SpecialSystemKind::None,
@@ -467,6 +474,7 @@ mod tests {
             surface: None,
             site_class: None,
             host_type: None,
+            host_has_station: false,
             current_cluster: 0,
             current_system_id: 7,
             current_system_special_kind: SpecialSystemKind::TheCrown,
@@ -522,6 +530,7 @@ mod tests {
             surface: None,
             site_class: None,
             host_type: None,
+            host_has_station: false,
             current_cluster: 0,
             current_system_id: 0,
             current_system_special_kind: SpecialSystemKind::None,
@@ -589,6 +598,7 @@ mod tests {
             surface: None,
             site_class: None,
             host_type: None,
+            host_has_station: false,
             current_cluster: 0,
             current_system_id: 7,
             current_system_special_kind: SpecialSystemKind::None,
@@ -644,6 +654,7 @@ mod tests {
             surface: Some(SurfaceType::Continental),
             site_class: Some("crown_sunmere_grove"),
             host_type: Some("planet"),
+            host_has_station: true,
             current_cluster: 0,
             current_system_id: 7,
             current_system_special_kind: SpecialSystemKind::TheCrown,

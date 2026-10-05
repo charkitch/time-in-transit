@@ -1,0 +1,33 @@
+id: REBEL_QUIET_BERTH
+title: THE QUIET BERTH
+requires:
+  - !HasFactionTag rebel_ally
+repeatability: rare
+narrativeLines:
+  - >-
+    The dock assignment arrives hand-written, which is how you know it's the
+    good one.
+  - >-
+    Berth forty-one: no cameras, no manifest scanner, and a dockworker who
+    greets you like a cousin. Word of the drop you carried has gotten around,
+    quietly.
+  - >-
+    "Fuel's sorted," she says. "And if anything falls off a crate while
+    you're loading, nobody here is going to write it down."
+choices:
+  - id: take_the_berth
+    label: Take berth forty-one
+    description: "+Fuel, prices -10% this port"
+    effect:
+      fuelReward: 0.5
+      priceModifier: 0.90
+  - id: carry_a_letter
+    label: Carry an unregistered letter out-system
+    description: "CR 400"
+    effect:
+      creditsReward: 400
+  - id: pay_on_the_books
+    label: Settle your dock fees on the books anyway
+    description: "+Reputation"
+    effect:
+      tradingReputation: 1

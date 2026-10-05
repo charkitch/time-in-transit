@@ -1,0 +1,35 @@
+id: BURNT_ACCORD_THE_ALMOST_WAR
+title: THE ALMOST-WAR
+requires:
+  - !AnyFlagSet tessaly_friend
+narrativeLines:
+  - >-
+    There is a new book in the port lending racks. "The Almost-War: A
+    Correspondence." The author's name is Tessaly Vane, and the dedication
+    reads, "To the ship that waited."
+  - >-
+    She has been writing it in your crew quarters for months, in the hours
+    when the drive is quiet — every intercept, every provocation, every name.
+    Ports argue about it. Harbor colleges teach it. Children playing dockside
+    reenact the scene with the borrowed jacket.
+  - >-
+    The lending librarian recognizes your registry and asks, carefully, if
+    the oldest witness in the book would consider adding a margin note to the
+    port's copy.
+choices:
+  - id: add_the_margin_note
+    label: Write what you saw in the margin
+    description: "+Reputation"
+    effect:
+      tradingReputation: 1
+  - id: read_the_reach_dispatches
+    label: Read the Thennic Reach peace dispatches aloud to the dockside children
+    description: "+Reputation — the peace you burned a lie to buy still holds"
+    requires:
+      - !AnyFlagSet thennic_peace
+    effect:
+      tradingReputation: 2
+  - id: leave_the_book_be
+    label: Leave the book to speak for itself
+    description: No effect
+    effect: {}

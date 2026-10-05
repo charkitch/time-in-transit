@@ -26,6 +26,7 @@ choices:
     description: "Share the full picture"
     effect:
       tradingReputation: 0
+      defersCompletion: true
     nextMoment:
       narrativeLines:
         - >-
@@ -65,8 +66,10 @@ choices:
         - id: back_out
           label: Tell Hadiq you can't carry this any further
           description: No effect
-          effect: {}
+          effect:
+            defersCompletion: true
   - id: deliver_silently
     label: Leave the case and go without a word
     description: No effect
-    effect: {}
+    effect:
+      defersCompletion: true

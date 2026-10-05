@@ -1,0 +1,33 @@
+id: MINERS_SPLIT_FOLLOWS_UP
+title: THE EVEN VEIN
+triggeredOnly: true
+triggeredBy: miners-split-outcome
+narrativeLines:
+  - >-
+    There's a new sign over the base's common dock: THE EVEN VEIN,
+    COOPERATIVE CHARTER. Under it, smaller: "Founded on the ruling of the
+    ancient outsider."
+  - >-
+    The two crews merged rather than keep splitting hairs about the split.
+    Their first joint act was to standardize dock fees. Their second was to
+    vote you permanent honorary membership, which mostly means your fuel is
+    always sorted and everyone tells you their grievances.
+  - >-
+    The old crew chief pours you something distilled in a reaction vessel.
+    "Fair ruins a good feud," he says. "Worth it, probably."
+choices:
+  - id: accept_membership
+    label: Accept the honorary share
+    description: "+Fuel, prices -10% this base"
+    effect:
+      fuelReward: 0.5
+      priceModifier: 0.90
+  - id: haul_first_contract
+    label: Haul the cooperative's first export contract
+    description: "CR 500"
+    effect:
+      creditsReward: 500
+  - id: drink_with_the_chief
+    label: Drink whatever that is with the chief
+    description: No effect
+    effect: {}

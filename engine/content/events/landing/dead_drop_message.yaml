@@ -25,6 +25,8 @@ choices:
     effect:
       creditsReward: 300
       factionTag: gov_ally
+      setsFlags: [dead_drop_reported]
+      fires: [gov-crackdown-ready]
   - id: delete_message
     label: Wipe the chip and forget it
     description: No effect

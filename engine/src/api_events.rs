@@ -26,6 +26,7 @@ pub fn get_game_event(
     surface: &str,
     site_class: &str,
     host_type: &str,
+    has_station: bool,
 ) -> Result<String, JsValue> {
     with_engine(|engine| {
         let player_state = &engine.player_state;
@@ -91,6 +92,7 @@ pub fn get_game_event(
             surface,
             site_class,
             host_type,
+            host_has_station: has_station,
             current_cluster: 0,
             current_system_id: system_id,
             current_system_special_kind: star.special_kind,
@@ -107,5 +109,5 @@ pub fn get_game_event(
 
 #[wasm_bindgen]
 pub fn get_landing_event(system_id: u32, secret_base_id: &str) -> Result<String, JsValue> {
-    get_game_event(system_id, "landing", secret_base_id, "", "", "")
+    get_game_event(system_id, "landing", secret_base_id, "", "", "", true)
 }

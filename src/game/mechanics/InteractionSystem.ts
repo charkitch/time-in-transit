@@ -127,16 +127,19 @@ export class InteractionSystem {
 
     const currentPayload = state.currentSystemPayload;
     if (!currentPayload) return;
+    const planet = host.type === 'planet'
+      ? currentPayload.system.planets.find((p) => p.id === host.id)
+      : undefined;
     const isVisited = !!site.visited;
     let event: GameEvent | null = null;
     if (!isVisited) {
       if (host.type === 'planet') {
-        const planet = currentPayload.system.planets.find((p) => p.id === host.id);
         event = engineGetGameEvent(state.currentSystemId, {
           context: 'planet_landing',
           surface: planet?.surfaceType,
           siteClass: site.siteClassification,
           hostType: 'planet',
+          hasStation: planet?.hasStation ?? false,
         });
       } else if (host.type === 'topopolis') {
         // Map topopolis biome to SurfaceType so events can use SurfaceIs conditions
@@ -171,6 +174,8 @@ export class InteractionSystem {
       landingSiteLabel: site.siteLabel ?? 'LANDING SITE',
       landingHostLabel: site.siteHostLabel ?? null,
       visited: isVisited,
+      hostHasStation: planet?.hasStation ?? false,
+      hostPlanetId: planet?.id ?? null,
     });
     state.setUIMode('landing');
   }
@@ -215,7 +220,7 @@ export class InteractionSystem {
     }
 
     // Refresh market from engine (player state already synced)
-    state.setCurrentSystemMarket(engineGetMarket(systemId));
+    state.setCurrentSystemMarket(engineGetMarket(systemId, ctx.hostPlanetId));
     // Remove landing site after planet/dyson landing (returnMode 'flight')
     if (returnMode === 'flight' && this.lastLandedSiteId) {
       this.sceneRenderer.removeLandingSite(this.lastLandedSiteId);
@@ -225,7 +230,10 @@ export class InteractionSystem {
 
     state.setPendingGameEvent(null);
     state.saveGame();
-    state.setUIMode(returnMode);
+    // A stationed planet has a working port: open its market instead of
+    // returning straight to flight. Undock lifts off from the surface.
+    const surfacePort = returnMode === 'flight' && !!ctx.hostHasStation;
+    state.setUIMode(surfacePort ? 'docked' : returnMode);
   }
 
   trackDockedStation(): void {
@@ -368,6 +376,7 @@ export class InteractionSystem {
         secretBaseId: secretBase ? stationId : undefined,
         siteClass: secretBase ? 'secret_base' : 'station',
         hostType: secretBase ? secretBase.type : hostType,
+        hasStation: !secretBase,
       });
     if (entity) entity.visited = true;
 
@@ -384,6 +393,7 @@ export class InteractionSystem {
       yearsSinceLastVisit,
       returnMode: 'docked',
       visited: isVisited,
+      hostPlanetId: stationPlanet?.id ?? null,
     });
     state.setUIMode('landing');
   }

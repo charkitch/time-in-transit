@@ -1,0 +1,33 @@
+id: BURNT_ACCORD_DRAIMAR_GRUDGE
+title: A CAT REMEMBERS
+requires:
+  - !AnyFlagSet draimar_exposed
+narrativeLines:
+  - >-
+    There's a Draimar trade frigate at the outer dock. There is always a
+    Draimar trade frigate at the outer dock now, sitting just inside sensor
+    range like a cat watching a mousehole, which is fitting, because you're
+    the one who took away the mouse.
+  - >-
+    The port authorities love you for it. Both delegations' flags fly over
+    the concourse, and the customs chief tells the story of the burned lie
+    to anyone who stands still long enough.
+  - >-
+    A broker sidles up anyway: a consortium of historians — genuinely
+    historians, she insists, mostly — will pay well for your firsthand
+    account of how Seval Osh's rebuttal came apart in that room.
+choices:
+  - id: sell_the_account
+    label: Sell your account of the unraveling
+    description: "CR 500"
+    effect:
+      creditsReward: 500
+  - id: tell_it_free
+    label: Tell it on the concourse, free, where the frigate can hear
+    description: "+Reputation"
+    effect:
+      tradingReputation: 2
+  - id: watch_the_frigate
+    label: Say nothing and watch the frigate watching you
+    description: No effect
+    effect: {}

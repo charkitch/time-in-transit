@@ -1,0 +1,33 @@
+id: DERELICT_TRANSLATION_FOLLOWS_UP
+title: THE DRIVE LOGS SPEAK
+triggeredOnly: true
+triggeredBy: derelict-translation-ready
+narrativeLines:
+  - >-
+    The researcher finds you at the fuel line, holding a printout like it
+    might dissolve. The translation you helped build has finished chewing
+    through the derelict's drive logs.
+  - >-
+    It wasn't fleeing anything. The last entry is a heading, annotated in the
+    calm shorthand of a crew doing routine work — a course laid from outside
+    the galaxy, ending here, engines stepped down in good order.
+  - >-
+    "It arrived," she says. "This was the destination. We've spent forty
+    years asking what went wrong, and the answer is nothing. So now we get to
+    ask the real question. Why here?"
+choices:
+  - id: fund_the_real_question
+    label: Endow the next forty years of asking
+    description: "CR -400, +Reputation x2"
+    effect:
+      creditsReward: -400
+      tradingReputation: 2
+  - id: chart_the_heading
+    label: Sell them your survey of the approach corridor
+    description: "CR 400"
+    effect:
+      creditsReward: 400
+  - id: look_up_the_corridor
+    label: Stand on the hull and look up the corridor it came down
+    description: Somewhere out there is a harbor that mourns this ship
+    effect: {}

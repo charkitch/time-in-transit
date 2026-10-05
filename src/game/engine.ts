@@ -260,6 +260,7 @@ export interface ChoiceEffect {
   fires: string[];
   setsGalacticFlags: string[];
   galaxyYearsAdvance: number;
+  defersCompletion: boolean;
 }
 
 export interface EventMoment {
@@ -498,8 +499,8 @@ export function engineJumpToSystem(
   return JSON.parse(result);
 }
 
-export function engineGetMarket(systemId: SystemId): MarketEntry[] {
-  const result = get_system_market(systemId as number);
+export function engineGetMarket(systemId: SystemId, hostPlanetId?: string | null): MarketEntry[] {
+  const result = get_system_market(systemId as number, hostPlanetId ?? '');
   return JSON.parse(result);
 }
 
@@ -511,6 +512,7 @@ export function engineGetGameEvent(
     surface?: string;
     siteClass?: string;
     hostType?: string;
+    hasStation?: boolean;
   },
 ): GameEvent | null {
   const result = get_game_event(
@@ -520,6 +522,7 @@ export function engineGetGameEvent(
     options?.surface ?? '',
     options?.siteClass ?? '',
     options?.hostType ?? '',
+    options?.hasStation ?? false,
   );
   return JSON.parse(result);
 }

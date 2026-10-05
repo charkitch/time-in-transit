@@ -26,6 +26,7 @@ choices:
     description: "Learn about the cartographer"
     effect:
       tradingReputation: 0
+      defersCompletion: true
     nextMoment:
       narrativeLines:
         - >-
@@ -62,8 +63,10 @@ choices:
         - id: decline_chart
           label: Interesting, but you've got cargo to move
           description: No effect
-          effect: {}
+          effect:
+            defersCompletion: true
   - id: mind_own_drink
     label: Mind your own drink
     description: No effect
-    effect: {}
+    effect:
+      defersCompletion: true

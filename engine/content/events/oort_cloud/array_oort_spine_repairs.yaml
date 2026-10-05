@@ -59,4 +59,5 @@ choices:
   - id: defer_repair_delivery
     label: Defer the delivery
     description: No effect
-    effect: {}
+    effect:
+      defersCompletion: true

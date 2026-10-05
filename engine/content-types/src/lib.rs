@@ -178,6 +178,11 @@ pub struct ChoiceEffect {
     pub grants_upgrade: Option<String>,
     #[serde(default)]
     pub recruits_crew: Option<String>,
+    /// "Not now" rather than "never": skip recording the event as completed
+    /// so it stays eligible to reappear. Required on chain-event choice paths
+    /// that would otherwise silently foreclose the chain.
+    #[serde(default)]
+    pub defers_completion: bool,
 }
 
 fn default_price_mod() -> f64 {
@@ -229,6 +234,7 @@ pub enum EventCondition {
     SurfaceIs(Vec<SurfaceType>),
     SiteClassIs(Vec<String>),
     HostTypeIs(Vec<String>),
+    HasStation,
     TriggerFired(String),
     ChainTargetHere(String),
     GalacticFlag(String),

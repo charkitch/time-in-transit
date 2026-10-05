@@ -191,6 +191,10 @@ pub fn simulate_galaxy(
                             {
                                 0.05
                             }
+                            // Direct alignment with a named faction (tag is the
+                            // faction id, e.g. from the Burnt Accord finale)
+                            // strengthens exactly that faction here.
+                            direct if direct == faction.id => 0.05,
                             _ => 0.0,
                         }
                     })

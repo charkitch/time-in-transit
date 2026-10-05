@@ -1,0 +1,35 @@
+id: BURNT_ACCORD_RENNS_NETWORK
+title: THE FIRST VICTIMS
+requires:
+  - !AnyFlagSet renn_ally
+  - !AnyFlagSet ashundi_accord
+  - !AnyFlagSet korathi_distrust
+narrativeLines:
+  - >-
+    An Ashundi consulate flags your transponder before the docking queue does.
+    Not a summons — an honor guard, two escort skiffs flying the accord
+    ribbon, falling in beside you like it's the most natural thing in space.
+  - >-
+    The consul receives you personally. The accord you backed holds in every
+    Ashundi sector, she says, and the first victims of the manufactured war
+    do not forget who stood up in that room.
+  - >-
+    Renn's old network runs quieter now — no more dead drops, just clean
+    manifests and open doors. Somewhere in your crew quarters, Renn pretends
+    not to be pleased about any of this.
+choices:
+  - id: accept_escort_privileges
+    label: Accept the consular escort privileges
+    description: "+Reputation, +Fuel"
+    effect:
+      tradingReputation: 1
+      fuelReward: 0.4
+  - id: run_network_errand
+    label: Carry a sealed pouch for the old network, for old times' sake
+    description: "CR 400"
+    effect:
+      creditsReward: 400
+  - id: ask_about_the_others
+    label: Ask Renn what became of Hadiq and Tessaly
+    description: Some answers are still being written
+    effect: {}

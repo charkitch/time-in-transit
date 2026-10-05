@@ -99,4 +99,5 @@ choices:
   - id: stay_back
     label: This isn't your fight. Stay by the door.
     description: No effect
-    effect: {}
+    effect:
+      defersCompletion: true

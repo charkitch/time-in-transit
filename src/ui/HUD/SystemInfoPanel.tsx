@@ -1,7 +1,8 @@
 import type { StarSystemData } from '../../game/engine';
 import type { SystemPayload } from '../../game/engine';
 import type { Faction } from '../../game/data/factions';
-import { STAR_TYPE_DISPLAY, STAR_DESCRIPTIONS, ECONOMY_DESCRIPTIONS, POLITICAL_DESCRIPTIONS, POLITICAL_TYPE_DISPLAY } from '../../game/constants';
+import type { CrewMemberId } from '../../game/types';
+import { STAR_TYPE_DISPLAY, STAR_DESCRIPTIONS, ECONOMY_DESCRIPTIONS, POLITICAL_DESCRIPTIONS, POLITICAL_TYPE_DISPLAY, CREW_DISPLAY } from '../../game/constants';
 import { useClickAwayTooltip } from '../hooks/useClickAwayTooltip';
 import styles from './HUD.module.css';
 
@@ -13,6 +14,7 @@ interface SystemInfoPanelProps {
   currentFaction: Faction | undefined;
   currentFactionKnown: boolean;
   credits: number;
+  crew: CrewMemberId[];
   isMobileHUD: boolean;
   onClusterMap: () => void;
   onSystemMap: () => void;
@@ -27,6 +29,7 @@ export function SystemInfoPanel({
   currentFaction,
   currentFactionKnown,
   credits,
+  crew,
   isMobileHUD,
   onClusterMap,
   onSystemMap,
@@ -35,6 +38,8 @@ export function SystemInfoPanel({
   const starTooltip = useClickAwayTooltip();
   const econTooltip = useClickAwayTooltip();
   const politicsTooltip = useClickAwayTooltip();
+  const crewTooltip = useClickAwayTooltip();
+  const crewMembers = crew.map(id => CREW_DISPLAY[id] ?? { name: id, role: 'UNLISTED' });
   const econKey = currentSystemPayload?.civState.economy ?? currentStar?.economy;
   const politicsKey = currentSystemPayload?.civState.politics;
   const econDesc = econKey ? ECONOMY_DESCRIPTIONS[econKey] : undefined;
@@ -136,6 +141,31 @@ export function SystemInfoPanel({
               )}
             </span>
           )}
+        </div>
+      )}
+      {crewMembers.length > 0 && (
+        <div className={styles.systemInfo}>
+          <span
+            ref={crewTooltip.ref}
+            className={`${styles.starType} ${crewTooltip.isOpen ? styles.active : ''}`}
+            onClick={() => crewTooltip.setIsOpen(!crewTooltip.isOpen)}
+          >
+            CREW: {crewMembers.map(m => m.name).join(' · ')}
+            <div className={`${styles.tooltip} ${crewTooltip.isOpen ? styles.tooltipOpen : ''}`}>
+              <button
+                className={styles.closeButton}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  crewTooltip.setIsOpen(false);
+                }}
+              >
+                ×
+              </button>
+              {crewMembers.map(m => (
+                <div key={m.name}>{m.name} — {m.role}</div>
+              ))}
+            </div>
+          </span>
         </div>
       )}
       {targetStar && (

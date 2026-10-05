@@ -4,6 +4,7 @@ requires:
   - !HostTypeIs [planet]
   - !SpecialSystemIs [the_crown]
   - !SiteClassIs [crown_sunmere_arrivals]
+  - !HasStation
 narrativeLines:
   - >-
     The shuttle terraces are busy, but not in the way stations are busy. People arrive carrying towels, sketchbooks, picnic tins, children, grandparents, sealed pollen-safe hampers. They step off the ferries from the Crown and pause, almost all of them, for the same first ritual: looking up.

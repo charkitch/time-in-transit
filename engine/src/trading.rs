@@ -348,6 +348,78 @@ fn compute_price(rng: &mut Prng, good: GoodName, ctx: &PriceContext) -> i32 {
     (price as f64 * choice_mod).round().max(1.0) as i32
 }
 
+/// The world a market belongs to. Biases which goods appear on the shelf —
+/// never prices, which stay identical across every port in a system so
+/// intra-system dock-hopping can't be arbitraged.
+pub struct MarketHost {
+    pub planet_type: PlanetType,
+    pub surface_type: SurfaceType,
+}
+
+const HOST_LEANING_BONUS: f64 = 0.30;
+
+fn host_leanings(host: &MarketHost) -> &'static [GoodName] {
+    if host.planet_type == PlanetType::GasGiant {
+        return &[
+            GoodName::ReactorSalt,
+            GoodName::WeatherKeys,
+            GoodName::HullskinLace,
+        ];
+    }
+    match host.surface_type {
+        SurfaceType::Continental => &[
+            GoodName::StarwindRations,
+            GoodName::ImpossibleSeeds,
+            GoodName::RainChoirSpools,
+        ],
+        SurfaceType::Ocean => &[
+            GoodName::RainChoirSpools,
+            GoodName::WeatherKeys,
+            GoodName::ImpossibleSeeds,
+        ],
+        SurfaceType::Marsh => &[
+            GoodName::DreamResin,
+            GoodName::ImpossibleSeeds,
+            GoodName::WitnessInk,
+        ],
+        SurfaceType::Venus => &[
+            GoodName::ReactorSalt,
+            GoodName::SilenceVials,
+            GoodName::GraviticBone,
+        ],
+        SurfaceType::Barren => &[
+            GoodName::BurialSunstone,
+            GoodName::GraviticBone,
+            GoodName::PilgrimMaps,
+        ],
+        SurfaceType::Desert => &[
+            GoodName::BurialSunstone,
+            GoodName::PilgrimMaps,
+            GoodName::SilenceVials,
+        ],
+        SurfaceType::Ice => &[
+            GoodName::MemoryCaskets,
+            GoodName::SilenceVials,
+            GoodName::OathFilaments,
+        ],
+        SurfaceType::Volcanic => &[
+            GoodName::ReactorSalt,
+            GoodName::GraviticBone,
+            GoodName::BurialSunstone,
+        ],
+        SurfaceType::ForestMoon => &[
+            GoodName::DreamResin,
+            GoodName::StarwindRations,
+            GoodName::OathFilaments,
+        ],
+        SurfaceType::Mountain => &[
+            GoodName::GraviticBone,
+            GoodName::OathFilaments,
+            GoodName::WitnessInk,
+        ],
+    }
+}
+
 fn pick_missing(listed: &mut Vec<GoodName>, candidates: &[GoodName], rng: &mut Prng) {
     let mut missing: Vec<GoodName> = candidates
         .iter()
@@ -367,15 +439,23 @@ pub fn get_market(
     civ_state: Option<&CivilizationState>,
     system_choices: Option<&SystemChoices>,
     player_cargo: Option<&HashMap<GoodName, u32>>,
+    host: Option<&MarketHost>,
 ) -> Vec<MarketEntry> {
     let era = civ_state.map_or(0, |c| c.era);
-    let mut rng = Prng::from_index(
-        CLUSTER_SEED,
-        system_id
-            .wrapping_mul(53)
-            .wrapping_add(7)
-            .wrapping_add(era.wrapping_mul(1000)),
-    );
+    let market_seed = system_id
+        .wrapping_mul(53)
+        .wrapping_add(7)
+        .wrapping_add(era.wrapping_mul(1000));
+    let mut rng = Prng::from_index(CLUSTER_SEED, market_seed);
+    // Prices and stock come from per-good streams seeded independently of the
+    // listing, so every port in a system quotes identical prices regardless
+    // of which goods its host world puts on the shelf.
+    let good_rng = |good_idx: usize| {
+        Prng::from_index(
+            CLUSTER_SEED,
+            market_seed.wrapping_add((good_idx as u32 + 1).wrapping_mul(10007)),
+        )
+    };
 
     let civ_banned: Vec<GoodName> = civ_state.map_or(vec![], |c| c.banned_goods.clone());
     let choice_banned: Vec<GoodName> = system_choices.map_or(vec![], |c| c.banned_goods.clone());
@@ -394,26 +474,50 @@ pub fn get_market(
         1.0 + c.trading_reputation as f64 * REPUTATION_SELL_BONUS
     });
 
+    let leanings: &[GoodName] = host.map_or(&[], host_leanings);
     let mut listed_goods: Vec<GoodName> = GoodName::ALL
         .iter()
         .copied()
-        .filter(|&good| rng.next() < listing_probability(economy, good))
+        .filter(|&good| {
+            let bonus = if leanings.contains(&good) {
+                HOST_LEANING_BONUS
+            } else {
+                0.0
+            };
+            rng.next() < (listing_probability(economy, good) + bonus).min(0.95)
+        })
         .collect();
 
+    // A host world always shows at least one of its own goods.
+    if !leanings.is_empty() && !listed_goods.iter().any(|good| leanings.contains(good)) {
+        pick_missing(&mut listed_goods, leanings, &mut rng);
+    }
     while listed_goods.len() < MIN_LISTED_GOODS {
         pick_missing(&mut listed_goods, GoodName::ALL, &mut rng);
     }
     while listed_goods.len() > MAX_LISTED_GOODS {
-        let idx = rng.int(0, (listed_goods.len() - 1) as i32) as usize;
+        // Trim off-theme goods first so the host flavor survives the cap.
+        let removable: Vec<usize> = listed_goods
+            .iter()
+            .enumerate()
+            .filter(|(_, good)| !leanings.contains(good))
+            .map(|(idx, _)| idx)
+            .collect();
+        let idx = if removable.is_empty() {
+            rng.int(0, (listed_goods.len() - 1) as i32) as usize
+        } else {
+            removable[rng.int(0, (removable.len() - 1) as i32) as usize]
+        };
         listed_goods.swap_remove(idx);
     }
 
     let mut entries: Vec<MarketEntry> = Vec::new();
 
-    for &good in GoodName::ALL {
+    for (good_idx, &good) in GoodName::ALL.iter().enumerate() {
         if !listed_goods.contains(&good) {
             continue;
         }
+        let mut rng = good_rng(good_idx);
 
         let civ_legality = politics.map_or(MarketLegality::Legal, |p| legality_for_good(p, good));
         let banned = civ_banned.contains(&good) || choice_banned.contains(&good);
@@ -452,11 +556,12 @@ pub fn get_market(
     }
 
     if let Some(cargo) = player_cargo {
-        for &good in GoodName::ALL {
+        for (good_idx, &good) in GoodName::ALL.iter().enumerate() {
             let qty = cargo.get(&good).copied().unwrap_or(0);
             if qty == 0 || listed_goods.contains(&good) {
                 continue;
             }
+            let mut rng = good_rng(good_idx);
 
             let civ_legality =
                 politics.map_or(MarketLegality::Legal, |p| legality_for_good(p, good));
@@ -494,7 +599,7 @@ mod tests {
 
     #[test]
     fn market_has_high_variance_listing_window() {
-        let market = get_market(0, EconomyType::Tithe, None, None, None);
+        let market = get_market(0, EconomyType::Tithe, None, None, None, None);
         let listed = market
             .iter()
             .filter(|m| m.listing_mode == MarketListingMode::ListedBuySell)
@@ -505,7 +610,7 @@ mod tests {
 
     #[test]
     fn prices_positive_when_legal() {
-        let market = get_market(5, EconomyType::Synthesis, None, None, None);
+        let market = get_market(5, EconomyType::Synthesis, None, None, None, None);
         for entry in &market {
             if entry.legality == MarketLegality::Prohibited {
                 continue;
@@ -519,7 +624,7 @@ mod tests {
 
     #[test]
     fn sell_less_than_buy_for_listed_items() {
-        let market = get_market(10, EconomyType::Tributary, None, None, None);
+        let market = get_market(10, EconomyType::Tributary, None, None, None, None);
         for entry in &market {
             if entry.listing_mode == MarketListingMode::ListedBuySell && entry.buy_price > 0 {
                 assert!(entry.sell_price <= entry.buy_price);
@@ -534,7 +639,14 @@ mod tests {
 
         let mut found = false;
         for system_id in 0..60 {
-            let market = get_market(system_id, EconomyType::Tithe, None, None, Some(&cargo));
+            let market = get_market(
+                system_id,
+                EconomyType::Tithe,
+                None,
+                None,
+                Some(&cargo),
+                None,
+            );
             if market.iter().any(|entry| {
                 entry.good == GoodName::ImpossibleSeeds
                     && entry.listing_mode == MarketListingMode::SellOnly
@@ -545,5 +657,61 @@ mod tests {
             }
         }
         assert!(found);
+    }
+
+    #[test]
+    fn host_ports_quote_identical_prices() {
+        let hosts = [
+            MarketHost {
+                planet_type: PlanetType::GasGiant,
+                surface_type: SurfaceType::Barren,
+            },
+            MarketHost {
+                planet_type: PlanetType::Rocky,
+                surface_type: SurfaceType::Ocean,
+            },
+        ];
+        for system_id in 0..20 {
+            let generic = get_market(system_id, EconomyType::Synthesis, None, None, None, None);
+            for host in &hosts {
+                let flavored = get_market(
+                    system_id,
+                    EconomyType::Synthesis,
+                    None,
+                    None,
+                    None,
+                    Some(host),
+                );
+                for entry in &flavored {
+                    let shared = generic.iter().find(|g| g.good == entry.good);
+                    if let Some(shared) = shared {
+                        assert_eq!(
+                            (entry.buy_price, entry.sell_price, entry.stock),
+                            (shared.buy_price, shared.sell_price, shared.stock),
+                            "port prices diverged for {:?} in system {system_id}",
+                            entry.good
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn host_ports_always_list_a_leaning_good() {
+        let host = MarketHost {
+            planet_type: PlanetType::Rocky,
+            surface_type: SurfaceType::Ice,
+        };
+        let leanings = host_leanings(&host);
+        for system_id in 0..40 {
+            let market = get_market(system_id, EconomyType::Tithe, None, None, None, Some(&host));
+            assert!(
+                market.iter().any(|entry| leanings.contains(&entry.good)
+                    && entry.listing_mode == MarketListingMode::ListedBuySell),
+                "no {:?}-leaning good listed in system {system_id}",
+                host.surface_type
+            );
+        }
     }
 }

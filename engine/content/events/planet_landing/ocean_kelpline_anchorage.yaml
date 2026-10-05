@@ -3,6 +3,7 @@ title: KELPLINE ANCHORAGE
 requires:
   - !HostTypeIs [planet]
   - !SurfaceIs [ocean]
+  - !HasStation
 narrativeLines:
   - >-
     The landing pad is a basalt crown barely above a warm, slate-blue sea.

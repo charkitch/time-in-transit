@@ -397,6 +397,14 @@ export const ECONOMY_DESCRIPTIONS: Record<string, { desc: string }> = {
   },
 };
 
+export const CREW_DISPLAY: Record<string, { name: string; role: string }> = {
+  Enne: { name: 'ENNE', role: 'cartographer of stars to come' },
+  TessalyVane: { name: 'TESSALY VANE', role: 'former Korathi attaché' },
+  Renn: { name: 'RENN', role: 'Ashundi convoy officer' },
+  TheListener: { name: 'THE LISTENER', role: 'listener at the system\'s edge' },
+  IceMonksAbbot: { name: 'THE ABBOT', role: 'keeper of the deep cold' },
+};
+
 /** Mutable — settings UI can toggle at runtime */
 export const RENDER_CONFIG = {
   planetTexturesEnabled: false,

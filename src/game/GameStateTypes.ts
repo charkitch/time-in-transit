@@ -74,6 +74,8 @@ export interface PendingGameEventContext {
   landingSiteLabel?: string | null;
   landingHostLabel?: string | null;
   visited?: boolean;
+  hostHasStation?: boolean;
+  hostPlanetId?: string | null;
 }
 
 export interface FactionMemoryEntry {

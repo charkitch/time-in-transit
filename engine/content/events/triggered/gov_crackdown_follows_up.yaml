@@ -1,0 +1,31 @@
+id: GOV_CRACKDOWN_FOLLOWS_UP
+title: THE QUIET CONCOURSE
+triggeredOnly: true
+triggeredBy: gov-crackdown-ready
+narrativeLines:
+  - >-
+    The concourse is cleaner than you remember. The unlicensed noodle stalls
+    are gone, and so is the wall of hand-lettered courier notices behind them.
+  - >-
+    Security thanks you by name. The cell you reported was processed without
+    incident — their word, "processed" — and traffic through the ring is up
+    four percent.
+  - >-
+    An old dockhand mentions, to nobody in particular, that the free clinic
+    on deck nine used to keep the same hours as those noodle stalls.
+choices:
+  - id: accept_commendation
+    label: Accept the civic commendation
+    description: "CR 400, +Reputation"
+    effect:
+      creditsReward: 400
+      tradingReputation: 1
+  - id: fund_the_clinic
+    label: Quietly settle the deck-nine clinic's license arrears
+    description: "CR -300"
+    effect:
+      creditsReward: -300
+  - id: ask_after_them
+    label: Ask what "processed" means
+    description: The answer costs nothing and stays with you
+    effect: {}

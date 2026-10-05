@@ -1,0 +1,7 @@
+triggers:
+  - id: miners-split-outcome
+    conditions:
+      - !FlagSet miners_split_ruled
+  - id: miners-stronger-outcome
+    conditions:
+      - !FlagSet miners_stronger_ruled

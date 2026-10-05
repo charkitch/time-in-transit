@@ -19,6 +19,22 @@ narrativeLines:
     They ask you to sit between them while they decide whether the past is a wall, a door, or
     only material that people keep learning how to share.
 choices:
+  - id: cite_the_inlet
+    label: Tell them what the inlet fed, and what it cost, before they vote
+    description: "+Reputation, chain complete"
+    requires:
+      - !AnyFlagSet harvest_scar_inlet_built
+    effect:
+      tradingReputation: 1
+      setsFlags: [harvest_scar_completed]
+  - id: cite_the_wall
+    label: Tell them what the wall taught, and what it withheld, before they vote
+    description: "+Reputation, chain complete"
+    requires:
+      - !AnyFlagSet harvest_scar_relic_preserved
+    effect:
+      tradingReputation: 1
+      setsFlags: [harvest_scar_completed]
   - id: witness_deliberation
     label: Sit with them until the vote is done
     description: "CR 700, chain complete"

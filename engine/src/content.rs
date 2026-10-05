@@ -205,12 +205,68 @@ pub fn the_crown_arrival_dialog() -> SystemEntryDialog {
 }
 
 #[cfg(test)]
+pub(crate) mod test_support {
+    use crate::events::ALL_EVENT_POOLS;
+    use crate::types::{ChoiceEffect, EventChoice, EventCondition, GameEvent};
+
+    use super::events_for_pool;
+
+    pub(crate) fn all_events() -> Vec<GameEvent> {
+        ALL_EVENT_POOLS
+            .iter()
+            .flat_map(|pool| events_for_pool(*pool))
+            .collect()
+    }
+
+    pub(crate) fn collect_choice_effects(choices: &[EventChoice]) -> Vec<&ChoiceEffect> {
+        choices
+            .iter()
+            .flat_map(|choice| {
+                std::iter::once(&choice.effect).chain(
+                    choice
+                        .next_moment
+                        .iter()
+                        .flat_map(|m| collect_choice_effects(&m.choices)),
+                )
+            })
+            .collect()
+    }
+
+    fn collect_choice_conditions(choices: &[EventChoice]) -> Vec<&EventCondition> {
+        choices
+            .iter()
+            .flat_map(|choice| {
+                choice.requires.iter().chain(
+                    choice
+                        .next_moment
+                        .iter()
+                        .flat_map(|m| collect_choice_conditions(&m.choices)),
+                )
+            })
+            .collect()
+    }
+
+    pub(crate) fn collect_event_conditions(events: &[GameEvent]) -> Vec<&EventCondition> {
+        events
+            .iter()
+            .flat_map(|event| {
+                event
+                    .requires
+                    .iter()
+                    .chain(collect_choice_conditions(&event.choices))
+            })
+            .collect()
+    }
+}
+
+#[cfg(test)]
 mod tests {
-    use crate::types::{ChoiceEffect, EventChoice, EventCondition};
+    use crate::types::EventCondition;
     use serde::de::DeserializeOwned;
     use std::collections::HashSet;
     use std::fmt::Debug;
 
+    use super::test_support::{all_events, collect_choice_effects, collect_event_conditions};
     use super::*;
 
     fn assert_sorted(entries: &[(&str, &[u8])]) {
@@ -240,53 +296,6 @@ mod tests {
             bincode::serde::decode_from_slice(bincode_raw, bincode::config::standard())
                 .unwrap_or_else(|e| panic!("Failed to decode generated bincode {}: {}", label, e));
         assert_eq!(from_yaml, from_bincode, "Typed mismatch for {}", label);
-    }
-
-    fn all_events() -> Vec<GameEvent> {
-        ALL_EVENT_POOLS
-            .iter()
-            .flat_map(|pool| events_for_pool(*pool))
-            .collect()
-    }
-
-    fn collect_choice_effects(choices: &[EventChoice]) -> Vec<&ChoiceEffect> {
-        choices
-            .iter()
-            .flat_map(|choice| {
-                std::iter::once(&choice.effect).chain(
-                    choice
-                        .next_moment
-                        .iter()
-                        .flat_map(|m| collect_choice_effects(&m.choices)),
-                )
-            })
-            .collect()
-    }
-
-    fn collect_choice_conditions(choices: &[EventChoice]) -> Vec<&EventCondition> {
-        choices
-            .iter()
-            .flat_map(|choice| {
-                choice.requires.iter().chain(
-                    choice
-                        .next_moment
-                        .iter()
-                        .flat_map(|m| collect_choice_conditions(&m.choices)),
-                )
-            })
-            .collect()
-    }
-
-    fn collect_event_conditions(events: &[GameEvent]) -> Vec<&EventCondition> {
-        events
-            .iter()
-            .flat_map(|event| {
-                event
-                    .requires
-                    .iter()
-                    .chain(collect_choice_conditions(&event.choices))
-            })
-            .collect()
     }
 
     #[test]

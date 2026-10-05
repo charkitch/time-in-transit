@@ -4,6 +4,7 @@ requires:
   - !HostTypeIs [planet]
   - !SpecialSystemIs [the_crown]
   - !SiteClassIs [crown_sunmere_grove]
+  - !HasStation
 narrativeLines:
   - >-
     The grove begins as woodland and only gradually reveals itself as infrastructure. The trees are broad-canopied, salt-tolerant, and very old. Between them stand slender mirrors on articulated stems, tracking the sun with the patience of flowers. Their corrections are tiny: a little more light for moss here, a little less heat for the fern beds there.

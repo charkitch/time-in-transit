@@ -26,6 +26,7 @@ choices:
     description: "Learn about the manufactured war"
     effect:
       tradingReputation: 0
+      defersCompletion: true
     nextMoment:
       narrativeLines:
         - >-
@@ -67,8 +68,10 @@ choices:
         - id: refuse_evidence
           label: This is espionage, not courier work. Walk away.
           description: No effect
-          effect: {}
+          effect:
+            defersCompletion: true
   - id: wrong_person
     label: Actually, you were just looking for the fuel depot
     description: No effect
-    effect: {}
+    effect:
+      defersCompletion: true
