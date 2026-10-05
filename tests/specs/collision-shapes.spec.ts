@@ -25,9 +25,6 @@ test.describe('Collision Shapes', () => {
       const collision = game.flightModel.resolveCollisions(ship, [asteroid]);
       const outcome = {
         lethal: collision?.lethal ?? null,
-        shieldDamage: collision?.shieldDamage ?? 0,
-        heatDamage: collision?.heatDamage ?? 0,
-        alert: collision?.alert ?? null,
         entityType: collision?.entity.type ?? null,
         x: ship.position.x,
         velocityX: game.flightModel.getVelocity().x,
@@ -40,9 +37,6 @@ test.describe('Collision Shapes', () => {
 
     expect(result.entityType).toBe('asteroid');
     expect(result.lethal).toBe(false);
-    expect(result.shieldDamage).toBe(4);
-    expect(result.heatDamage).toBe(1);
-    expect(result.alert).toBe('ASTEROID IMPACT');
     expect(result.x).toBe(130);
     expect(result.velocityX).toBeGreaterThan(0);
   });
@@ -108,8 +102,6 @@ test.describe('Collision Shapes', () => {
       const collision = game.flightModel.resolveCollisions(ship, [station]);
       const outcome = {
         lethal: collision?.lethal ?? null,
-        shieldDamage: collision?.shieldDamage ?? 0,
-        heatDamage: collision?.heatDamage ?? 0,
         entityType: collision?.entity.type ?? null,
         x: ship.position.x,
         velocityX: game.flightModel.getVelocity().x,
@@ -122,8 +114,6 @@ test.describe('Collision Shapes', () => {
 
     expect(result.entityType).toBe('station');
     expect(result.lethal).toBe(false);
-    expect(result.shieldDamage).toBe(0);
-    expect(result.heatDamage).toBe(0);
     expect(result.x).toBe(98);
     expect(result.velocityX).toBeGreaterThan(0);
   });
@@ -159,5 +149,54 @@ test.describe('Collision Shapes', () => {
 
     expect(result.entityType).toBe('planet');
     expect(result.lethal).toBe(true);
+  });
+
+  test('lethal collision destroys the ship through the flight tick', async ({ gamePage }) => {
+    await gamePage.waitForGameReady();
+
+    await gamePage.page.evaluate(() => {
+      const game = window.__GAME__!
+      game.flightModel.resolveCollisions = (() => ({
+        entity: { type: 'star' },
+        lethal: true,
+      })) as TestFlightModel['resolveCollisions'];
+    });
+
+    await gamePage.page.waitForFunction(() =>
+      window.__STORE__?.getState().ui.mode === 'dead',
+    );
+
+    await expect(gamePage.page.getByText('STELLAR IMPACT')).toBeVisible();
+    expect((await gamePage.getPlayerState()).shields).toBeGreaterThan(0);
+  });
+
+  test('asteroid bounce damage is applied through the flight tick', async ({ gamePage }) => {
+    await gamePage.waitForGameReady();
+
+    await gamePage.page.evaluate(() => {
+      const game = window.__GAME__!
+      const originalResolve = game.flightModel.resolveCollisions.bind(game.flightModel);
+      let injected = false;
+
+      game.flightModel.resolveCollisions = ((shipGroup, collidables) => {
+        if (!injected) {
+          injected = true;
+          return {
+            entity: { type: 'asteroid' },
+            lethal: false,
+          };
+        }
+        return originalResolve(shipGroup, collidables);
+      }) as TestFlightModel['resolveCollisions'];
+    });
+
+    await gamePage.page.waitForFunction(() =>
+      (window.__STORE__?.getState().player.shields ?? 100) < 100,
+    );
+
+    const shields = (await gamePage.getPlayerState()).shields;
+    expect(shields).toBeGreaterThan(95);
+    expect(await gamePage.getHeat()).toBe(0);
+    expect(await gamePage.getUIMode()).toBe('flight');
   });
 });

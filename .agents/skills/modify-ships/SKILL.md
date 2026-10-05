@@ -29,7 +29,18 @@ description: Guide for finding and modifying ships — player ship physics, NPC 
 - Shield regeneration rate
 - Fuel harvest logic
 - Input application to flight model
-- Damage/death handling
+
+### Damage to the player ship
+
+Sources never touch shields or heat. They report to a per-tick ledger, and the engine applies the total.
+
+**`src/game/mechanics/damageProfiles.ts`** — every damage number: hazard zone rates, pulsar bursts, bounce damage, which collisions are instantly lethal. Edit here to tune damage.
+
+**`src/game/mechanics/ShipDamage.ts`** — the ledger: `sustain()` (per-second), `burst()` (flat), `impact()` (bounce, never lethal by depletion), `destroy()` (instant kill). New damage sources call one of these.
+
+**`src/game/mechanics/FlightHazardSystem.ts`** — owns the ledger, drains it once per tick into `engineTickFlight`, and maps the engine's death cause to `DEATH_MESSAGES`.
+
+**`engine/src/ship_damage.rs`** — `apply_damage`: the only place shields drop. Overheat bleed, regen gating, unshielded heat spill and the death rule live here (rebuild with `npm run wasm:build`).
 
 **`src/game/constants.ts`** — ship-related constants: `HYPERSPACE` config, `FUEL_HARVEST`, `GAS_GIANT_SCOOP`, `BATTLE_DANGER_RANGE`, `BATTLE_WEAPONS_RANGE`
 

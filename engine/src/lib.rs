@@ -8,6 +8,7 @@ mod factions;
 #[cfg(test)]
 mod noise;
 mod prng;
+mod ship_damage;
 pub mod simulation;
 mod star_properties;
 mod station_archetypes;

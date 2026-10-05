@@ -3,6 +3,7 @@ use wasm_bindgen::prelude::*;
 use crate::api_state::{from_json, to_json, with_engine_mut};
 use crate::civilization::get_civ_state;
 use crate::factions;
+use crate::ship_damage::apply_damage;
 use crate::simulation::simulate_galaxy;
 use crate::system_payload::{
     build_cluster_summary, build_system_payload, compute_chain_targets, jump_years_elapsed,
@@ -117,27 +118,9 @@ pub fn tick_flight(context_json: &str) -> Result<String, JsValue> {
 
         ps.fuel = (ps.fuel + ctx.fuel_rate * ctx.dt).clamp(0.0, stats.max_fuel);
 
-        ps.heat += ctx.heat_rate * ctx.dt;
-        if ctx.cooling_active && ps.heat > 0.0 {
-            ps.heat -= stats.cooling_rate * ctx.dt;
-        }
-        ps.heat = ps.heat.clamp(0.0, stats.heat_max);
-
-        if ps.heat >= stats.heat_max {
-            ps.shields -= stats.overheat_shield_dmg * ctx.dt;
-        }
-
-        ps.shields -= ctx.shield_damage_rate * ctx.dt;
-
-        if !ctx.is_dead
-            && ctx.active_hazard == HazardType::None
-            && ps.heat < stats.regen_heat_ceil
-            && ps.shields < stats.max_shields
-        {
-            ps.shields += stats.shield_regen_rate * ctx.dt;
-        }
-
-        ps.shields = ps.shields.clamp(0.0, stats.max_shields);
+        let outcome = apply_damage(ps.shields, ps.heat, &stats, &ctx);
+        ps.shields = outcome.shields;
+        ps.heat = outcome.heat;
 
         let total_cargo: u32 = ps.cargo.values().sum();
         let mut remaining_capacity = stats.max_cargo.saturating_sub(total_cargo);
@@ -149,30 +132,13 @@ pub fn tick_flight(context_json: &str) -> Result<String, JsValue> {
             }
         }
 
-        let shield_damage_can_kill =
-            ctx.shield_damage_rate > 0.0 && ctx.active_hazard != HazardType::TopopolisCollision;
-        let dead = !ctx.is_dead
-            && ps.shields <= 0.0
-            && (shield_damage_can_kill || ps.heat >= stats.heat_max);
-        let death_cause = if dead {
-            Some(
-                if ps.heat >= stats.heat_max && ctx.active_hazard == HazardType::None {
-                    HazardType::Overheat
-                } else {
-                    ctx.active_hazard
-                },
-            )
-        } else {
-            None
-        };
-
         let result = FlightTickResult {
             fuel: ps.fuel,
             heat: ps.heat,
             shields: ps.shields,
             cargo: ps.cargo.clone(),
-            dead,
-            death_cause,
+            dead: outcome.death_cause.is_some(),
+            death_cause: outcome.death_cause,
             cargo_full: remaining_capacity == 0,
         };
 
