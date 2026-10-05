@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import type { SceneRenderer } from '../rendering/SceneRenderer';
-import type { SceneEntity } from '../rendering/scene/types';
+import type { CollisionResult } from '../flight/FlightModel';
 import { useGameState } from '../GameState';
 import {
   FUEL_HARVEST,
   GAS_GIANT_SCOOP,
+  STAR_SCOOP,
   COMBAT_INTELLIGENCE_GOOD,
   RELATIVISTIC_ASH_GOOD,
   PULSAR_SILK_GOOD,
@@ -13,7 +14,20 @@ import {
 } from '../constants';
 import type { GoodName } from '../constants';
 import { BATTLE_DANGER_RANGE } from './FleetBattleSystem';
+import { ShipDamage } from './ShipDamage';
+import { deathMessageFor } from './deathMessages';
 import {
+  runEntryHarvest,
+  runTimedHarvest,
+} from './hazardHarvest';
+import {
+  BOUNCE_DAMAGE,
+  PULSAR_FRINGE_BURST,
+  lethalCollisionSource,
+  pulsarBeamBurst,
+} from './damageProfiles';
+import {
+  alertEffect,
   checkBattleZoneHazard,
   checkBlackHoleHazard,
   checkMicroquasarJetHazard,
@@ -21,8 +35,8 @@ import {
   checkProximityAlerts,
   checkXRayStreamHazard,
   type HazardEffect,
-} from '../systems/flightHazards';
-import { engineTickFlight, type FlightTickContext, type FlightTickResult, type HazardType, type CargoHarvest } from '../engine';
+} from './flightHazards';
+import { engineTickFlight, type FlightTickContext, type FlightTickResult, type CargoHarvest } from '../engine';
 import type { SecretBaseType } from '../engine';
 
 const XB_STREAM_HAZARD_RADIUS = 40;
@@ -34,136 +48,8 @@ const COMBAT_INTELLIGENCE_INFO = 'COLLECTING COMBAT INTELLIGENCE FROM CROSSFIRE'
 const RELATIVISTIC_ASH_INFO = 'COLLECTING RELATIVISTIC ASH FROM JET CORE';
 const PULSAR_SILK_INFO = 'COLLECTING PULSAR SILK FROM BEAM SWEEP';
 const TRANSFER_PLASMA_INFO = 'COLLECTING TRANSFER PLASMA FROM DONOR STREAM';
-// Pulsar burst damage per sweep (flat amounts, not per-second rates)
-const PULSAR_LETHAL_SHIELD_BURST = [30, 80] as const; // [min, max] — proximity-scaled
-const PULSAR_LETHAL_HEAT_BURST = [25, 50] as const;
-const PULSAR_HARVEST_SHIELD_BURST = 3;
-const PULSAR_HARVEST_HEAT_BURST = 5;
-
-// Only collidable body types — npc_ship, fleet_ship, landing_site can't collide
-export const COLLISION_HAZARD_MAP: Partial<Record<SceneEntity['type'], HazardType>> = {
-  star: 'StarCollision',
-  planet: 'PlanetCollision',
-  moon: 'MoonCollision',
-  dyson_shell: 'DysonShellCollision',
-  topopolis: 'TopopolisCollision',
-};
-
-export const DEFAULT_DEATH = ['SHIP DESTROYED', 'Impact with stellar body.'];
-
-export const DEATH_MESSAGES: Partial<Record<HazardType, string[]>> = {
-  Overheat: ['THERMAL FAILURE', 'Reactor overheat destroyed primary systems.', 'Emergency coolant exhausted.'],
-  MicroquasarJet: ['RELATIVISTIC JET', 'Ship vaporized by relativistic plasma outflow.', 'No wreckage recovered.'],
-  PulsarBeam: ['RADIATION EXPOSURE', 'Sustained pulsar radiation overwhelmed shields.', 'Hull breach across all decks.'],
-  BlackHole: ['EVENT HORIZON', 'Crossed the point of no return.', 'Ship crushed by tidal forces.'],
-  TidalDisruption: ['TIDAL DISRUPTION', 'Gravitational shear exceeded structural limits.', 'Hull torn apart.'],
-  BattleZone: ['COMBAT CASUALTY', 'Destroyed by crossfire in active battle zone.', 'Escape pods deployed.'],
-  XRayStream: ['X-RAY EXPOSURE', 'X-ray transfer stream overwhelmed shielding.', 'Hull compromised.'],
-  StarCollision: ['STELLAR IMPACT', 'Ship incinerated on approach to stellar surface.', 'No wreckage found.'],
-  PlanetCollision: ['PLANETARY IMPACT', 'Uncontrolled descent into planetary body.', 'Crash site detected on surface.'],
-  MoonCollision: ['LUNAR IMPACT', 'Collision with lunar surface at terminal velocity.', 'Debris field detected in low orbit.'],
-  StationCollision: ['STATION COLLISION', 'Hull breached on impact with orbital structure.', 'Station authorities notified.'],
-  DysonShellCollision: ['SHELL IMPACT', 'Ship destroyed on collision with Dyson shell.', 'Wreckage embedded in superstructure.'],
-  TopopolisCollision: ['TOPOPOLIS IMPACT', 'Ship destroyed on collision with topopolis hull.', 'Wreckage scattered across habitat surface.'],
-};
-
-/** Pick the highest-priority hazard (the one that has shield damage, or first lethal). */
-function pickActiveHazard(effects: HazardEffect[]): HazardType {
-  for (const e of effects) {
-    if (e.shieldDamageRate > 0) return e.hazardType;
-  }
-  for (const e of effects) {
-    if (e.heatRate > 0 && e.hazardType !== 'None') return e.hazardType;
-  }
-  return 'None';
-}
 
 const _vec = new THREE.Vector3();
-
-interface TimedHarvestParams {
-  active: boolean;
-  wasActive: boolean;
-  timer: number;
-  interval: number;
-  immediateOnEntry?: boolean;
-  good: GoodName;
-  message: string;
-  collectedThisPass: boolean;
-  cargoHarvests: CargoHarvest[];
-  canHarvest: (good: GoodName) => boolean;
-}
-
-interface TimedHarvestResult {
-  active: boolean;
-  timer: number;
-  collectedThisPass: boolean;
-  infoMessage: string | null;
-}
-
-function runTimedHarvest(params: TimedHarvestParams): TimedHarvestResult {
-  const {
-    active, wasActive, interval, immediateOnEntry = false,
-    good, message, cargoHarvests, canHarvest,
-  } = params;
-  let { timer, collectedThisPass } = params;
-
-  if (!active) {
-    return {
-      active: false,
-      timer: 0,
-      collectedThisPass: false,
-      infoMessage: null,
-    };
-  }
-
-  const entering = !wasActive;
-  if (entering && immediateOnEntry && canHarvest(good)) {
-    cargoHarvests.push({ good, qty: 1 });
-    collectedThisPass = true;
-  }
-
-  timer += 0;
-  while (timer >= interval && canHarvest(good)) {
-    cargoHarvests.push({ good, qty: 1 });
-    timer -= interval;
-    collectedThisPass = true;
-  }
-
-  return {
-    active: true,
-    timer,
-    collectedThisPass,
-    infoMessage: collectedThisPass ? message : null,
-  };
-}
-
-function runEntryHarvest(params: {
-  active: boolean;
-  wasActive: boolean;
-  good: GoodName;
-  message: string;
-  collectedThisPass: boolean;
-  cargoHarvests: CargoHarvest[];
-  canHarvest: (good: GoodName) => boolean;
-}): { active: boolean; collectedThisPass: boolean; infoMessage: string | null } {
-  const { active, wasActive, good, message, cargoHarvests, canHarvest } = params;
-  let { collectedThisPass } = params;
-
-  if (!active) {
-    return { active: false, collectedThisPass: false, infoMessage: null };
-  }
-
-  if (!wasActive && canHarvest(good)) {
-    cargoHarvests.push({ good, qty: 1 });
-    collectedThisPass = true;
-  }
-
-  return {
-    active: true,
-    collectedThisPass,
-    infoMessage: collectedThisPass ? message : null,
-  };
-}
 
 export class FlightHazardSystem {
   private scoopingFuel = false;
@@ -182,6 +68,7 @@ export class FlightHazardSystem {
   private pulsarInZone = false;
   private pulsarHarvestCollected = false;
   private pulsarLethalHit = false;
+  private readonly damage = new ShipDamage();
 
   constructor(private sceneRenderer: SceneRenderer) {}
 
@@ -192,13 +79,14 @@ export class FlightHazardSystem {
     isDead: boolean,
     onDeath: (msg: string[]) => void,
     boostFuelConsumed: number,
-    collisionShieldDamage = 0,
-    collisionHeatDamage = 0,
-    collisionAlert = 'TOPOPOLIS WALL IMPACT',
-    collisionHazardType: HazardType = 'TopopolisCollision',
+    collision: CollisionResult | null,
   ): void {
     const effects: HazardEffect[] = [];
     const cargoHarvests: CargoHarvest[] = [];
+    const addHazard = (effect: HazardEffect) => {
+      effects.push(effect);
+      if (effect.damage) this.damage.sustain(effect.damage);
+    };
 
     // ── Fuel scooping near star ──
     const starEntity = this.sceneRenderer.getEntity('star');
@@ -206,20 +94,15 @@ export class FlightHazardSystem {
     const starType = state.currentSystem?.starType;
     const starAttrs = starType ? STAR_ATTRIBUTES[starType] : null;
     let starScoopRate = 0;
+    let scoopHeatRate = 0;
 
     if (starPos && starEntity && starAttrs?.stellarEffects) {
       const distToStar = pos.distanceTo(starPos);
-      const scoopRange = starEntity.collisionRadius + 200;
+      const scoopRange = starEntity.collisionRadius + STAR_SCOOP.rangePadding;
       if (distToStar < scoopRange) {
-        starScoopRate = 0.3;
-        effects.push({
-          heatRate: 15,
-          shieldDamageRate: 0,
-          fuelRate: 0,
-          alert: 'FUEL SCOOPING',
-          hazardType: 'None',
-          zone: 'scooping',
-        });
+        starScoopRate = STAR_SCOOP.rate;
+        scoopHeatRate = STAR_SCOOP.heatRate;
+        effects.push(alertEffect(STAR_SCOOP.alert, 'scooping'));
         this.scoopingFuel = true;
         this.gasGiantScoopingFuel = false;
       } else {
@@ -245,14 +128,8 @@ export class FlightHazardSystem {
         const scoopRange = entity.collisionRadius + GAS_GIANT_SCOOP.rangePadding;
         if (dist < scoopRange) {
           gasGiantScoopRate = GAS_GIANT_SCOOP.rate;
-          effects.push({
-            heatRate: GAS_GIANT_SCOOP.heatRate,
-            shieldDamageRate: 0,
-            fuelRate: 0,
-            alert: GAS_GIANT_SCOOP.alert,
-            hazardType: 'None',
-            zone: 'scooping',
-          });
+          scoopHeatRate = GAS_GIANT_SCOOP.heatRate;
+          effects.push(alertEffect(GAS_GIANT_SCOOP.alert, 'scooping'));
           scoopingGasGiant = true;
           break;
         }
@@ -277,14 +154,7 @@ export class FlightHazardSystem {
         if (dist < FUEL_HARVEST.range) {
           const baseType = base.type as SecretBaseType;
           baseHarvestRate = FUEL_HARVEST.rates[baseType];
-          effects.push({
-            heatRate: 0,
-            shieldDamageRate: 0,
-            fuelRate: 0,
-            alert: FUEL_HARVEST.alerts[baseType],
-            hazardType: 'None',
-            zone: 'scooping',
-          });
+          effects.push(alertEffect(FUEL_HARVEST.alerts[baseType], 'scooping'));
           harvesting = true;
           break;
         }
@@ -333,9 +203,7 @@ export class FlightHazardSystem {
       battle: this.sceneRenderer.getFleetBattle(),
       battleDangerRange: BATTLE_DANGER_RANGE,
     });
-    if (battleEffect.alert) {
-      effects.push(battleEffect);
-    }
+    addHazard(battleEffect);
     {
       const combatHarvest = runTimedHarvest({
         active: battleEffect.zone === 'lethal',
@@ -359,7 +227,7 @@ export class FlightHazardSystem {
       curve: this.sceneRenderer.getXRayStreamCurveBuffer(),
       hazardRadius: XB_STREAM_HAZARD_RADIUS,
     });
-    if (xrayEffect.alert) effects.push(xrayEffect);
+    addHazard(xrayEffect);
     {
       const streamHarvest = runTimedHarvest({
         active: xrayEffect.zone === 'lethal',
@@ -386,7 +254,7 @@ export class FlightHazardSystem {
         jetParams: mqJet,
         starWorldPos: mqStarEntity?.worldPos ?? null,
       });
-      if (jetEffect.alert) effects.push(jetEffect);
+      addHazard(jetEffect);
       {
         const jetHarvest = runTimedHarvest({
           active: jetEffect.zone === 'lethal',
@@ -424,17 +292,11 @@ export class FlightHazardSystem {
         if (sweep.zone === 'lethal') {
           // Burst damage on entry — not continuous
           if (!this.pulsarLethalHit) {
-            const f = sweep.proximityFactor;
-            const shieldBurst = (PULSAR_LETHAL_SHIELD_BURST[0] + (PULSAR_LETHAL_SHIELD_BURST[1] - PULSAR_LETHAL_SHIELD_BURST[0]) * f);
-            const heatBurst = (PULSAR_LETHAL_HEAT_BURST[0] + (PULSAR_LETHAL_HEAT_BURST[1] - PULSAR_LETHAL_HEAT_BURST[0]) * f);
-            effects.push({
-              heatRate: heatBurst / dt,
-              shieldDamageRate: shieldBurst / dt,
-              fuelRate: 0,
-              alert: f > 0.5 ? 'PULSAR BEAM — LETHAL RADIATION' : 'PULSAR BEAM — HULL CRITICAL',
-              hazardType: 'PulsarBeam',
-              zone: 'lethal',
-            });
+            this.damage.burst(pulsarBeamBurst(sweep.proximityFactor));
+            effects.push(alertEffect(
+              sweep.proximityFactor > 0.5 ? 'PULSAR BEAM — LETHAL RADIATION' : 'PULSAR BEAM — HULL CRITICAL',
+              'lethal',
+            ));
             this.pulsarLethalHit = true;
           }
         } else {
@@ -443,14 +305,8 @@ export class FlightHazardSystem {
 
         if (sweep.zone === 'harvesting' && enteringSweep) {
           // Small burst when the sweep first catches the ship
-          effects.push({
-            heatRate: PULSAR_HARVEST_HEAT_BURST / dt,
-            shieldDamageRate: PULSAR_HARVEST_SHIELD_BURST / dt,
-            fuelRate: 0,
-            alert: 'WARNING: PULSAR BEAM PROXIMITY',
-            hazardType: 'PulsarBeam',
-            zone: 'harvesting',
-          });
+          this.damage.burst(PULSAR_FRINGE_BURST);
+          effects.push(alertEffect('WARNING: PULSAR BEAM PROXIMITY', 'harvesting'));
         }
 
         const pulsarHarvest = runEntryHarvest({
@@ -478,36 +334,22 @@ export class FlightHazardSystem {
         starWorldPos: bhStarEntity?.worldPos ?? null,
         starRadius: bhStarEntity?.collisionRadius ?? 0,
       });
-      if (bhEffect.alert) effects.push(bhEffect);
+      addHazard(bhEffect);
     }
 
     // ── Aggregate into FlightTickContext ──
     const isScooping = this.scoopingFuel || this.gasGiantScoopingFuel || this.harvestingFuel;
-    if (collisionShieldDamage > 0 || collisionHeatDamage > 0) {
-      effects.push({
-        heatRate: collisionHeatDamage / Math.max(dt, 0.001),
-        shieldDamageRate: collisionShieldDamage / Math.max(dt, 0.001),
-        fuelRate: 0,
-        alert: collisionAlert,
-        hazardType: collisionHazardType,
-        zone: 'lethal',
-      });
-    }
-    const heatRate = effects.reduce((sum, e) => sum + e.heatRate, 0);
-    const shieldDamageRate = effects.reduce((sum, e) => sum + e.shieldDamageRate, 0);
+    if (collision) this.reportCollision(collision, effects);
     const fuelRate = effects.reduce((sum, e) => sum + e.fuelRate, 0)
       + starScoopRate + gasGiantScoopRate + baseHarvestRate + topopolisRegenRate
       - boostFuelConsumed / Math.max(dt, 0.001);
-    const coolingActive = heatRate === 0 && !isScooping;
-    const activeHazard = pickActiveHazard(effects);
 
     const context: FlightTickContext = {
       dt,
       fuelRate,
-      heatRate,
-      coolingActive,
-      shieldDamageRate,
-      activeHazard,
+      heatRate: scoopHeatRate,
+      coolingActive: !isScooping,
+      damage: this.damage.drain(),
       isDead: isDead,
       cargoHarvests,
     };
@@ -547,9 +389,20 @@ export class FlightHazardSystem {
 
     // ── Death ──
     if (result.dead && result.deathCause) {
-      const msg = DEATH_MESSAGES[result.deathCause] ?? DEFAULT_DEATH;
-      onDeath(msg);
+      onDeath(deathMessageFor(result.deathCause));
     }
+  }
+
+  private reportCollision(collision: CollisionResult, effects: HazardEffect[]): void {
+    const { entity, lethal } = collision;
+    if (lethal) {
+      this.damage.destroy(lethalCollisionSource(entity.type));
+      return;
+    }
+    const bounce = BOUNCE_DAMAGE[entity.type];
+    if (!bounce) return;
+    this.damage.impact(bounce);
+    effects.push(alertEffect(bounce.alert, 'lethal'));
   }
 
   resetTimers(): void {

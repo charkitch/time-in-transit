@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import type { InputState } from '../input/InputSystem';
 import type { SceneEntity } from '../rendering/SceneRenderer';
-import type { HazardType } from '../engine';
 import { FLIGHT, HYPERSPACE } from '../constants';
 
 const _collisionVec = new THREE.Vector3();
@@ -13,18 +12,10 @@ const _topoTangentVelocity = new THREE.Vector3();
 
 const TOPOPOLIS_INTERIOR_BOUNCE_RESTITUTION = 0.75;
 const TOPOPOLIS_INTERIOR_BOUNCE_TANGENTIAL_DAMPING = 0.92;
-export const TOPOPOLIS_INTERIOR_BOUNCE_SHIELD_DAMAGE = 18;
-export const TOPOPOLIS_INTERIOR_BOUNCE_HEAT_DAMAGE = 4;
-export const ASTEROID_BOUNCE_SHIELD_DAMAGE = 4;
-export const ASTEROID_BOUNCE_HEAT_DAMAGE = 1;
-
+/** What the ship hit. Damage for it is decided by the damage profiles, not here. */
 export interface CollisionResult {
   entity: SceneEntity;
   lethal: boolean;
-  shieldDamage?: number;
-  heatDamage?: number;
-  alert?: string;
-  hazardType?: HazardType;
 }
 
 function angleDelta(a: number, b: number): number {
@@ -75,18 +66,6 @@ function resolveDysonShellCollision(
 
 function isNonLethalBounce(type: SceneEntity['type']): boolean {
   return type === 'station' || type === 'asteroid';
-}
-
-function nonLethalCollisionPayload(body: SceneEntity): Omit<CollisionResult, 'entity' | 'lethal'> {
-  if (body.type === 'asteroid') {
-    return {
-      shieldDamage: ASTEROID_BOUNCE_SHIELD_DAMAGE,
-      heatDamage: ASTEROID_BOUNCE_HEAT_DAMAGE,
-      alert: 'ASTEROID IMPACT',
-      hazardType: 'StationCollision',
-    };
-  }
-  return {};
 }
 
 export class FlightModel {
@@ -224,12 +203,7 @@ export class FlightModel {
                 this.velocity.multiplyScalar(0.5);
               }
             }
-            hit = {
-              entity: body,
-              lethal: side > 0,
-              shieldDamage: side < 0 ? TOPOPOLIS_INTERIOR_BOUNCE_SHIELD_DAMAGE : undefined,
-              heatDamage: side < 0 ? TOPOPOLIS_INTERIOR_BOUNCE_HEAT_DAMAGE : undefined,
-            };
+            hit = { entity: body, lethal: side > 0 };
           }
         }
         continue;
@@ -239,7 +213,6 @@ export class FlightModel {
         hit = {
           entity: body,
           lethal: !isNonLethalBounce(body.type),
-          ...nonLethalCollisionPayload(body),
         };
       }
 
@@ -260,7 +233,6 @@ export class FlightModel {
           hit = {
             entity: body,
             lethal: !isNonLethalBounce(body.type),
-            ...nonLethalCollisionPayload(body),
           };
         }
       }

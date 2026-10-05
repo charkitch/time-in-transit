@@ -90,14 +90,15 @@ pub struct SystemSimState {
 
 // ─── Flight Tick Types ───────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum HazardType {
+    #[default]
     None,
     Overheat,
     StarCollision,
     PlanetCollision,
     MoonCollision,
-    StationCollision,
+    AsteroidCollision,
     DysonShellCollision,
     TopopolisCollision,
     MicroquasarJet,
@@ -115,15 +116,33 @@ pub struct CargoHarvest {
     pub qty: u32,
 }
 
+/// One tick of damage, aggregated from every source by the client's damage ledger.
+/// Rates are per second; bursts are flat amounts.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShipDamage {
+    pub shield_rate: f64,
+    pub shield_burst: f64,
+    pub heat_rate: f64,
+    pub heat_burst: f64,
+    /// Heat that only lands when there are no shields left to absorb the hit.
+    pub unshielded_heat_burst: f64,
+    /// Source blamed for this tick's damage; `None` when nothing is hurting the ship.
+    pub cause: HazardType,
+    /// Whether running out of shields this tick destroys the ship.
+    pub lethal_on_depletion: bool,
+    pub destroyed_by: Option<HazardType>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FlightTickContext {
     pub dt: f64,
     pub fuel_rate: f64,
+    /// Non-damage thermal load (fuel scooping).
     pub heat_rate: f64,
     pub cooling_active: bool,
-    pub shield_damage_rate: f64,
-    pub active_hazard: HazardType,
+    pub damage: ShipDamage,
     pub is_dead: bool,
     #[serde(default)]
     pub cargo_harvests: Vec<CargoHarvest>,

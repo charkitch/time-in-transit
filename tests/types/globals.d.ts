@@ -51,9 +51,6 @@ interface TestFlightModel {
     collidables: Array<Record<string, unknown>>,
   ): {
     lethal: boolean;
-    shieldDamage?: number;
-    heatDamage?: number;
-    alert?: string;
     entity: { type: string };
   } | null;
 }

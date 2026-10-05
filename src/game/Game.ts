@@ -5,7 +5,7 @@ import { InputSystem } from './input/InputSystem';
 import { DockingSystem } from './mechanics/DockingSystem';
 import { TargetingSystem } from './mechanics/TargetingSystem';
 import { ScanningSystem } from './mechanics/ScanningSystem';
-import { FlightHazardSystem, COLLISION_HAZARD_MAP, DEATH_MESSAGES, DEFAULT_DEATH } from './mechanics/FlightHazardSystem';
+import { FlightHazardSystem } from './mechanics/FlightHazardSystem';
 import { InteractionSystem } from './mechanics/InteractionSystem';
 import { JumpSystem } from './mechanics/JumpSystem';
 
@@ -283,25 +283,8 @@ export class Game {
     // Collision avoidance — push ship out of celestial bodies
     const collidables = this.sceneRenderer.getCollidables();
     const collision = this.flightModel.resolveCollisions(this.sceneRenderer.shipGroup, collidables);
-    if (collision?.lethal && !this.isDead) {
-      this.triggerDeath(DEATH_MESSAGES[COLLISION_HAZARD_MAP[collision.entity.type]!] ?? DEFAULT_DEATH);
-      return;
-    }
-    const collisionShieldDamage = collision?.lethal || state.player.shields <= 0 ? 0 : collision?.shieldDamage ?? 0;
-    const collisionHeatDamage = collision?.lethal || state.player.shields > 0 ? 0 : collision?.heatDamage ?? 0;
-    const collisionAlert = collision?.alert;
-    const collisionHazardType = collision?.hazardType;
 
     const pos = this.sceneRenderer.shipGroup.position;
-    const quat = this.sceneRenderer.shipGroup.quaternion;
-    const vel = this.flightModel.getVelocity();
-    if (isFiniteVec3(pos) && isFiniteVec3(vel) && isFiniteQuat(quat)) {
-      state.setPlayerSpatial(
-        { x: pos.x, y: pos.y, z: pos.z },
-        { x: vel.x, y: vel.y, z: vel.z },
-        { x: quat.x, y: quat.y, z: quat.z, w: quat.w },
-      );
-    }
     state.setPlayerSpeed(speed);
     state.setCanDockNow(this.interaction.canDockNow(speed));
     state.setCanLandNow(this.interaction.canLandNow(speed));
@@ -317,11 +300,20 @@ export class Game {
       this.isDead,
       (msg) => this.triggerDeath(msg),
       boostFuelConsumed,
-      collisionShieldDamage,
-      collisionHeatDamage,
-      collisionAlert,
-      collisionHazardType,
+      collision,
     );
+    // `state` predates the tick, so nothing below can see the death — stop here
+    if (this.isDead) return;
+
+    const quat = this.sceneRenderer.shipGroup.quaternion;
+    const vel = this.flightModel.getVelocity();
+    if (isFiniteVec3(pos) && isFiniteVec3(vel) && isFiniteQuat(quat)) {
+      state.setPlayerSpatial(
+        { x: pos.x, y: pos.y, z: pos.z },
+        { x: vel.x, y: vel.y, z: vel.z },
+        { x: quat.x, y: quat.y, z: quat.z, w: quat.w },
+      );
+    }
 
     this.tryProximityGameEvent(state, pos);
 

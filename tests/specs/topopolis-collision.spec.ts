@@ -23,8 +23,6 @@ test.describe('Topopolis Collision', () => {
       const collision = game.flightModel.resolveCollisions(ship, [topopolis]);
       const result = {
         lethal: collision?.lethal ?? null,
-        shieldDamage: collision?.shieldDamage ?? 0,
-        heatDamage: collision?.heatDamage ?? 0,
         entityType: collision?.entity?.type ?? null,
         y: ship.position.y,
         velocityX: game.flightModel.getVelocity().x,
@@ -38,8 +36,6 @@ test.describe('Topopolis Collision', () => {
 
     expect(result.entityType).toBe('topopolis');
     expect(result.lethal).toBe(false);
-    expect(result.shieldDamage).toBe(18);
-    expect(result.heatDamage).toBe(4);
     expect(result.y).toBeLessThan(90);
     expect(result.velocityX).toBeGreaterThan(35);
     expect(result.velocityY).toBeLessThan(-70);
@@ -68,8 +64,6 @@ test.describe('Topopolis Collision', () => {
       const collision = game.flightModel.resolveCollisions(ship, [topopolis]);
       const result = {
         lethal: collision?.lethal ?? null,
-        shieldDamage: collision?.shieldDamage ?? 0,
-        heatDamage: collision?.heatDamage ?? 0,
         entityType: collision?.entity?.type ?? null,
         y: ship.position.y,
         velocityY: game.flightModel.getVelocity().y,
@@ -82,8 +76,6 @@ test.describe('Topopolis Collision', () => {
 
     expect(result.entityType).toBe('topopolis');
     expect(result.lethal).toBe(true);
-    expect(result.shieldDamage).toBe(0);
-    expect(result.heatDamage).toBe(0);
     expect(result.y).toBeGreaterThan(110);
     expect(result.velocityY).toBeGreaterThan(0);
   });
@@ -102,8 +94,6 @@ test.describe('Topopolis Collision', () => {
           return {
             entity: { type: 'topopolis' },
             lethal: false,
-            shieldDamage: 18,
-            heatDamage: 4,
           };
         }
         return originalResolve(shipGroup, collidables);
@@ -136,8 +126,6 @@ test.describe('Topopolis Collision', () => {
           return {
             entity: { type: 'topopolis' },
             lethal: false,
-            shieldDamage: 18,
-            heatDamage: 4,
           };
         }
         return originalResolve(shipGroup, collidables);

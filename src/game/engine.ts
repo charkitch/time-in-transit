@@ -353,7 +353,7 @@ export type HazardType =
   | 'StarCollision'
   | 'PlanetCollision'
   | 'MoonCollision'
-  | 'StationCollision'
+  | 'AsteroidCollision'
   | 'DysonShellCollision'
   | 'TopopolisCollision'
   | 'MicroquasarJet'
@@ -368,13 +368,28 @@ export interface CargoHarvest {
   qty: number;
 }
 
+/** One tick of damage from every source. Rates are per second; bursts are flat amounts. */
+export interface ShipDamageReport {
+  shieldRate: number;
+  shieldBurst: number;
+  heatRate: number;
+  heatBurst: number;
+  /** Heat that only lands when there are no shields left to absorb the hit */
+  unshieldedHeatBurst: number;
+  /** Source blamed for this tick's damage; 'None' when nothing is hurting the ship */
+  cause: HazardType;
+  /** Whether running out of shields this tick destroys the ship */
+  lethalOnDepletion: boolean;
+  destroyedBy: HazardType | null;
+}
+
 export interface FlightTickContext {
   dt: number;
   fuelRate: number;
+  /** Non-damage thermal load (fuel scooping) */
   heatRate: number;
   coolingActive: boolean;
-  shieldDamageRate: number;
-  activeHazard: HazardType;
+  damage: ShipDamageReport;
   isDead: boolean;
   cargoHarvests: CargoHarvest[];
 }
@@ -385,7 +400,7 @@ export interface FlightTickResult {
   shields: number;
   cargo: Record<string, number>;
   dead: boolean;
-  deathCause: HazardType | null;
+  deathCause: Exclude<HazardType, 'None'> | null;
   cargoFull: boolean;
 }
 

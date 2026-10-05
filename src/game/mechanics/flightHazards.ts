@@ -1,26 +1,28 @@
 import * as THREE from 'three';
-import type { FleetBattle } from '../mechanics/FleetBattleSystem';
+import type { FleetBattle } from './FleetBattleSystem';
 import type { SceneEntity } from '../rendering/SceneRenderer';
 import { useGameState } from '../GameState';
-import type { HazardType } from '../engine';
+import { HAZARD_DAMAGE } from './damageProfiles';
+import type { SustainedDamage } from './ShipDamage';
 
 export interface HazardEffect {
-  heatRate: number;
-  shieldDamageRate: number;
   fuelRate: number;
   alert: string | null;
-  hazardType: HazardType;
   zone: 'scooping' | 'harvesting' | 'lethal' | null;
+  damage: SustainedDamage | null;
 }
 
 const EMPTY_EFFECT: HazardEffect = {
-  heatRate: 0,
-  shieldDamageRate: 0,
   fuelRate: 0,
   alert: null,
-  hazardType: 'None',
   zone: null,
+  damage: null,
 };
+
+/** An alert with no sustained damage of its own — for scooping, and for damage reported as a burst or impact. */
+export function alertEffect(alert: string, zone: HazardEffect['zone']): HazardEffect {
+  return { ...EMPTY_EFFECT, alert, zone };
+}
 
 function proximityAlertLabel(entity: SceneEntity): string {
   switch (entity.type) {
@@ -122,12 +124,10 @@ export function checkXRayStreamHazard(params: {
 
   if (minDist < hazardRadius) {
     return {
-      heatRate: 30,
-      shieldDamageRate: 0,
       fuelRate: 0,
       alert: 'WARNING: X-RAY TRANSFER STREAM',
-      hazardType: 'XRayStream',
       zone: 'lethal',
+      damage: HAZARD_DAMAGE.xRayStream,
     };
   } else if (minDist < warningRadius) {
     return { ...EMPTY_EFFECT, alert: 'CAUTION: X-RAY STREAM NEARBY' };
@@ -171,21 +171,17 @@ export function checkMicroquasarJetHazard(params: {
 
   if (zone === 'inside') {
     return {
-      heatRate: 80,
-      shieldDamageRate: 60,
       fuelRate: 0,
       alert: 'RELATIVISTIC JET — HULL CRITICAL',
-      hazardType: 'MicroquasarJet',
       zone: 'lethal',
+      damage: HAZARD_DAMAGE.jetCore,
     };
   } else if (zone === 'warning') {
     return {
-      heatRate: 10,
-      shieldDamageRate: 0,
       fuelRate: 1.5,
       alert: 'WARNING: RELATIVISTIC JET PROXIMITY',
-      hazardType: 'MicroquasarJet',
       zone: 'scooping',
+      damage: HAZARD_DAMAGE.jetFringe,
     };
   }
   return EMPTY_EFFECT;
@@ -248,21 +244,17 @@ export function checkBlackHoleHazard(params: {
 
   if (dist < killZone) {
     return {
-      heatRate: 100,
-      shieldDamageRate: 200,
       fuelRate: 0,
       alert: 'EVENT HORIZON — NO ESCAPE',
-      hazardType: 'BlackHole',
       zone: 'lethal',
+      damage: HAZARD_DAMAGE.eventHorizon,
     };
   } else if (dist < damageZone) {
     return {
-      heatRate: 50,
-      shieldDamageRate: 40,
       fuelRate: 0,
       alert: 'TIDAL FORCES — HULL STRESS CRITICAL',
-      hazardType: 'TidalDisruption',
       zone: 'lethal',
+      damage: HAZARD_DAMAGE.tidalDisruption,
     };
   } else if (dist < warningZone) {
     return { ...EMPTY_EFFECT, alert: 'WARNING: GRAVITATIONAL ANOMALY' };
@@ -283,17 +275,11 @@ export function checkBattleZoneHazard(params: {
 
   if (dist < battleDangerRange) {
     return {
-      heatRate: 25,
-      shieldDamageRate: 20,
       fuelRate: 0,
       alert: 'TAKING FIRE — COMBAT ZONE',
-      hazardType: 'BattleZone',
       zone: 'lethal',
+      damage: HAZARD_DAMAGE.battleCrossfire,
     };
   }
-  return {
-    ...EMPTY_EFFECT,
-    alert: 'WARNING: ACTIVE COMBAT ZONE',
-    hazardType: 'BattleZone',
-  };
+  return { ...EMPTY_EFFECT, alert: 'WARNING: ACTIVE COMBAT ZONE' };
 }

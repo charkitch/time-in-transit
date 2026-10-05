@@ -108,6 +108,13 @@ export const FUEL_HARVEST = {
   },
 } as const;
 
+export const STAR_SCOOP = {
+  rangePadding: 200,     // extra distance beyond the stellar surface
+  rate: 0.3,             // fuel units per second
+  heatRate: 15,
+  alert: 'FUEL SCOOPING',
+} as const;
+
 export const GAS_GIANT_SCOOP = {
   rangePadding: 180,     // extra distance beyond the visible radius
   rate: 0.08,            // fuel units per second
