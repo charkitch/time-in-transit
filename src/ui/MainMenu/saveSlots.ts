@@ -1,7 +1,7 @@
 import type { SaveData } from '../../game/GameState';
 import type { GameStateData } from '../../game/GameState';
 
-export const SLOT_COUNT = 5;
+const SLOT_COUNT = 5;
 const AUTOSAVE_LEGACY_FILENAME = 'save-autosave.json';
 const AUTOSAVE_INTERVAL_FILENAME = 'save-autosave-interval.json';
 const AUTOSAVE_SYSTEM_ENTRY_FILENAME = 'save-autosave-system-entry.json';
@@ -53,7 +53,7 @@ function autosaveFileName(kind: AutosaveKind): string {
   return AUTOSAVE_INTERVAL_FILENAME;
 }
 
-export async function readSlotMeta(index: number): Promise<SlotMeta | null> {
+async function readSlotMeta(index: number): Promise<SlotMeta | null> {
   try {
     const dir = await getSlotDir();
     const handle = await dir.getFileHandle(slotFileName(index));
@@ -89,15 +89,6 @@ export async function loadFromSlot(index: number): Promise<SaveData | null> {
     return entry.data;
   } catch {
     return null;
-  }
-}
-
-export async function deleteSlot(index: number): Promise<void> {
-  try {
-    const dir = await getSlotDir();
-    await dir.removeEntry(slotFileName(index));
-  } catch {
-    // file didn't exist — no-op
   }
 }
 
@@ -169,11 +160,7 @@ async function readLatestAutosaveEntry(): Promise<AutosaveEntry | null> {
   return entries[0];
 }
 
-export async function readAutosaveMeta(): Promise<SlotMeta | null> {
-  return (await readLatestAutosaveEntry())?.meta ?? null;
-}
-
-export async function readAutosaveMetaByKind(kind: AutosaveKind): Promise<SlotMeta | null> {
+async function readAutosaveMetaByKind(kind: AutosaveKind): Promise<SlotMeta | null> {
   return (await readAutosaveEntry(kind))?.meta ?? null;
 }
 

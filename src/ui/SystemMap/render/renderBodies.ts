@@ -45,7 +45,6 @@ export function renderStar(rc: RenderContext, currentSystem: SystemData, default
 export function renderPlanets(
   rc: RenderContext,
   currentSystem: SystemData,
-  defaultRange: number,
   entities: Map<string, SceneEntity>,
 ): void {
   const { ctx, viewport, isMobile, showDetailLabels, selectedId, hoveredId, targetId, pickTargets, mobileLabels } = rc;

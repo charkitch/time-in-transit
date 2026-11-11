@@ -11,10 +11,6 @@ import initWasm, {
   jump_to_system,
   get_system_market,
   get_game_event,
-  get_landing_event,
-  get_cluster_summary,
-  get_player_state,
-  set_player_state,
   apply_choice_effect,
   query_ship_stats,
   trade_buy,
@@ -66,8 +62,8 @@ export type DysonBiomeProfile = 'continental' | 'mixed' | 'desert' | 'arctic';
 
 export type GasGiantType = 'jovian' | 'saturnian' | 'neptunian' | 'inferno' | 'chromatic' | 'helium';
 export type ClimateState = 'stable' | 'ice_age' | 'warming' | 'nuclear_winter' | 'toxic_bloom' | 'tidally_locked';
-export type SpecialSystemKind = 'none' | 'home' | 'iron_star' | 'the_crown';
-export type InteractionTopology = 'sphere' | 'shell_patch' | 'helix_tube';
+type SpecialSystemKind = 'none' | 'home' | 'iron_star' | 'the_crown';
+type InteractionTopology = 'sphere' | 'shell_patch' | 'helix_tube';
 export type InteractionProfile = 'rocky' | 'gas_giant' | 'dyson_shell' | 'topopolis';
 export type TopopolisBiome = 'continental' | 'ocean' | 'desert' | 'alien' | 'forest' | 'ice';
 
@@ -135,7 +131,7 @@ export interface PlanetData {
   axialTilt: number;
 }
 
-export interface AsteroidBeltData {
+interface AsteroidBeltData {
   innerRadius: number;
   outerRadius: number;
   count: number;
@@ -152,7 +148,7 @@ export interface SecretBaseData {
   orbitSpeed: number;
 }
 
-export type DysonInteractionMode = 'targetable_only';
+type DysonInteractionMode = 'targetable_only';
 
 export interface DysonWeatherBandData {
   startAngle: number;
@@ -162,7 +158,7 @@ export interface DysonWeatherBandData {
   hasLightning: boolean;
 }
 
-export interface DysonShellSegmentData {
+interface DysonShellSegmentData {
   id: string;
   name: string;
   bandIndex: number;
@@ -184,7 +180,7 @@ export interface DysonShellSegmentData {
   interactionField: InteractionFieldData;
 }
 
-export interface BinaryCompanionData {
+interface BinaryCompanionData {
   starType: StarType;
   radius: number;
   color: number;
@@ -193,7 +189,7 @@ export interface BinaryCompanionData {
   orbitPhase: number;
 }
 
-export interface TopopolisCoilData {
+interface TopopolisCoilData {
   id: string;
   name: string;
   orbitRadius: number;
@@ -249,7 +245,7 @@ export interface MarketEntry {
   legality: 'legal' | 'licensed' | 'prohibited';
 }
 
-export interface ChoiceEffect {
+interface ChoiceEffect {
   tradingReputation: number;
   bannedGoods: GoodName[];
   priceModifier: number;
@@ -262,12 +258,12 @@ export interface ChoiceEffect {
   galaxyYearsAdvance: number;
 }
 
-export interface EventMoment {
+interface EventMoment {
   narrativeLines: string[];
   choices: EventChoice[];
 }
 
-export interface EventChoice {
+interface EventChoice {
   id: string;
   label: string;
   description: string;
@@ -524,29 +520,8 @@ export function engineGetGameEvent(
   return JSON.parse(result);
 }
 
-export function engineGetLandingEvent(
-  systemId: SystemId,
-  secretBaseId?: string,
-): GameEvent | null {
-  const result = get_landing_event(systemId as number, secretBaseId ?? '');
-  return JSON.parse(result);
-}
-
-export function engineGetClusterSummary(galaxyYear: GalaxyYear): ClusterSystemSummary[] {
-  const result = get_cluster_summary(galaxyYear as number);
-  return JSON.parse(result);
-}
-
-export function engineGetPlayerState(): WasmPlayerState {
-  return JSON.parse(get_player_state());
-}
-
 export function engineQueryShipStats(): ShipStats {
   return JSON.parse(query_ship_stats());
-}
-
-export function engineSetPlayerState(playerState: WasmPlayerState): void {
-  set_player_state(JSON.stringify(playerState));
 }
 
 export function engineApplyChoiceEffect(

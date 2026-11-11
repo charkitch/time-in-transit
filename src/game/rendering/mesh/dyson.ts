@@ -7,7 +7,7 @@ import dysonCityLightsFrag from './shaders/dyson_city_lights.frag.glsl';
 import dysonShellExteriorFrag from './shaders/dyson_shell_exterior.frag.glsl';
 import { makeInteractionFieldTexture } from './planet/shared';
 
-export const BIOME_PROFILE_INDEX: Record<DysonBiomeProfile, number> = {
+const BIOME_PROFILE_INDEX: Record<DysonBiomeProfile, number> = {
   continental: 0,
   mixed: 1,
   desert: 2,

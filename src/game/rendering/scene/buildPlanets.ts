@@ -82,7 +82,7 @@ export function buildPlanets(params: {
             planet.polarCapSize, planet.climateState);
     } else {
       planetGroup = planet.type === 'gas_giant'
-        ? makeGasGiant(planet.radius, planet.color, () => rng.next(), planetSeed, planet.gasType,
+        ? makeGasGiant(planet.radius, planet.color, planetSeed, planet.gasType,
             planet.greatSpot, planet.greatSpotLat, planet.greatSpotSize, planet.interactionField)
         : makePlanet(planet.radius, planet.color, 1, planetSeed, planet.surfaceType, planet.interactionField,
             planet.polarCapSize, planet.climateState);

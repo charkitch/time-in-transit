@@ -9,7 +9,7 @@ import {
   STAR_TYPE_COLOR, applyAlpha,
 } from './ClusterMapViewport';
 
-export interface DrawClusterMapParams {
+interface DrawClusterMapParams {
   ctx: CanvasRenderingContext2D;
   viewport: MapViewport;
   cluster: StarSystemData[];

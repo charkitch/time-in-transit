@@ -1,32 +1,6 @@
 import * as THREE from 'three';
-import { loadTexture } from '../../textureCache';
-import type { PlanetSkin } from '../../planetSkins';
 import type { GasGiantType } from '../../../engine';
 import { PRNG } from '../../../generation/prng';
-
-export function makeTexturedRing(
-  innerR: number,
-  outerR: number,
-  skin: PlanetSkin,
-): THREE.Mesh {
-  const geo = new THREE.RingGeometry(innerR, outerR, 64);
-  const mat = new THREE.MeshStandardMaterial({
-    side: THREE.DoubleSide,
-    transparent: true,
-    opacity: 0.6,
-    roughness: 1.0,
-    metalness: 0.0,
-  });
-
-  if (skin.ring) {
-    mat.map = loadTexture(skin.ring);
-    mat.alphaMap = loadTexture(skin.ring);
-  }
-
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.rotation.x = Math.PI / 2;
-  return mesh;
-}
 
 // ── Procedural ring system ────────────────────────────────────────────────────
 
@@ -169,18 +143,4 @@ export function makeRingSystem(
   group.rotation.x = Math.PI / 2;
   group.rotation.z = ringInclination;
   return group;
-}
-
-
-export function makeRingMesh(innerR: number, outerR: number): THREE.Mesh {
-  const geo = new THREE.RingGeometry(innerR, outerR, 64);
-  const mat = new THREE.MeshBasicMaterial({
-    color: 0xAABBCC,
-    side: THREE.DoubleSide,
-    transparent: true,
-    opacity: 0.4,
-  });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.rotation.x = Math.PI / 2;
-  return mesh;
 }

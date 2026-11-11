@@ -40,7 +40,7 @@ export const SURFACE_TYPE_INDEX: Record<SurfaceType, number> = {
   mountain: 9,
 };
 
-export const SURFACE_TYPE_SHADER_DEFINES = `
+const SURFACE_TYPE_SHADER_DEFINES = `
 #define SURF_TYPE_CONTINENTAL ${SURFACE_TYPE_INDEX.continental}
 #define SURF_TYPE_OCEAN ${SURFACE_TYPE_INDEX.ocean}
 #define SURF_TYPE_MARSH ${SURFACE_TYPE_INDEX.marsh}

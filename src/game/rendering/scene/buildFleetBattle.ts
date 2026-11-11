@@ -7,7 +7,7 @@ import type { FleetBattle } from '../../mechanics/FleetBattleSystem';
 import { getFaction } from '../../data/factions';
 import type { SceneEntity } from './types';
 
-export interface FleetBattleResult {
+interface FleetBattleResult {
   fleetBattleData: FleetBattle | null;
   battleProjectiles: THREE.Points | null;
   battleExplosions: BattleExplosions | null;
@@ -71,7 +71,7 @@ export function buildFleetBattle(params: {
 
     // Create projectile + explosion effects
     battleProjectiles = createBattleProjectiles(
-      scene, battle.position,
+      scene,
       shipWorldPosA, shipWorldPosB,
       colorA, colorB,
     );

@@ -148,7 +148,7 @@ class HelixCurve extends THREE.Curve<THREE.Vector3> {
   }
 }
 
-export interface TopopolisCoilMeshResult {
+interface TopopolisCoilMeshResult {
   /** Per-coil-wrap groups for frustum culling */
   groups: THREE.Group[];
   interiorMaterials: THREE.ShaderMaterial[];

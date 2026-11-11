@@ -5,7 +5,7 @@ import type { PlayerState, GameStateData, SaveData, SystemChoices, UIMode } from
 import { isFiniteVec3, isFiniteQuat, isOriginVec3 } from './spatialValidation';
 
 // Matches EffectiveShipStats::default() in Rust — no upgrades applied
-export const DEFAULT_SHIP_STATS: ShipStats = {
+const DEFAULT_SHIP_STATS: ShipStats = {
   maxFuel: STARTING_FUEL,
   maxShields: 100,
   maxCargo: 20,

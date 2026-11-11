@@ -1,8 +1,6 @@
-import * as THREE from 'three';
 import type {
   InteractionFieldData,
   InteractionProfile,
-  InteractionTopology,
 } from '../engine';
 
 function wrap01(v: number): number {
@@ -25,30 +23,7 @@ function sampleNearest(field: InteractionFieldData, u: number, v: number): numbe
   return Math.max(0, Math.min(255, value)) / 255;
 }
 
-export function directionToSphereUV(direction: THREE.Vector3): { u: number; v: number } {
-  const norm = direction.clone().normalize();
-  const u = wrap01(Math.atan2(norm.z, norm.x) / (Math.PI * 2) + 0.5);
-  const v = clamp01(Math.asin(THREE.MathUtils.clamp(norm.y, -1, 1)) / Math.PI + 0.5);
-  return { u, v };
-}
-
-export function sampleInteractionFieldUV(
-  field: InteractionFieldData,
-  u: number,
-  v: number,
-): number {
-  return sampleNearest(field, u, v);
-}
-
-export function sampleInteractionFieldSphere(
-  field: InteractionFieldData,
-  direction: THREE.Vector3,
-): number {
-  const { u, v } = directionToSphereUV(direction);
-  return sampleNearest(field, u, v);
-}
-
-export type InteractionClass =
+type InteractionClass =
   | 'rocky_landable'
   | 'rocky_water'
   | 'gas_stable'
@@ -81,7 +56,7 @@ function classifyTopopolis(value: number): InteractionClass {
   return 'topopolis_interior';
 }
 
-export function classifyInteractionValue(
+function classifyInteractionValue(
   profile: InteractionProfile,
   value: number,
 ): InteractionClass {
@@ -102,21 +77,7 @@ export function sampleAndClassifyByUV(
   u: number,
   v: number,
 ): { value: number; classification: InteractionClass } {
-  const value = sampleInteractionFieldUV(field, u, v);
-  return {
-    value,
-    classification: classifyInteractionValue(field.profile, value),
-  };
-}
-
-export function sampleAndClassifyByDirection(
-  field: InteractionFieldData,
-  topology: InteractionTopology,
-  direction: THREE.Vector3,
-): { value: number; classification: InteractionClass } {
-  const value = topology === 'sphere'
-    ? sampleInteractionFieldSphere(field, direction)
-    : sampleInteractionFieldUV(field, 0.5, 0.5);
+  const value = sampleNearest(field, u, v);
   return {
     value,
     classification: classifyInteractionValue(field.profile, value),

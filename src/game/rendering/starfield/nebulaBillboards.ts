@@ -8,7 +8,7 @@ import {
   type NebulaDescriptor,
 } from './starfieldConstants';
 
-export interface NebulaBillboardSystem {
+interface NebulaBillboardSystem {
   mesh: THREE.Mesh;
   updatePerFrame(camera: THREE.PerspectiveCamera): void;
   dispose(): void;

@@ -17,7 +17,7 @@ const GAS_TYPE_INDEX: Record<GasGiantType, number> = {
 };
 
 export function makeGasGiant(
-  radius: number, baseColor: number, rng: () => number,
+  radius: number, baseColor: number,
   seed: number = 0, gasType: GasGiantType = 'jovian',
   greatSpot = false, greatSpotLat = 0, greatSpotSize = 0.5,
   interactionField?: InteractionFieldData,
@@ -68,7 +68,7 @@ export function makeTexturedGasGiant(
 ): THREE.Group {
   // No skin — use procedural shader
   if (!skin) {
-    return makeGasGiant(radius, fallbackColor, () => 0, seed, gasType);
+    return makeGasGiant(radius, fallbackColor, seed, gasType);
   }
 
   const geo = new THREE.SphereGeometry(radius, 32, 24);

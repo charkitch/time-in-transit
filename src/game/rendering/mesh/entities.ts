@@ -334,7 +334,7 @@ export function makeGlowSprite(color: number, size: number): THREE.Sprite {
 }
 
 /** Instanced asteroid field */
-export interface AsteroidBeltMeshResult {
+interface AsteroidBeltMeshResult {
   mesh: THREE.InstancedMesh;
   material: THREE.ShaderMaterial;
   collisionSpheres: Array<{ center: THREE.Vector3; radius: number }>;
@@ -342,7 +342,7 @@ export interface AsteroidBeltMeshResult {
   maxAsteroidRadius: number;
 }
 
-export function makeAsteroidBeltMaterial(lightColor = 0xFFFFFF): THREE.ShaderMaterial {
+function makeAsteroidBeltMaterial(lightColor = 0xFFFFFF): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
       uLightPos: { value: new THREE.Vector3(0, 0, 0) },

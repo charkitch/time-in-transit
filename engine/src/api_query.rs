@@ -3,28 +3,13 @@ use wasm_bindgen::prelude::*;
 use crate::api_state::{from_json, to_json, with_engine_mut};
 use crate::civilization::get_civ_state;
 use crate::simulation::simulate_galaxy;
-use crate::system_payload::{build_cluster_summary, compute_chain_targets};
+use crate::system_payload::compute_chain_targets;
 use crate::trading::get_market;
 use crate::types::*;
 
 #[wasm_bindgen]
 pub fn query_ship_stats() -> Result<String, JsValue> {
     crate::api_state::with_engine(|engine| to_json(&engine.player_state.effective_stats()))
-}
-
-#[wasm_bindgen]
-pub fn get_player_state() -> Result<String, JsValue> {
-    crate::api_state::with_engine(|engine| to_json(&engine.player_state))
-}
-
-#[wasm_bindgen]
-pub fn set_player_state(json: &str) -> Result<(), JsValue> {
-    let player_state: PlayerState = from_json(json, "player state")?;
-
-    with_engine_mut(|engine| {
-        engine.player_state = player_state;
-        Ok(())
-    })
 }
 
 #[wasm_bindgen]
@@ -43,13 +28,6 @@ pub fn get_system_market(system_id: u32) -> Result<String, JsValue> {
         );
 
         to_json(&market)
-    })
-}
-
-#[wasm_bindgen]
-pub fn get_cluster_summary(galaxy_year: u32) -> Result<String, JsValue> {
-    crate::api_state::with_engine(|engine| {
-        to_json(&build_cluster_summary(&engine.cluster, galaxy_year))
     })
 }
 

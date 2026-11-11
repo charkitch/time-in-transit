@@ -55,7 +55,6 @@ export class FlightHazardSystem {
   private scoopingFuel = false;
   private gasGiantScoopingFuel = false;
   private harvestingFuel = false;
-  private insideTopopolis = false;
   combatIntelTimer = 0;
   private combatIntelActive = false;
   private combatIntelCollected = false;
@@ -187,7 +186,6 @@ export class FlightHazardSystem {
       if (inside) {
         topopolisRegenRate = 0.15;
       }
-      this.insideTopopolis = inside;
     }
 
     // ── Hazard checks ──
