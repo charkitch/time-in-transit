@@ -11,14 +11,14 @@ interface BlackHoleVisualStyle {
   outerGlowOpacity: number;
 }
 
-export interface XRayAccretorOptions {
+interface XRayAccretorOptions {
   radius: number;
   accretorKind: 'black_hole' | 'neutron_star';
   donorColor: number;
   diskTintStrength?: number;
 }
 
-export interface MicroquasarJetOptions {
+interface MicroquasarJetOptions {
   radius: number;
   color?: number;
 }

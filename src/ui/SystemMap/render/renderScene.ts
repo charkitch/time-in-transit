@@ -7,7 +7,7 @@ import { renderStar, renderPlanets, renderDysonShells, renderAsteroidBelt } from
 import { renderFleetBattle, renderSecretBases, renderNpcShips, renderFleetShips, renderPlayer } from './renderContacts';
 import { drawMobileLabels } from './mobileLabels';
 
-export interface SceneResult {
+interface SceneResult {
   pickTargets: PickTarget[];
   mobileLabels: MobileLabel[];
   hasNpcShips: boolean;
@@ -45,7 +45,7 @@ export function renderScene(
 
   renderStar(rc, currentSystem, defaultRange);
   if (battle) renderFleetBattle(rc, battle);
-  renderPlanets(rc, currentSystem, defaultRange, entities);
+  renderPlanets(rc, currentSystem, entities);
   renderDysonShells(rc, currentSystem, entities);
   renderAsteroidBelt(rc, currentSystem);
   renderSecretBases(rc, currentSystem);

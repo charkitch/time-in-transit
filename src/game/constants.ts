@@ -47,7 +47,7 @@ export const DOCKING = {
   maxSpeed:    20,
 } as const;
 
-export const INTERACTION_DISTANCE = {
+const INTERACTION_DISTANCE = {
   base: 130,
   stationCollisionScale: 1.0,
   stationCollisionMaxBonus: 120,
@@ -145,7 +145,7 @@ export const STAR_COLORS: Record<string, number> = {
   IRON: PALETTE.starIron,
 };
 
-export interface StarAttributes {
+interface StarAttributes {
   /** Whether this star type renders a glow/halo sprite */
   glow: boolean;
   /** Glow sprite size multiplier relative to star radius */

@@ -191,7 +191,7 @@ export function checkMicroquasarJetHazard(params: {
 const PULSAR_LETHAL_HALF = 0.03;     // ~1.7° — direct beam hit
 const PULSAR_HARVEST_HALF = 0.15;    // ~8.6° — broader radiation field
 
-export interface PulsarSweepResult {
+interface PulsarSweepResult {
   zone: 'lethal' | 'harvesting' | null;
   dist: number;
   proximityFactor: number;

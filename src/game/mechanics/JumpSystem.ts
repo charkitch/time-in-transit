@@ -5,7 +5,7 @@ import type { ScanningSystem } from './ScanningSystem';
 import type { FlightHazardSystem } from './FlightHazardSystem';
 import { useGameState } from '../GameState';
 import { HYPERSPACE } from '../constants';
-import { engineJumpToSystem, type SystemPayload, type WasmPlayerState } from '../engine';
+import { engineJumpToSystem, type SystemPayload } from '../engine';
 import { jumpCost } from './hyperspaceCalc';
 
 const INFINITE_FUEL_DEV = import.meta.env.DEV;
@@ -16,11 +16,9 @@ const FIRST_SYSTEM_ID = STARTING_SYSTEM_ID;
 const SYSTEM_ENTRY_EVENT_CHANCE = 0.3;
 
 export class JumpSystem {
-  private hyperspaceTimer = 0;
   private hyperspaceActive = false;
   private hyperspaceStartTime = 0;
   private pendingSystemPayload: SystemPayload | null = null;
-  private pendingPlayerSnapshot: WasmPlayerState | null = null;
 
   constructor(
     private sceneRenderer: SceneRenderer,
@@ -65,11 +63,9 @@ export class JumpSystem {
     state.addJumpLogEntry(jumpResult.jumpLogEntry);
 
     this.pendingSystemPayload = jumpResult.systemPayload;
-    this.pendingPlayerSnapshot = jumpResult.playerState;
     state.setPendingTransitYears(jumpResult.yearsElapsed, jumpResult.shipYearsElapsed);
 
     this.hyperspaceActive = true;
-    this.hyperspaceTimer = HYPERSPACE.duration;
     this.hyperspaceStartTime = performance.now();
     this.sceneRenderer.startHyperspace();
     state.setUIMode('hyperspace');
@@ -111,10 +107,8 @@ export class JumpSystem {
 
   resetOnNewGame(): void {
     this.hyperspaceActive = false;
-    this.hyperspaceTimer = 0;
     this.hyperspaceStartTime = 0;
     this.pendingSystemPayload = null;
-    this.pendingPlayerSnapshot = null;
   }
 
   private arriveInSystem(targetId: SystemId): void {

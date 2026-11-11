@@ -5,7 +5,7 @@ export interface CollisionSphere {
   radius: number;
 }
 
-export interface CollisionRadialBounds {
+interface CollisionRadialBounds {
   innerRadius: number;
   outerRadius: number;
   halfHeight: number;
@@ -56,7 +56,7 @@ export interface SceneEntity {
 }
 
 /** Body types that can be scanned for landing site intel. */
-export const SCANNABLE_HOST_TYPES: ReadonlySet<SceneEntity['type']> = new Set([
+const SCANNABLE_HOST_TYPES: ReadonlySet<SceneEntity['type']> = new Set([
   'planet', 'dyson_shell', 'topopolis',
 ]);
 

@@ -16,7 +16,7 @@ export interface PlanetSkin {
  * Texture files live in public/assets/planets/<category>/.
  * Add entries here once texture files are downloaded (see ASSET_LICENSES.md).
  */
-export const PLANET_SKINS: PlanetSkin[] = [
+const PLANET_SKINS: PlanetSkin[] = [
   // ── Rocky planets ─────────────────────────────────────────────────────────
   // {
   //   id: 'rocky_01',

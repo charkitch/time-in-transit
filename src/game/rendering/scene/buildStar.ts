@@ -57,7 +57,7 @@ const COMPANION_GLOW_MUL = 6;
 
 // ─── Return type ────────────────────────────────────────────────────────────
 
-export interface StarResult {
+interface StarResult {
   starLight: THREE.PointLight | null;
   xbDiskGroup: THREE.Group | null;
   xRayTransferStreams: XRayTransferStream[];

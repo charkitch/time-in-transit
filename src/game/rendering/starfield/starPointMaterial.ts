@@ -25,7 +25,7 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
-export function createStarPointMaterial(pixelRatio: number): THREE.ShaderMaterial {
+function createStarPointMaterial(pixelRatio: number): THREE.ShaderMaterial {
   const material = new THREE.ShaderMaterial({
     uniforms: {
       uPixelRatio: { value: pixelRatio },

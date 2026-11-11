@@ -4,7 +4,7 @@ export interface Faction {
   color: number;
 }
 
-export const ALL_FACTIONS: readonly Faction[] = [
+const ALL_FACTIONS: readonly Faction[] = [
   { id: 'faction-0', name: 'Korathi', color: 0xFF4444 },
   { id: 'faction-1', name: 'Veleron', color: 0xFF8833 },
   { id: 'faction-2', name: 'Ashundi', color: 0x4488FF },

@@ -33,7 +33,7 @@ export function pulsarBeamBurst(proximityFactor: number): BurstDamage {
   };
 }
 
-export interface BounceDamage extends ImpactDamage {
+interface BounceDamage extends ImpactDamage {
   alert: string;
 }
 

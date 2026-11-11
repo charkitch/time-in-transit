@@ -61,7 +61,6 @@ export class Game {
   private lastTime = 0;
   private lastAutosaveTime = 0;
   private isDead = false;
-  private engineReady = false;
   private proximityEventCooldown = 0;
 
   private shouldTriggerEvent(chance: number): boolean {
@@ -119,7 +118,6 @@ export class Game {
     state.setClusterSummary(result.clusterSummary);
     state.setGalaxySimState(result.galaxySimState);
     state.setChainTargets(result.chainTargets);
-    this.engineReady = true;
 
     // Use system payload from Rust for first system
     const systemData = result.systemPayload.system;

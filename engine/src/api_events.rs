@@ -104,8 +104,3 @@ pub fn get_game_event(
         to_json(&event)
     })
 }
-
-#[wasm_bindgen]
-pub fn get_landing_event(system_id: u32, secret_base_id: &str) -> Result<String, JsValue> {
-    get_game_event(system_id, "landing", secret_base_id, "", "", "")
-}

@@ -105,7 +105,7 @@ export function updateHyperspaceGrid(grid: THREE.LineSegments, dt: number): void
 }
 
 /** Battle projectile system: laser bolts flying between two ship groups */
-export interface BattleProjectileData {
+interface BattleProjectileData {
   tValues: Float32Array;
   sourceIndices: Uint8Array;
   targetIndices: Uint8Array;
@@ -144,7 +144,6 @@ function configureBattleProjectile(
 
 export function createBattleProjectiles(
   scene: THREE.Scene,
-  battlePos: THREE.Vector3,
   shipsA: THREE.Vector3[],
   shipsB: THREE.Vector3[],
   colorA: number,
